@@ -1,0 +1,30 @@
+---
+
+# ---- GLOBAL BLOCK ----
+# Settings for the haproxy 'global' section.
+# See vars/main.yml or README for full structure.
+haproxy_global: {}
+
+# ---- DEFAULTS BLOCKS ----
+# List of haproxy 'defaults' blocks.
+haproxy_defaults: []
+
+# ---- MAILERS BLOCKS ----
+# List of haproxy 'mailers' blocks.
+haproxy_mailers: []
+
+# ---- RESOLVERS BLOCKS ----
+# List of haproxy 'resolvers' blocks.
+haproxy_resolvers: []
+
+# ---- FRONTEND BLOCKS ----
+# List of haproxy 'frontend' blocks.
+haproxy_frontends: []
+
+# ---- BACKEND BLOCKS ----
+# List of haproxy 'backend' blocks.
+haproxy_backends: []
+
+# ---- ADDITIONAL FILES ----
+# List of extra files to hard-link into place before haproxy starts.
+haproxy_additional: []

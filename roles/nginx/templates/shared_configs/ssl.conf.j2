@@ -1,0 +1,33 @@
+{% set ssl_configs = nginx_shared_configs.ssl %}
+# SSL configuration
+ssl_protocols {{ ssl_configs.ssl_protos -}};
+ssl_ciphers   {{ ssl_configs.ssl_ciphers -}};
+ssl_prefer_server_ciphers on;
+
+ssl_certificate {{ ssl_configs.ssl_cert_path -}};
+ssl_certificate_key {{ ssl_configs.ssl_key_path -}};
+ssl_dhparam {{ ssl_configs.ssl_dhparam }};
+
+## Cache SSL sessions for 10m (this is about 40,000 sessions), timing them out
+## after 24 hours.
+ssl_session_cache shared:SSL:10m;
+ssl_session_timeout 24h;
+
+## Set the buffer size to 1400 bytes (that way it fits into a single MTU).
+ssl_buffer_size 1400;
+
+## OCSP Stapling
+ssl_stapling on;
+ssl_stapling_verify on;
+
+ssl_session_tickets off;
+
+
+
+#===================================
+# additional hardening of the server
+#===================================
+
+#disable giving out nginx versioning on pages
+server_tokens off;
+

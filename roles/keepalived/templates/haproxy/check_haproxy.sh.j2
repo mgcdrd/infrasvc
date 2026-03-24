@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# get the full path of nginx binary and exit if it doesn't exist
+TARGET_BIN=$(/usr/bin/which haproxy)
+if [ -z "$TARGET_BIN" ]; then
+  exit 1
+fi
+
+# check if it's running...
+if ! systemctl is-active haproxy.service > /dev/null; then
+  /usr/bin/systemctl restart haproxy.service || exit 1
+fi
+
+exit 0
+

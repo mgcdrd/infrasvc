@@ -1,0 +1,104 @@
+---
+
+# ---- Normalize names ----
+# PowerDNS requires all names to end with a trailing dot.  We normalise once
+# here and reference the internal vars throughout so the regex isn't repeated.
+
+- name: pdns_records manage_record - Normalize record and zone names
+  ansible.builtin.set_fact:
+    _pdns_rec_name: "{{ _pdns_record.name | regex_replace('\\.?$', '.') }}"
+    _pdns_rec_zone: "{{ _pdns_record.zone | regex_replace('\\.?$', '.') }}"
+    _pdns_rec_type: "{{ _pdns_record.type | upper }}"
+
+
+# ---- Fetch current zone state ----
+# We do a GET on the zone rather than on the individual RRset so we have the
+# full picture in one API call per record iteration.
+
+- name: pdns_records manage_record - Query current zone RRsets
+  ansible.builtin.uri:
+    url: "{{ pdns_records_api_url }}/api/v1/servers/{{ pdns_records_server_id }}/zones/{{ _pdns_rec_zone }}"
+    method: GET
+    headers:
+      X-API-Key: "{{ pdns_records_api_key }}"
+    status_code: 200
+  register: _pdns_zone_query
+  changed_when: false
+
+
+# ---- Extract the matching RRset (if it exists) ----
+# selectattr filters the rrsets list down to entries whose name AND type match.
+# 'first | default({})' gives an empty dict when nothing matches — no RRset
+# currently exists for this name/type combination.
+
+- name: pdns_records manage_record - Locate existing RRset
+  ansible.builtin.set_fact:
+    _pdns_current_rrset: >-
+      {{ _pdns_zone_query.json.rrsets
+         | selectattr('name', 'equalto', _pdns_rec_name)
+         | selectattr('type', 'equalto', _pdns_rec_type)
+         | list | first | default({}) }}
+
+
+# ---- Build the desired content list ----
+# The PowerDNS API expects records as a list of objects:
+#   [{"content": "192.168.1.10", "disabled": false}, ...]
+# We reset the buffer first to prevent values from a previous loop iteration
+# from leaking in, then append one entry per value string.
+
+- name: pdns_records manage_record - Reset record content buffer
+  ansible.builtin.set_fact:
+    _pdns_record_content: []
+
+- name: pdns_records manage_record - Build desired content list
+  ansible.builtin.set_fact:
+    _pdns_record_content: "{{ _pdns_record_content + [{'content': _val, 'disabled': false}] }}"
+  loop: "{{ _pdns_record.records | default([]) }}"
+  loop_control:
+    loop_var: _val
+  when: _pdns_record.state | default('present') == 'present'
+
+
+# ---- Decide whether an API call is actually needed ----
+# For state: present — skip if the RRset exists, has the right TTL, and the
+#   content values match (order-independent sort before comparison).
+# For state: absent  — skip if the RRset does not exist at all.
+# This makes the role genuinely idempotent: re-running with no changes results
+# in no API calls and no 'changed' events.
+
+- name: pdns_records manage_record - Determine whether update is needed (present)
+  ansible.builtin.set_fact:
+    _pdns_record_needs_update: >-
+      {{ _pdns_current_rrset | length == 0
+         or (_pdns_current_rrset.ttl | default(0)) != (_pdns_record.ttl | default(300) | int)
+         or (_pdns_current_rrset.records | default([]) | map(attribute='content') | sort | list)
+            != (_pdns_record.records | default([]) | sort | list) }}
+  when: _pdns_record.state | default('present') == 'present'
+
+- name: pdns_records manage_record - Determine whether delete is needed (absent)
+  ansible.builtin.set_fact:
+    _pdns_record_needs_update: "{{ _pdns_current_rrset | length > 0 }}"
+  when: _pdns_record.state | default('present') == 'absent'
+
+
+# ---- Apply the change ----
+# PATCH with changeType REPLACE sets the RRset to exactly what we provide,
+# creating it if it did not exist.  PATCH with changeType DELETE removes it.
+# The task is skipped entirely when _pdns_record_needs_update is false.
+
+- name: pdns_records manage_record - Apply record change
+  ansible.builtin.uri:
+    url: "{{ pdns_records_api_url }}/api/v1/servers/{{ pdns_records_server_id }}/zones/{{ _pdns_rec_zone }}"
+    method: PATCH
+    headers:
+      X-API-Key: "{{ pdns_records_api_key }}"
+    body_format: json
+    body:
+      rrsets:
+        - name: "{{ _pdns_rec_name }}"
+          type: "{{ _pdns_rec_type }}"
+          ttl: "{{ _pdns_record.ttl | default(300) | int }}"
+          changetype: "{{ 'REPLACE' if _pdns_record.state | default('present') == 'present' else 'DELETE' }}"
+          records: "{{ _pdns_record_content }}"
+    status_code: 204
+  when: _pdns_record_needs_update | bool

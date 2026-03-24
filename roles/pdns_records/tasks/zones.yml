@@ -1,0 +1,55 @@
+---
+
+# Short-circuit the whole file when there is nothing to do.
+- name: pdns_records zones - Skip when no zones are defined
+  ansible.builtin.meta: end_play
+  when: pdns_records_zones | length == 0
+
+# Fetch all zones in one call so we don't hit the API once per desired zone.
+- name: pdns_records zones - Query existing zones
+  ansible.builtin.uri:
+    url: "{{ pdns_records_api_url }}/api/v1/servers/{{ pdns_records_server_id }}/zones"
+    method: GET
+    headers:
+      X-API-Key: "{{ pdns_records_api_key }}"
+    status_code: 200
+  register: _pdns_zone_list
+  changed_when: false
+
+# The API returns zone objects whose 'id' field is the canonical name with
+# a trailing dot (e.g. "lab.example.com.").  Build a plain list of those
+# names so we can do simple membership checks below.
+- name: pdns_records zones - Build existing zone name list
+  ansible.builtin.set_fact:
+    _pdns_existing_zone_names: "{{ _pdns_zone_list.json | map(attribute='id') | list }}"
+
+# Create any zone marked present that does not already exist.
+- name: pdns_records zones - Create zones
+  ansible.builtin.uri:
+    url: "{{ pdns_records_api_url }}/api/v1/servers/{{ pdns_records_server_id }}/zones"
+    method: POST
+    headers:
+      X-API-Key: "{{ pdns_records_api_key }}"
+    body_format: json
+    body:
+      name: "{{ item.name | regex_replace('\\.?$', '.') }}"
+      kind: "{{ item.kind | default('Native') }}"
+      nameservers: "{{ item.nameservers | default([]) }}"
+    status_code: 201
+  loop: "{{ pdns_records_zones }}"
+  when:
+    - item.state | default('present') == 'present'
+    - (item.name | regex_replace('\\.?$', '.')) not in _pdns_existing_zone_names
+
+# Delete any zone marked absent that currently exists.
+- name: pdns_records zones - Delete zones
+  ansible.builtin.uri:
+    url: "{{ pdns_records_api_url }}/api/v1/servers/{{ pdns_records_server_id }}/zones/{{ item.name | regex_replace('\\.?$', '.') }}"
+    method: DELETE
+    headers:
+      X-API-Key: "{{ pdns_records_api_key }}"
+    status_code: 204
+  loop: "{{ pdns_records_zones }}"
+  when:
+    - item.state | default('present') == 'absent'
+    - (item.name | regex_replace('\\.?$', '.')) in _pdns_existing_zone_names

@@ -1,0 +1,78 @@
+---
+
+# ================
+# Make sure the nginx user is given
+- name: nginx config - Create {{ nginx_process_user | default('nginx') }}
+  ansible.builtin.user:
+    name:    "{{ nginx_process_user }}"
+    comment: Nginx web server
+    state:   present
+    system:  true
+    home:    /var/lib/nginx
+    shell:   /sbin/nologin
+    create_home: false
+  when: nginx_process_user is defined and nginx_process_user | length > 0
+
+
+# ================
+# make all necessary directories
+- name: nginx config - Create needed directories
+  ansible.builtin.file:
+    path:   "{{ item }}"
+    state:  directory
+    owner:  root
+    group:  root
+    mode:   '0755'
+  with_items:
+    - /etc/nginx/conf.d
+    - /etc/nginx/conf.d/shared_configs
+
+# ================
+#  adding ssl_scripting role if enabled
+- name: nginx config - setting up ssl
+  ansible.builtin.include_role:
+    name: ssl_scripting
+  vars:
+    ssl_scripting: "{{ nginx_ssl_scripting }}"
+  when: nginx_ssl_enable is defined and nginx_ssl_enable | bool
+
+# ================
+# Deploy shared config snippets to conf.d/shared_configs/
+- name: nginx config - Deploy shared config files
+  ansible.builtin.template:
+    src:   "{{ item }}"
+    dest:  "/etc/nginx/conf.d/shared_configs/{{ item | basename | regex_replace('\\.j2$', '') }}"
+    owner: root
+    group: root
+    mode:  '0644'
+  loop:
+    - shared_configs/logging.conf.j2
+    - shared_configs/proxy_configs.conf.j2
+    - shared_configs/ssl.conf.j2
+    - shared_configs/useragent.conf.j2
+  notify: nginx handlers - reload nginx
+
+# ================
+# file: /etc/nginx/nginx.conf
+- name: nginx config - Copying nginx.conf template
+  ansible.builtin.template:
+    src:   nginx.conf.j2
+    dest:  /etc/nginx/nginx.conf
+    owner: root
+    group: root
+    mode:  '0644'
+  notify: nginx handlers - reload nginx
+
+# ================
+#
+- name: nginx config - creating server blocks
+  ansible.builtin.template:
+    src:   server_block.conf.j2
+    dest:  "/etc/nginx/conf.d/{{ tpl.name }}.conf"
+    owner: root
+    group: root
+    mode:  '0644'
+  loop: "{{ nginx_server_blocks | default([]) }}"
+  loop_control:
+    loop_var: tpl
+  notify: nginx handlers - reload nginx

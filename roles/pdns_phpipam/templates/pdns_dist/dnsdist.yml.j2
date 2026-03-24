@@ -1,0 +1,48 @@
+---
+
+acl:
+  - 0.0.0.0/0
+
+webserver:
+  listen_addresses:
+    - "0.0.0.0:8083"
+  acl:
+    - 127.0.0.0/8
+    - 10.100.0.0/8
+  password: "{{ _pdns_dnsdist_web_passwd }}"
+
+binds:
+  - listen_address: "0.0.0.0:53"
+    protocol: "Do53"
+
+backends:
+  - address: "{{ pdns_phpipam_docker_network_auth }}"
+    protocol: "Do53"
+    pools:
+      - auth
+  - address: "{{ pdns_phpipam_docker_network_recu }}"
+    protocol: "Do53"
+    pools:
+      - recursor
+
+# https://dnsdist.org/rules-actions.html
+query_rules:
+  - name: "domain rule"
+    selector:
+      type: QNameSuffix
+      suffixes:
+        - {{ pdns_phpipam_domain }}
+        - {{ pdns_phpipam_domain_ip_rev }}.in-addr.arpa
+    action:
+      type: Pool
+      pool_name: auth
+  - name: "default rule"
+    selector:
+      type: All
+    action:
+      type: Pool
+      pool_name: recursor
+
+pools:
+  - name: auth
+  - name: recursor

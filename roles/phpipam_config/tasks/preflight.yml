@@ -1,0 +1,33 @@
+---
+
+- name: phpipam_config preflight - Assert required variables are set
+  ansible.builtin.assert:
+    that:
+      - phpipam_config_url | length > 0
+      - phpipam_config_app_id | length > 0
+      - phpipam_config_username | length > 0
+      - phpipam_config_password | length > 0
+    fail_msg: >-
+      phpipam_config_url, phpipam_config_app_id, phpipam_config_username,
+      and phpipam_config_password must all be set.
+      The API application must be pre-configured in phpIPAM under
+      Administration > API before this role can run.
+
+# Authenticate with phpIPAM and retrieve a session token.
+# The token is stored as _phpipam_token and used by all subsequent tasks.
+- name: phpipam_config preflight - Authenticate and retrieve session token
+  ansible.builtin.uri:
+    url: "{{ phpipam_config_url }}/api/{{ phpipam_config_app_id }}/user/"
+    method: POST
+    url_username: "{{ phpipam_config_username }}"
+    url_password: "{{ phpipam_config_password }}"
+    force_basic_auth: true
+    status_code: 200
+  register: _phpipam_auth
+  changed_when: false
+  no_log: true
+
+- name: phpipam_config preflight - Store session token
+  ansible.builtin.set_fact:
+    _phpipam_token: "{{ _phpipam_auth.json.data.token }}"
+  no_log: true

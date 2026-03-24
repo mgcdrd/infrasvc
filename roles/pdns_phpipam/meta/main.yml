@@ -1,0 +1,29 @@
+galaxy_info:
+  author: mgcdrd
+  description: >-
+    Deploys a PowerDNS (Auth + Recursor + DNSDist) and phpIPAM stack
+    via Docker Compose. Manages directory layout, configuration templating,
+    secret generation, and service lifecycle.
+
+  license: GPL-3.0-or-later
+
+  min_ansible_version: "2.14"
+
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+        - trixie
+    - name: EL
+      versions:
+        - '9'
+        - '10'
+
+  galaxy_tags:
+    - mgcdrd
+    - dns
+    - powerdns
+    - phpipam
+    - docker
+
+#dependencies: []

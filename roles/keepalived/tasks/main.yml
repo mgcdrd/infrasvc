@@ -1,0 +1,8 @@
+---
+# tasks file for keepalived
+
+- name: keepalived - main install
+  import_tasks: install.yml
+
+- name: keepalived main - configure
+  import_tasks: config.yml

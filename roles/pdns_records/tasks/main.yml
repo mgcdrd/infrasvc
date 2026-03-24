@@ -1,0 +1,10 @@
+---
+
+- name: pdns_records main - Preflight validation
+  import_tasks: roles/pdns_records/tasks/preflight.yml
+
+- name: pdns_records main - Manage zones
+  import_tasks: roles/pdns_records/tasks/zones.yml
+
+- name: pdns_records main - Manage records
+  import_tasks: roles/pdns_records/tasks/records.yml

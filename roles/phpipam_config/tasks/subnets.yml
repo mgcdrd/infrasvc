@@ -1,0 +1,87 @@
+---
+
+- name: phpipam_config subnets - Manage subnets
+  when: phpipam_config_subnets | length > 0
+  block:
+
+    - name: phpipam_config subnets - Query existing subnets
+      ansible.builtin.uri:
+        url: "{{ phpipam_config_url }}/api/{{ phpipam_config_app_id }}/subnets/"
+        method: GET
+        headers:
+          token: "{{ _phpipam_token }}"
+        status_code: [200, 404]
+      register: _phpipam_subnets_query
+      changed_when: false
+
+    # Key on "subnet/mask" string — unique within a section.
+    - name: phpipam_config subnets - Build existing subnet map
+      ansible.builtin.set_fact:
+        _phpipam_subnet_map: >-
+          {{ (_phpipam_subnets_query.json.data | default([]))
+             | items2dict(key_name='subnet', value_name='id') }}
+
+    - name: phpipam_config subnets - Create subnets
+      ansible.builtin.uri:
+        url: "{{ phpipam_config_url }}/api/{{ phpipam_config_app_id }}/subnets/"
+        method: POST
+        headers:
+          token: "{{ _phpipam_token }}"
+        body_format: json
+        body:
+          subnet: "{{ item.subnet }}"
+          mask: "{{ item.mask }}"
+          sectionId: "{{ _phpipam_section_map[item.section] }}"
+          description: "{{ item.description | default('') }}"
+          vlanId: "{{ _phpipam_vlan_map[item.vlan] | default(omit) }}"
+          nameserverId: "{{ _phpipam_ns_map[item.nameserver] | default(omit) }}"
+          customer_id: "{{ _phpipam_customer_map[item.customer] | default(omit) }}"
+          pingSubnet: "{{ item.pingSubnet | default(false) | int }}"
+          discoverSubnet: "{{ item.discoverSubnet | default(false) | int }}"
+        status_code: 201
+      loop: "{{ phpipam_config_subnets }}"
+      when:
+        - item.state | default('present') == 'present'
+        - item.subnet not in _phpipam_subnet_map
+
+    - name: phpipam_config subnets - Delete subnets
+      ansible.builtin.uri:
+        url: "{{ phpipam_config_url }}/api/{{ phpipam_config_app_id }}/subnets/{{ _phpipam_subnet_map[item.subnet] }}/"
+        method: DELETE
+        headers:
+          token: "{{ _phpipam_token }}"
+        status_code: 200
+      loop: "{{ phpipam_config_subnets }}"
+      when:
+        - item.state | default('present') == 'absent'
+        - item.subnet in _phpipam_subnet_map
+
+    # Refresh the map before address management so newly created subnets have IDs.
+    - name: phpipam_config subnets - Refresh subnet map
+      ansible.builtin.uri:
+        url: "{{ phpipam_config_url }}/api/{{ phpipam_config_app_id }}/subnets/"
+        method: GET
+        headers:
+          token: "{{ _phpipam_token }}"
+        status_code: [200, 404]
+      register: _phpipam_subnets_query
+      changed_when: false
+
+    - name: phpipam_config subnets - Store refreshed subnet map
+      ansible.builtin.set_fact:
+        _phpipam_subnet_map: >-
+          {{ (_phpipam_subnets_query.json.data | default([]))
+             | items2dict(key_name='subnet', value_name='id') }}
+
+    # Delegate per-subnet address management to manage_subnet.yml.
+    # Only runs for subnets that are present and have an addresses list defined.
+    - name: phpipam_config subnets - Manage address assignments
+      ansible.builtin.include_tasks: roles/phpipam_config/tasks/manage_subnet.yml
+      loop: "{{ phpipam_config_subnets }}"
+      loop_control:
+        loop_var: _phpipam_subnet
+        label: "{{ _phpipam_subnet.subnet }}/{{ _phpipam_subnet.mask }}"
+      when:
+        - _phpipam_subnet.state | default('present') == 'present'
+        - _phpipam_subnet.addresses | default([]) | length > 0
+        - _phpipam_subnet.subnet in _phpipam_subnet_map

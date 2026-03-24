@@ -1,0 +1,161 @@
+---
+
+# ---- API CONNECTION ----
+
+# Base URL of the phpIPAM instance (no trailing slash).
+phpipam_config_url: "http://127.0.0.1"
+
+# API application ID — must be pre-configured in phpIPAM under
+# Administration > API before this role can run.
+phpipam_config_app_id: "ansible"
+
+# phpIPAM credentials.  Use Ansible Vault to protect these values.
+phpipam_config_username: ""
+phpipam_config_password: ""
+
+# Set false only if using a self-signed certificate and you cannot add the CA
+# to the controller's trust store. Leave true in all other cases.
+phpipam_config_validate_certs: true
+
+
+# ---- CUSTOMERS ----
+# phpIPAM customers used to tag subnets/addresses to an owner.
+#
+#   name:        (required) Customer name — unique identifier.
+#   description: Optional description.
+#   contact:     Optional contact name.
+#   email:       Optional contact email.
+#   phone:       Optional contact phone.
+#   state:       present (default) or absent
+#
+phpipam_config_customers: []
+
+
+# ---- SECTIONS ----
+# Top-level organisational buckets that contain subnets.
+#
+#   name:          (required) Section name — unique identifier.
+#   description:   Optional description.
+#   strictMode:    Enforce strict subnet/host boundary checks (default: false).
+#   state:         present (default) or absent
+#
+phpipam_config_sections: []
+
+
+# ---- VLANs ----
+# VLAN definitions.  Optionally scoped to an L2 domain.
+#
+#   name:        (required) VLAN name.
+#   number:      (required) VLAN ID number.
+#   description: Optional description.
+#   l2domain:    L2 domain name to associate with (optional — uses default if omitted).
+#   state:       present (default) or absent
+#
+phpipam_config_vlans: []
+
+
+# ---- NAMESERVERS ----
+# DNS nameserver sets that can be assigned to subnets.
+#
+#   name:         (required) Nameserver set name — unique identifier.
+#   nameserver1:  (required) Primary nameserver IP.
+#   nameserver2:  Secondary nameserver IP (optional).
+#   nameserver3:  Tertiary nameserver IP (optional).
+#   description:  Optional description.
+#   state:        present (default) or absent
+#
+phpipam_config_nameservers: []
+
+
+# ---- NAT ----
+# NAT policy definitions.
+#
+#   name:        (required) NAT policy name — unique identifier.
+#   type:        NAT type: "1-to-1" or "many-to-1" (default: "1-to-1")
+#   description: Optional description.
+#   state:       present (default) or absent
+#
+phpipam_config_nat: []
+
+
+# ---- LOCATIONS ----
+# Physical locations (data centres, rooms, etc.).
+#
+#   name:        (required) Location name — unique identifier.
+#   description: Optional description.
+#   address:     Optional physical address.
+#   state:       present (default) or absent
+#
+phpipam_config_locations: []
+
+
+# ---- RACKS ----
+# Physical racks.  Racks reference a location by name.
+#
+#   name:        (required) Rack name — unique within a location.
+#   size:        Rack height in rack units (default: 42).
+#   location:    Location name the rack lives in (optional).
+#   description: Optional description.
+#   state:       present (default) or absent
+#
+phpipam_config_racks: []
+
+
+# ---- SUBNETS ----
+# IP subnets.  Subnets reference a section, and optionally a VLAN and nameserver,
+# all by name.  Each subnet can also carry a list of address assignments.
+#
+#   subnet:      (required) Network address, e.g. "10.100.10.0"
+#   mask:        (required) Prefix length, e.g. 24
+#   section:     (required) Section name the subnet belongs to.
+#   description: Optional description.
+#   vlan:        VLAN name to associate with (optional).
+#   nameserver:  Nameserver set name to associate with (optional).
+#   customer:    Customer name to tag the subnet to (optional).
+#   pingSubnet:  Ping scan the subnet (default: false).
+#   discoverSubnet: Auto-discover hosts (default: false).
+#   state:       present (default) or absent
+#
+#   addresses:   Optional list of IP address assignments within this subnet.
+#     ip:          (required) IP address string, e.g. "10.100.10.1"
+#     hostname:    FQDN or hostname for this address (optional).
+#     description: Description (optional).
+#     tag:         Address state tag:
+#                    1 = Offline
+#                    2 = Used    (default)
+#                    3 = Reserved
+#                    4 = DHCP
+#                    5 = Gateway
+#     mac:         MAC address (optional).
+#     owner:       Owner name (optional).
+#     note:        Free-text note (optional).
+#     state:       present (default) or absent
+#
+phpipam_config_subnets: []
+
+
+# ---- DEVICES ----
+# Network devices.  Devices can reference a location and rack by name.
+#
+#   hostname:    (required) Device hostname — unique identifier.
+#   ip:          Management IP address (optional).
+#   description: Optional description.
+#   type:        Device type ID (optional — matches phpIPAM device type).
+#   location:    Location name (optional).
+#   rack:        Rack name (optional).
+#   rack_start:  Starting rack unit (optional).
+#   rack_size:   Number of rack units occupied (optional).
+#   state:       present (default) or absent
+#
+phpipam_config_devices: []
+
+
+# ---- CIRCUITS ----
+# Network circuits / connectivity links.
+#
+#   name:        (required) Circuit name — unique identifier.
+#   cid:         Circuit ID / reference number (optional).
+#   description: Optional description.
+#   state:       present (default) or absent
+#
+phpipam_config_circuits: []

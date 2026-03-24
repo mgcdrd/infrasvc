@@ -1,0 +1,33 @@
+---
+
+# Resolve the subnet's numeric ID from the map built in subnets.yml.
+- name: phpipam_config manage_subnet - Resolve subnet ID
+  ansible.builtin.set_fact:
+    _phpipam_subnet_id: "{{ _phpipam_subnet_map[_phpipam_subnet.subnet] }}"
+
+# Fetch all addresses currently assigned to this subnet in one call.
+- name: phpipam_config manage_subnet - Query existing addresses
+  ansible.builtin.uri:
+    url: "{{ phpipam_config_url }}/api/{{ phpipam_config_app_id }}/subnets/{{ _phpipam_subnet_id }}/addresses/"
+    method: GET
+    headers:
+      token: "{{ _phpipam_token }}"
+    status_code: [200, 404]
+  register: _phpipam_addr_query
+  changed_when: false
+
+# Build a map of ip → address object for O(1) lookups below.
+- name: phpipam_config manage_subnet - Build existing address map
+  ansible.builtin.set_fact:
+    _phpipam_addr_map: >-
+      {{ (_phpipam_addr_query.json.data | default([]))
+         | items2dict(key_name='ip', value_name='id') }}
+
+# Delegate per-address work to manage_address.yml so set_fact calls
+# are scoped per iteration and do not bleed between addresses.
+- name: phpipam_config manage_subnet - Manage addresses
+  ansible.builtin.include_tasks: roles/phpipam_config/tasks/manage_address.yml
+  loop: "{{ _phpipam_subnet.addresses | default([]) }}"
+  loop_control:
+    loop_var: _phpipam_address
+    label: "{{ _phpipam_address.ip }}"

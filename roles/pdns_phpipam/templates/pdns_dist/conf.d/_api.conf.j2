@@ -1,0 +1,5 @@
+webserver("0.0.0.0:8083")
+setWebserverConfig({password='{{ _pdns_dnsdist_api_key }}', apiKey='{{ _pdns_dnsdist_api_key }}', acl='0.0.0.0/0'})
+controlSocket('0.0.0.0:5199')
+setKey('{{ _pdns_dnsdist_api_key }}')
+setConsoleACL('0.0.0.0/0')

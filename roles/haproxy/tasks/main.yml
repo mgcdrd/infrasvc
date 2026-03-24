@@ -1,0 +1,7 @@
+---
+
+- name: haproxy main - install
+  import_tasks: install.yml
+
+- name: haproxy main - configure
+  import_tasks: config.yml

@@ -1,0 +1,8 @@
+# This is used to block known bad user agents.
+#  the blockedagent has to be in the http block so it defined in
+#  /etc/nginx/nginx.conf, but needs to be in each server definition.
+
+if ($blockedagent){
+  return 403;
+}
+

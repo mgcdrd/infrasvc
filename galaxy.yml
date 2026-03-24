@@ -1,0 +1,31 @@
+namespace: mgcdrd
+name: infrasvc
+version: 0.1.0
+readme: README.md
+authors:
+- mgcdrd mgcdryad@gmail.com
+
+# A short summary description of the collection
+description: A collection roles that deploy various infrastructure related services
+
+license:
+- GPL-3.0-or-later
+
+# Collections that this collection requires to be installed for it to be usable. The key of the dict is the
+# collection label 'namespace.name'. The value is a version range
+# L(specifiers,https://python-semanticversion.readthedocs.io/en/latest/#requirement-specification). Multiple version
+# range specifiers can be set and are separated by ','
+dependencies: 
+  mgcdrd.infrabase: 0.1.0
+
+#repository: https://gitlab.internal.dev/ansible/collections/
+#documentation: http://docs.example.com
+#homepage: http://example.com
+#issues: http://example.com/issue/tracker
+
+# A list of file glob-like patterns used to filter any files or directories that should not be included in the build
+# artifact. A pattern is matched from the relative path of the file or directory of the collection directory. This
+# uses 'fnmatch' to match the files or directories. Some directories and files like 'galaxy.yml', '*.pyc', '*.retry',
+# and '.git' are always filtered. Mutually exclusive with 'manifest'
+build_ignore: []
+

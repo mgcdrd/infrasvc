@@ -1,0 +1,23 @@
+---
+
+# =====================
+# Debian install
+- name: haproxy install - Install haproxy
+  ansible.builtin.apt:
+    pkg:
+    - haproxy
+    state: latest
+    update_cache: true
+  register: haproxy_installed
+  notify: restart haproxy
+  when: ansible_facts['os_family'] == 'Debian'
+
+# =====================
+# RH-based install
+- name: haproxy install - Install haproxy
+  ansible.builtin.dnf:
+    name:  haproxy
+    state: latest
+  register: haproxy_installed
+  notify: restart haproxy
+  when: ansible_facts['os_family'] == 'RedHat'

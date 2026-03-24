@@ -1,0 +1,19 @@
+---
+
+galaxy_info:
+  role_name: keepalived
+  author: mgcdrd
+  description: Installs and configures keepalived with VRRP instances, preset check scripts, and automatic priority calculation.
+  license: GPL-3.0-or-later
+  min_ansible_version: "2.14"
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+        - trixie
+    - name: EL
+      versions:
+        - "9"
+        - "10"
+
+dependencies: []

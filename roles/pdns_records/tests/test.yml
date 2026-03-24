@@ -1,0 +1,24 @@
+---
+
+- hosts: all
+  gather_facts: false
+  become: false
+  roles:
+    - mgcdrd.infrasvc.pdns_records
+  vars:
+    pdns_records_api_url: "http://127.0.0.1:8081"
+    pdns_records_api_key: "changeme"
+
+    pdns_records_zones:
+      - name: "lab.example.com"
+        kind: Native
+        nameservers:
+          - "ns1.lab.example.com."
+
+    pdns_records:
+      - zone: "lab.example.com"
+        name: "host1.lab.example.com"
+        type: A
+        ttl: 300
+        records:
+          - "10.100.10.5"

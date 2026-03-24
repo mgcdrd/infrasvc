@@ -1,0 +1,72 @@
+---
+
+# =====================
+# Seeing if keepalived.conf exists to get password if already generated
+- name: keepalive config - Checking for /etc/keepalived/keepalived.conf
+  ansible.builtin.stat:
+    path: /etc/keepalived/keepalived.conf
+  register: keepalived_conf_stat
+
+
+# =====================
+# If config exists get the current password
+#- name: keepalive config - Config exists, getting password
+#  ansible.builtin.set_fact:
+#    keepalived_auth_passwd_existing: "{{ lookup('file', '/etc/keepalived/keepalived.conf') | regex_search('auth_pass(\\S+)') }}"
+#  when: keepalived_conf_stat.stat.exists
+
+- name: keepalived config - Getting keepalived.conf sensitive data
+  ansible.builtin.slurp:
+    src: /etc/keepalived/keepalived.conf
+  register: keepalived_conf_contents
+  when: keepalived_conf_stat.stat.exists
+  ignore_errors: true
+
+- name:  keepalived config - saving existing passwords
+  ansible.builtin.set_fact:
+    keepalived_auth_passwd_existing: >-
+      {{
+        dict(
+          (
+            keepalived_conf_contents.content | default('') | b64decode
+          )
+          | regex_findall('vrrp_instance\\s+(\\S+)\\s*\\{[\\s\\S]*?(?:auth_pass\\s+(\\S+))?', multiline=True )
+        )
+        | dict2items
+        | selectattr('value', 'defined')
+        | selectattr('value', '!=', '')
+        | items2dict
+      }}
+
+# =====================
+# Push conf file
+- name: keepalived config - Pushing configuration file
+  ansible.builtin.template:
+    src: keepalived.conf.j2
+    dest: /etc/keepalived/keepalived.conf
+    owner: root
+    group: root
+    mode:  0644
+    backup: true
+  notify: 
+  - restart keepalived
+
+- name: keepalived config - Get all check scripts for processing
+  ansible.builtin.set_fact:
+    all_vrrp_scripts:  >-
+      {{
+        all_vrrp_scripts | default([]) +
+        (vars['keepalived_preset_' ~ item].vrrp_scripts  )
+      }}
+  loop: "{{ keepalived_vip_for }}"
+
+- name: keepalived config - Pushing check scripts
+  ansible.builtin.template:
+    src:   "{{ item.template }}"
+    dest:  "{{ item.script }}"
+    owner: "{{ item.user  | default('root') }}"
+    group: "{{ item.group | default('root') }}"
+    mode:  0740
+  notify: restart keepalived
+  loop: "{{ all_vrrp_scripts + (keepalived_vrrp_scripts | default([])) }}"
+  

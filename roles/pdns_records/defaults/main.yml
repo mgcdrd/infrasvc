@@ -1,0 +1,67 @@
+---
+
+# ---- API CONNECTION ----
+
+# Full URL to the PowerDNS Authoritative server HTTP API.
+# When deployed alongside pdns_phpipam, the auth container is on the Docker
+# network — expose port 8081 on the host or call this from the host directly.
+pdns_records_api_url: "http://127.0.0.1:8081"
+
+# API key for the PowerDNS auth server.  Must match the value pdns-auth was
+# configured with.  Use Ansible Vault to protect this value.
+pdns_records_api_key: ""
+
+# PowerDNS server ID — almost always "localhost" for self-hosted instances.
+pdns_records_server_id: "localhost"
+
+
+# ---- ZONES ----
+# List of DNS zones to manage.  Each item supports:
+#
+#   name:         (required) Zone name. A trailing dot is added automatically if missing.
+#   kind:         Zone type: Native (default), Master, or Slave
+#   nameservers:  List of NS record values — required when creating a new zone.
+#                 Example: ["ns1.lab.example.com.", "ns2.lab.example.com."]
+#   state:        present (default) — ensure zone exists
+#                 absent           — ensure zone is removed
+#
+# Example:
+#   pdns_records_zones:
+#     - name: "lab.example.com"
+#       kind: Native
+#       nameservers:
+#         - "ns1.lab.example.com."
+#     - name: "10.100.10.in-addr.arpa"
+#       kind: Native
+#       nameservers:
+#         - "ns1.lab.example.com."
+pdns_records_zones: []
+
+
+# ---- RECORDS ----
+# List of DNS records to manage.  Each item supports:
+#
+#   zone:     (required) Zone the record lives in.
+#   name:     (required) Fully-qualified record name. Trailing dot added if missing.
+#   type:     (required) Record type: A, AAAA, CNAME, MX, TXT, PTR, NS, SRV, etc.
+#   ttl:      TTL in seconds (default: 300)
+#   records:  List of value strings for this RRset.  Required when state is present.
+#             For MX/SRV include priority in the value string as PowerDNS expects
+#             (e.g. "10 mail.example.com.").
+#   state:    present (default) — create or update the RRset to exactly match records
+#             absent            — remove the RRset entirely
+#
+# Example:
+#   pdns_records:
+#     - zone: "lab.example.com"
+#       name: "host1.lab.example.com"
+#       type: A
+#       ttl: 300
+#       records:
+#         - "10.100.10.5"
+#     - zone: "10.100.10.in-addr.arpa"
+#       name: "5.10.100.10.in-addr.arpa"
+#       type: PTR
+#       records:
+#         - "host1.lab.example.com."
+pdns_records: []

@@ -1,0 +1,73 @@
+---
+
+# ---- State: present ----
+
+- name: phpipam_config manage_address - Create address
+  ansible.builtin.uri:
+    url: "{{ phpipam_config_url }}/api/{{ phpipam_config_app_id }}/addresses/"
+    method: POST
+    headers:
+      token: "{{ _phpipam_token }}"
+    body_format: json
+    body:
+      subnetId: "{{ _phpipam_subnet_id }}"
+      ip: "{{ _phpipam_address.ip }}"
+      hostname: "{{ _phpipam_address.hostname | default('') }}"
+      description: "{{ _phpipam_address.description | default('') }}"
+      tag: "{{ _phpipam_address.tag | default(2) }}"
+      mac: "{{ _phpipam_address.mac | default('') }}"
+      owner: "{{ _phpipam_address.owner | default('') }}"
+      note: "{{ _phpipam_address.note | default('') }}"
+    status_code: 201
+  when:
+    - _phpipam_address.state | default('present') == 'present'
+    - _phpipam_address.ip not in _phpipam_addr_map
+
+# Update if the address exists but hostname, description, or tag have changed.
+- name: phpipam_config manage_address - Query current address detail
+  ansible.builtin.uri:
+    url: "{{ phpipam_config_url }}/api/{{ phpipam_config_app_id }}/addresses/{{ _phpipam_addr_map[_phpipam_address.ip] }}/"
+    method: GET
+    headers:
+      token: "{{ _phpipam_token }}"
+    status_code: 200
+  register: _phpipam_addr_detail
+  changed_when: false
+  when:
+    - _phpipam_address.state | default('present') == 'present'
+    - _phpipam_address.ip in _phpipam_addr_map
+
+- name: phpipam_config manage_address - Update address if changed
+  ansible.builtin.uri:
+    url: "{{ phpipam_config_url }}/api/{{ phpipam_config_app_id }}/addresses/{{ _phpipam_addr_map[_phpipam_address.ip] }}/"
+    method: PATCH
+    headers:
+      token: "{{ _phpipam_token }}"
+    body_format: json
+    body:
+      hostname: "{{ _phpipam_address.hostname | default('') }}"
+      description: "{{ _phpipam_address.description | default('') }}"
+      tag: "{{ _phpipam_address.tag | default(2) }}"
+      mac: "{{ _phpipam_address.mac | default('') }}"
+      owner: "{{ _phpipam_address.owner | default('') }}"
+      note: "{{ _phpipam_address.note | default('') }}"
+    status_code: 200
+  when:
+    - _phpipam_address.state | default('present') == 'present'
+    - _phpipam_address.ip in _phpipam_addr_map
+    - (_phpipam_addr_detail.json.data.hostname | default('')) != (_phpipam_address.hostname | default(''))
+      or (_phpipam_addr_detail.json.data.description | default('')) != (_phpipam_address.description | default(''))
+      or (_phpipam_addr_detail.json.data.tag | default('2') | string) != (_phpipam_address.tag | default(2) | string)
+
+# ---- State: absent ----
+
+- name: phpipam_config manage_address - Delete address
+  ansible.builtin.uri:
+    url: "{{ phpipam_config_url }}/api/{{ phpipam_config_app_id }}/addresses/{{ _phpipam_addr_map[_phpipam_address.ip] }}/"
+    method: DELETE
+    headers:
+      token: "{{ _phpipam_token }}"
+    status_code: 200
+  when:
+    - _phpipam_address.state | default('present') == 'absent'
+    - _phpipam_address.ip in _phpipam_addr_map

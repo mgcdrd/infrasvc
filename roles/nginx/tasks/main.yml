@@ -1,0 +1,7 @@
+---
+
+- name: nginx main - install
+  import_tasks: install.yml
+
+- name: nginx main - configure
+  import_tasks: config.yml

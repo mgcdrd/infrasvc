@@ -1,0 +1,43 @@
+---
+
+- hosts: all
+  gather_facts: false
+  become: false
+  roles:
+    - mgcdrd.infrasvc.phpipam_config
+  vars:
+    phpipam_config_url: "http://127.0.0.1"
+    phpipam_config_app_id: "ansible"
+    phpipam_config_username: "Admin"
+    phpipam_config_password: "{{ vault_phpipam_password }}"
+
+    phpipam_config_sections:
+      - name: "Lab"
+        description: "Lab networks"
+
+    phpipam_config_nameservers:
+      - name: "Lab DNS"
+        nameserver1: "10.0.0.53"
+        description: "Primary lab DNS"
+
+    phpipam_config_vlans:
+      - name: "Management"
+        number: 10
+        description: "Management VLAN"
+
+    phpipam_config_subnets:
+      - subnet: "10.0.10.0"
+        mask: 24
+        section: "Lab"
+        description: "Lab management network"
+        vlan: "Management"
+        nameserver: "Lab DNS"
+        addresses:
+          - ip: "10.0.10.1"
+            hostname: "vault.lab.example.com"
+            description: "Vault"
+            tag: 2
+          - ip: "10.0.10.254"
+            hostname: "gateway.lab.example.com"
+            description: "Default gateway"
+            tag: 5

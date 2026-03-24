@@ -1,0 +1,1052 @@
+#=============DO NOT EDIT - ANSIBLE CONTROLLED===============
+#============================================================
+# /etc/vsftpd.conf 
+#
+#  Note: Most settings have been included in this
+#    file; commented out show the defaults
+#============================================================
+#============================================================
+
+#=============================
+# General Settings
+#=============================
+
+{% if vsftp_show_comments %}
+# background - BOOLEAN
+#   if YES, vsftpd starts in listen mode - daemonize 
+#   default: YES
+{% endif %}
+background={{ vsftp_background | default(true) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# listen - BOOLEAN
+#   if YES, vsftpd will run in standalone mode.
+#   must not be run from inetd
+#   mutually exclusive from listen_ipv6
+#   default: NO
+{% endif %}
+listen={{ vsftp_listen | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# listen_ipv6 - BOOLEAN
+#   listen on IPv6 not v4
+#   mutually exclusive from 'listen'
+#   default: NO
+{% endif %}
+listen_ipv6={{ vsftp_listen_ipv6 | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# delete_failed_uploads - BOOLEAN
+#   if YES, any failed upload file is deleted
+#   default: NO
+{% endif %}
+delete_failed_uploads={{ vsftp_delete_failed_uploads | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# one_process_model - BOOLEAN
+#   don't enable unless you know what you are doing
+#   default: NO
+{% endif %}
+one_process_model={{ vsftp_one_process_model  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if ansible_facts['os_family'] != 'Debian' %}
+{% if vsftp_show_comments %}
+# reverse_lookup_enable - BOOLEAN
+#   use hostname over IP before pam auth (when pam_access setup for it)
+#   default: YES
+{% endif %}
+reverse_lookup_enable={{ vsftp_reverse_lookup_enable  | default(true) | bool | ternary('YES', 'NO') }}
+{% endif %}
+
+{% if vsftp_show_comments %}
+# run_as_launching_user - BOOLEAN
+#   run vsftpd as user which launched it
+#   DO NOT EVER ENABLE - see man page
+#   default: NO
+{% endif %}
+run_as_launching_user={{ vsftp_run_as_launching_user  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# session_support - BOOLEAN
+#   controls is vsftpd attempts to maintain sessions for logins.
+#   only works if pam auth, and uses utmp and wtmp - performance hit
+#   default: NO
+{% endif %}
+session_support={{ vsftp_session_support  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# setproctitle_enable - BOOLEAN
+#   if YES, session status in system process listing
+#   leave off for security
+#   default: NO
+{% endif %}
+setproctitle_enable={{ vsftp_setproctitle_enable  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# use_sendfile - BOOLEAN
+#   internal setting used for testing the benefits of using the sendfile() system call
+#   default: YES
+{% endif %}
+use_sendfile={{ vsftp_use_sendfile  | default(true) | bool | ternary('YES', 'NO') }}
+
+
+{% if vsftp_show_comments %}
+# nopriv_user - STRING {svc acct}
+#   user vsftpd use when wants to be totally unpriv 
+#   should be dedicated user, not nobody
+#   default: nobody
+{% endif %}
+nopriv_user={{ vsftp_nopriv_user | default('nobody') }}
+
+
+{% if vsftp_show_comments %}
+# pam_service_name - STRING {svc acct}
+#   name of PAM service vsftp will use
+#   default: ftp
+{% endif %}
+pam_service_name={{ vsftp_pam_service_name | default('ftp') }}
+
+{% if vsftp_show_comments %}
+# mdtm_write - BOOLEAN
+#   allow MDTM to set file mod times
+#   default: YES
+{% endif %}
+mdtm_write={{ vsftp_mdtm_write  | default(true) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# secure_chroot_dir - STRING {path}
+#   used for secure chroot at time vsftpd does req FS access 
+#   should be empty and not be writable by ftp user
+#   default: /usr/share/empty (vsftpd default config is /var/run/vsftpd/empty)
+{% endif %}
+secure_chroot_dir={{ vsftp_secure_chroot_dir | default('/var/run/vsftpd/empty') }}
+
+{% if vsftp_show_comments %}
+# delay_successful_login - INTEGER
+#   num of sec to pause prior to allowing a successful login
+#   default: 0
+{% endif %}
+delay_successful_login={{ vsftp_delay_successful_login | default('0') }}
+
+
+
+{% if vsftp_show_comments %}
+#========
+# PORT - port method
+#========
+
+# port_enable - BOOLEAN
+#   if NO, disallow PORT method of obtaining data conn
+#   default: YES
+{% endif %}
+port_enable={{ vsftp_port_enable  | default(true) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# port_promiscuous - BOOLEAN
+#   if YES, disable PORT security check ensuring outgoing conn only conn to client
+#   default: NO
+{% endif %}
+port_promiscuous={{ vsftp_port_promiscuous  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+#========
+# PASV - passive
+#========
+# pasv_enable - BOOLEAN
+#   server tell client IP and port for data xfer....leave on when proxying
+#   default: Yes
+{% endif %}
+pasv_enable={{ vsftp_pasv_enable  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# pasv_addr_resolve  - BOOLEAN
+#   if YES, use hostname (not IP) in pasv_address
+#   default: NO
+{% endif %}
+pasv_addr_resolve={{ vsftp_pasv_addr_resolve  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# pasv_promiscuous - BOOLEAN
+#   if YES, disable PASV sec check ensuring data conn origin same IP as control conn
+#   LEAVE AS NO!
+#   default: NO
+{% endif %}
+pasv_promiscuous={{ vsftp_pasv_promiscuous  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+#=============================
+# Network Settings
+#=============================
+
+# listen_address - STRING {IPv4}
+#   if in standalone mode, listen address
+#   default: (none)
+{% endif %}
+listen_address={{ vsftp_listen_address | default('') }}
+
+{% if vsftp_show_comments %}
+# listen_address6 - STRING {IPv6}
+#   if in standalone mode, listen address
+#   format is standard IPv6 address
+#   default: (none)
+{% endif %}
+listen_address6={{ CHANGEME | default('') }}
+
+{% if vsftp_show_comments %}
+# listen_port - INTEGER
+#   if in standalone mode, port to listen for connections
+#   default: 21
+{% endif %}
+listen_port={{ vsftp_listen_port | default('21') }}
+
+{% if vsftp_show_comments %}
+# data_connection_timeout - INTEGER
+#   timeout in sec for stalled xfers
+#   default: 300
+{% endif %}
+data_connection_timeout={{ vsftp_data_connection_timeout | default('300') }}
+
+{% if vsftp_show_comments %}
+# idle_session_timeout - INTEGER
+#   timeout in sec between FTP command
+#   default: 300
+{% endif %}
+idle_session_timeout={{ vsftp_idle_session_timeout | default('300') }}
+
+{% if vsftp_show_comments %}
+# max_login_fails - INTEGER
+#   max login attempts before kicked
+#   default: 3
+{% endif %}
+max_login_fails={{ vsftp_max_login_fails | default('3') }}
+
+{% if vsftp_show_comments %}
+# max_clients - INTEGER
+#   max num of clients, excess get error message 
+#   '0' is unlimited
+#   default: 2000
+{% endif %}
+max_clients={{ vsftp_max_clients | default('2000') }}
+
+{% if vsftp_show_comments %}
+# max_per_ip - INTEGER
+#   max num clients from same IP
+#   '0' is unlimited
+#   default: 50
+{% endif %}
+max_per_ip={{ vsftp_max_per_ip | default('50') }}
+
+{% if vsftp_show_comments %}
+# isolate_network - BOOLEAN
+#   if YES, use CLONE_NEWNET to isolate untrusted proccessees so can't arbitrary connect() 
+#   and have to ask the privileged proccess for sockets
+#   'port_promiscuous' have to be disabled
+#   default: YES
+{% endif %}
+isolate_network={{ vsftp_isolate_network  | default(true) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# isolate - BOOLEAN
+#   if YES, use CLONE_NEWPID and CLONE_NEWIPC to isolate processes to their ipc and pid namespaces
+#   searapated processes cannot interface with each other
+{% endif %}
+isolate={{ vsftp_isolate  | default(true) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# trans_chunk_size - INTEGER
+#   amt of data to send in each packet 
+#   '0' vsftpd picks 'sensible'
+#   default: 0
+{% endif %}
+trans_chunk_size={{ vsftp_trans_chunk_size | default('0') }}
+
+{% if vsftp_show_comments %}
+# tcp_wrappers - BOOLEAN
+#   allows for tcp_wrappers control - keep off
+#   default: NO
+{% endif %}
+tcp_wrappers={{ vsftp_tcp_wrappers  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+#========
+# PORT - port method
+#========
+
+# connect_from_port_20 - BOOLEAN
+#   controls PORT style data connections use port 20 (ftp-data)
+#   default: NO (enabled in default config file)
+{% endif %}
+connect_from_port_20={{ CHANGEME  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# ftp_data_port - INTEGER
+#   if connect_from_port_20 YES, port for PORT style conns originate
+#   default: 20
+{% endif %}
+ftp_data_port={{ vsftp_ftp_data_port | default('20') }}
+
+{% if vsftp_show_comments %}
+# connect_timeout - INTEGER
+#   timeout in secs for remote client to respond to PORT style data connection
+#   default: 60
+{% endif %}
+connect_timeout={{ vsftp_connect_timeout | default('60') }}
+
+{% if vsftp_show_comments %}
+#========
+# PASV - passive
+#========
+
+# pasv_address - STRING
+#   override IP address vsftpd will advertise in response to PASV cmd. 
+#   specify IP unless 'pasv_addr_resolve' is enabled then can be hostname
+#   default: (none - the address is taken from the incoming connected socket)
+{% endif %}
+pasv_address={{ vsftp_pasv_address | default('') }}
+
+{% if vsftp_show_comments %}
+# pasv_min_port - INTEGER
+#   lowest port for PASV style data conns
+#   default: 0 (any ephemeral port)
+{% endif %}
+pasv_min_port={{ vsftp_pasv_min_port | default('0') }}
+
+{% if vsftp_show_comments %}
+# pasv_max_port - INTEGER
+#   highest port for PASV style data conns
+#   default: 0 (any ephemeral port)
+{% endif %}
+pasv_max_port={{ vsftp_pasv_max_port | default('0') }}
+
+{% if vsftp_show_comments %}
+# accept_timeout - INTEGER
+#   timeout in sec for a remote client to establish connection with a PASV style data connection
+#   default: 60
+{% endif %}
+accept_timeout={{ vsftp_accept_timeout | default('60') }}
+
+{% if vsftp_show_comments %}
+#=============================
+# SSL Settings
+#=============================
+
+# ssl_enable - BOOLEAN
+#   enable support for SSL conns on control (login) and data
+#   client needs SSL support too - suggest to keep off
+#   default: NO
+{% endif %}
+ssl_enable={{ vsftp_ssl_enable  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# ssl_request_cert - BOOLEAN
+#   request, not require, SSL cert on incoming conns
+#   default: NO
+{% endif %}
+ssl_request_cert={{ vsftp_ssl_request_cert  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# require_ssl_reuse - BOOLEAN
+#   all SSL data conns req SSL session reuse
+#   might break some clients
+#   default: YES
+{% endif %}
+require_ssl_reuse={{ vsftp_require_ssl_reuse  | default(true) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# implicit_ssl - BOOLEAN
+#   force SSL on all connections (FTPS)
+#   default: NO
+{% endif %}
+implicit_ssl={{ vsftp_implicit_ssl  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# force_local_data_ssl - BOOLEAN
+#   all non-anon forced to SSL to send and receive data on data connections
+#   only if only if ssl_enable: YES
+{% endif %}
+force_local_data_ssl={{ vsftp_force_local_data_ssl  | default(true) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# force_local_logins_ssl - BOOLEAN
+#   all non-anon forced to SSL to send the password
+#   only if only if ssl_enable: YES
+{% endif %}
+force_local_logins_ssl={{ vsftp_force_local_logins_ssl  | default(true) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# force_anon_logins_ssl - BOOLEAN
+#   all anon forced to SSL to send the password
+#   only if only if ssl_enable: YES
+#   default: NO
+{% endif %}
+force_anon_logins_ssl={{ vsftp_force_anon_logins_ssl  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# force_anon_data_ssl - BOOLEAN
+#   all anon forced to SSL to send and receive data on data connections
+#   only if only if ssl_enable: YES
+#   default: NO
+{% endif %}
+force_anon_data_ssl={{ vsftp_force_anon_data_ssl  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# require_cert - BOOLEAN
+#   all SSL client conns req'd to present client cert. degree of validation - validate_cert
+#   default: NO
+{% endif %}
+require_cert={{ vsftp_require_cert  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# validate_cert - BOOLEAN
+#   all SSL client certificates received must validate OK. 
+#   Self-signed certs do not constitute OK validation
+#   default: NO
+{% endif %}
+validate_cert={{ vsftp_validate_cert  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# ssl_sslv2 - BOOLEAN
+#   permit SSLv2 (deprecated).  TLSv1 preferred
+#   only if ssl_enable={{ CHANGEME  | default(true) | bool | ternary('YES', 'NO') }}
+#   default: NO
+{% endif %}
+ssl_sslv2={{ vsftp_ssl_sslv2  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# ssl_sslv3 - BOOLEAN
+#   permit SSLv3 (deprecated).  TLSv1 preferred
+#   default: NO
+{% endif %}
+ssl_sslv3={{ vsftp_ssl_sslv3  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# ssl_tlsv1 - BOOLEAN
+#   permit TLSv1
+#   default: YES
+{% endif %}
+ssl_tlsv1={{ vsftp_ssl_tlsv1  | default(true) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# strict_ssl_read_eof - BOOLEAN
+#   SSL data ULs req term by SSL not an EOF - can break some clients
+#   required to prevent premature termination with TCP FIN
+#   default: NO
+{% endif %}
+strict_ssl_read_eof={{ vsftp_strict_ssl_read_eof  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# strict_ssl_write_shutdown - BOOLEAN
+#   SSL data DLs req term by SSL not an EOF
+#   default: NO
+{% endif %}
+strict_ssl_write_shutdown={{ vsftp_strict_ssl_write_shutdown  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# ca_certs_file - STRING {path}
+#   location of CA certs from for validating client
+#   default: (none)
+{% endif %}
+ca_certs_file={{ vsftp_ca_certs_file | default('') }}
+
+{% if vsftp_show_comments %}
+# rsa_cert_file - STRING {path}
+#   location of RSA certs for SSL encryption
+#   default: /usr/share/ssl/certs/vsftpd.pem 
+{% endif %}
+rsa_cert_file={{ vsftp_rsa_cert_file | default('/usr/share/ssl/certs/vsftpd.pem ') }}
+
+{% if vsftp_show_comments %}
+# rsa_private_key_file -  - STRING {path}
+#   location of RSA priv key for SSL encryption
+#   if not set, priv key expected in same file as cert
+#   default: (none)
+{% endif %}
+rsa_private_key_file={{ vsftp_rsa_private_key_file | default('') }}
+
+{% if vsftp_show_comments %}
+# dsa_cert_file - STRING {path}
+#   location of DSA cert for SSL encryption
+#   default (none - an RSA certificate suffices)
+{% endif %}
+dsa_cert_file={{ vsftp_dsa_cert_file | default('') }}
+
+{% if vsftp_show_comments %}
+# dsa_private_key_file - STRING {path}
+#   location of DSA private key for SSL encryption.  
+#   priv key expected in same file as cert
+#   defaiult: (none)
+{% endif %}
+dsa_private_key_file={{ vsftp_dsa_private_key_file | default('') }}
+
+{% if vsftp_show_comments %}
+# ssl_ciphers - STRING
+#   SSL ciphers allowed by vsftpd. 
+#   see ciphers man page. 
+#   default: DES-CBC3-SHA
+{% endif %}
+ssl_ciphers={{ vsftp_ssl_ciphers | default('DES-CBC3-SHA') }}
+
+{% if vsftp_show_comments %}
+# debug_ssl - BOOLEAN
+#   OpenSSL conn diag dumped into vsftpd log
+#   default: NO
+{% endif %}
+debug_ssl={{ vsftp_debug_ssl  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+#=============================
+# User Experience Settings
+#=============================
+
+#========
+# Login Banner
+#========
+
+# ftpd_banner - STRING {text}
+#   sting options allows override greeting banner when conn first comes in
+#   default: (none - default vsftpd banner is displayed) 
+{% endif %}
+ftpd_banner={{ vsftp_ftpd_banner | default('') }}
+
+{% if vsftp_show_comments %}
+# banner_file - STRING {path}
+#   file containing text to display when conn'ing
+#   overrides banner provided by 'ftpd_banner'
+#   default: (none)
+{% endif %}
+banner_file={{ vsftp_banner_file | default('') }}
+
+{% if vsftp_show_comments %}
+#========
+# ASCII Settings
+#========
+
+# ascii_download_enable - BOOLEAN
+#   ASCII mode data xfers honored for DLs
+#   default: NO
+{% endif %}
+ascii_download_enable={{ vsftp_ascii_download_enable  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# ascii_upload_enable - BOOLEAN
+#   ASCII mode data xfers honored for ULs
+#   default: NO
+{% endif %}
+ascii_upload_enable={{ vsftp_ascii_upload_enable  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+#========
+# Directory Settings
+#========
+
+# dirlist_enable
+#   allow dir listing commands
+#   default: YES
+{% endif %}
+dirlist_enable={{ vsftp_dirlist_enable  | default(true) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# dirmessage_enable - BOOLEAN
+#   users shown message when entering new dir.  
+#   by default, scans for .message file in current/new directory
+#   default: NO (enabled in default config file)
+{% endif %}
+dirmessage_enable={{ vsftp_dirmessage_enable  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# force_dot_files - BOOLEAN
+#   show all listing without need for '-a'
+#   default: NO
+{% endif %}
+force_dot_files={{ vsftp_force_dot_files  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# ls_recurse_enable - BOOLEAN
+#   allow recurvise listing with 'ls -R'
+#   default: NO
+{% endif %}
+ls_recurse_enable={{ vsftp_ls_recurse_enable  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# text_userdb_names - BOOLEAN
+#   'ls' shows user and group name
+#   slows performance
+#   default: NO
+{% endif %}
+text_userdb_names={{ vsftp_text_userdb_names  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# tilde_user_enable - BOOLEAN
+#   tilde paths will try to be resolve
+#   ~user only resolve if /etc/passwd within _current_ chroot jail
+#   default: NO
+{% endif %}
+tilde_user_enable={{ vsftp_tilde_user_enable  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# file_open_mode - STRING {POSIX 4 digit octal}
+#   perms of UL files
+#   umask applied to this value
+#   default: 0666
+{% endif %}
+file_open_mode={{ vsftp_file_open_mode | default('0666') }}
+
+{% if vsftp_show_comments %}
+# lock_upload_files - BOOLEAN
+#   ULs proceed with write lock; DLs w/ shared read lock.  
+#   WARN can be used to starve writer
+#   default: NO
+{% endif %}
+lock_upload_files={{ vsftp_lock_upload_files  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# deny_file - STRING {regex}
+#   pattern of files/dirs should NOT be accessible at all
+#   File system perms better option...
+#   default: (none)
+{% endif %}
+deny_file={{ vsftp_deny_file | default('') }}
+
+{% if vsftp_show_comments %}
+# hide_file - STRING {regex}
+#   pattern for files/dir should be hidden 
+#   still accessible unless in deny_file
+#   default: (none)
+{% endif %}
+hide_file={{ vsftp_hide_file | default('') }}
+
+{% if vsftp_show_comments %}
+# use_localtime - BOOLEAN
+#   display dir in local time zone - also affects MDTM FTP cmd
+#   default: NO (GMT)
+{% endif %}
+use_localtime={{ vsftp_use_localtime  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# message_file - STRING {file name}
+#   if dirmessage_enable enabled, name of file looked for when dir is entered to be displayed to user
+#   default: .message
+{% endif %}
+message_file={{ vsftp_message_file | default('.message') }}
+
+{% if vsftp_show_comments %}
+# hide_ids - BOOLEAN
+#   show user and grp as 'ftp'
+#   default: NO
+{% endif %}
+hide_ids={{ vsftp_hide_ids  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# user_config_dir - STRING {dir path}
+#   set to a dir, when user logs in, vsftpd looks in dir for username named file for settings to apply
+#   can't be affected 'listen_address', 'banner_file', 'max_per_ip', 'max_clients', 'xferlog_file', etc
+#   default: (none)
+{% endif %}
+user_config_dir={{ vsftp_user_config_dir | default('') }}
+
+{% if vsftp_show_comments %}
+#========
+# User Perm Settings
+#========
+
+# write_enable - BOOLEAN
+#   write cmds enabled
+#   STOR, DELE, RNFR, RNTO, MKD, RMD, APPE and SITE
+#   default: NO
+{% endif %}
+write_enable={{ vsftp_write_enable  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# download_enable - BOOLEAN
+#   allow DLs
+#   default: YES
+{% endif %}
+download_enable={{ vsftp_download_enable  | default(true) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# cmds_allowed - STRING {comma separated list}
+#   allowed FTP cmds post login
+#   USER, PASS and QUIT and others are always allowed pre-login
+#   default: (none)
+{% endif %}
+cmds_allowed={{ vsftp_cmds_allowed | default('') }}
+
+{% if vsftp_show_comments %}
+# cmds_denied - STRING {comma separated list}
+#   list of denies FTP cmds
+#   deny takes precedence
+#   default: (none)
+{% endif %}
+cmds_denied={{ vsftp_cmds_denied | default('') }}
+
+{% if vsftp_show_comments %}
+# async_abor_enable - BOOLEAN
+#   enable FTP cmd 'async ABOR'
+#   ill advised clients will use; awkward to handle
+#   some clients will hang on cancelled xfer unless enabled
+#   default: NO
+{% endif %}
+async_abor_enable={{ vsftp_async_abor_enable  | default(false) | bool | ternary('YES', 'NO') }}
+
+
+{% if vsftp_show_comments %}
+#=============================
+# Anonymous User Settings
+#=============================
+
+# anonymous_enable - BOOLEAN
+#   if enabled, both the usernames 'ftp' and 'anonymous' are recognised as anonymous logins
+#   default: YES
+{% endif %}
+anonymous_enable={{ vsftp_anonymous_enable  | default(true) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# allow_anon_ssl - BOOLEAN
+#   allow anon user to use SSL conns
+#   only if ssl_enable={{ CHANGEME  | default(true) | bool | ternary('YES', 'NO') }}
+#   default: NO
+{% endif %}
+allow_anon_ssl={{ vsftp_allow_anon_ssl  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# secure_email_list_enable - BOOLEAN
+#   specified list of e-mail passwords for anonymous logins to be accepted
+#   default: NO
+{% endif %}
+secure_email_list_enable={{ vsftp_secure_email_list_enable  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# email_password_file - STRING {path}
+#   alternate file for 'secure_email_list_enable' setting
+#   default: /etc/vsftpd/email_passwords
+{% endif %}
+email_password_file={{ vsftp_email_password_file | default('/etc/vsftpd/email_passwords') }}
+
+{% if vsftp_show_comments %}
+# deny_email_enable - BOOLEAN
+#   deny list of emails
+#   file /etc/vsftpd/banned_emails or specified with banned_email_file
+{% endif %}
+deny_email_enable={{ vsftp_deny_email_enable  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# banned_email_file - STRING {file path}
+#   if deny_email_enable enabled, file path of anon emails not permitted
+#   default: /etc/vsftpd/banned_emails
+{% endif %}
+banned_email_file={{ vsftp_banned_email_file | default('/etc/vsftpd/banned_emails') }}
+
+{% if vsftp_show_comments %}
+# no_anon_password - BOOLEAN
+#   vsftpd doesn't ask anon password; straight login
+#   default: NO
+{% endif %}
+no_anon_password={{ vsftp_no_anon_password  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# anon_root - STRING {dir}
+#   dir to drop anon users to
+#   failure is silently ignored
+#   default: (none)
+{% endif %}
+anon_root={{ vsftp_anon_root | default('') }}
+
+{% if vsftp_show_comments %}
+# ftp_username - STRING {username}
+#   user used for handling anon FTP. 
+#   home dir is root dir of anon FTP area
+#   default: ftp
+{% endif %}
+ftp_username={{ vsftp_ftp_username | default('') }}
+
+{% if vsftp_show_comments %}
+# check_shell - BOOLEAN
+#   check /etc/shells for valid user shell for local logins
+#   only affects non-PAM builds of vsftpd
+#   default: YES
+{% endif %}
+check_shell={{ vsftp_check_shell  | default(true) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# anon_max_rate - INTEGER
+#   max data xfer rate in bytes/sec for anon clients
+#   default: 0 (unlimited)
+{% endif %}
+anon_max_rate={{ vsftp_anon_max_rate | default('0') }}
+
+{% if vsftp_show_comments %}
+#========
+# Upload Settings
+#========
+
+# anon_upload_enable - BOOLEAN
+#   allow anon to UL - required for virt users to UL
+#   only if write_enable={{ CHANGEME | default('YES and ftp user has write perms to parent') }}
+#   default: NO
+{% endif %}
+anon_upload_enable={{ vsftp_anon_upload_enable  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# chown_uploads - BOOLEAN
+#   all anon ULs will be chownd to 'chown_username'
+#   default: NO
+{% endif %}
+chown_uploads={{ vsftp_chown_uploads  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# chown_username - STRING {username}
+#   if chown_uploads set, user who is given ownership of anon UL files
+#   default: root
+{% endif %}
+chown_username={{ vsftp_chown_username | default('root') }}
+
+{% if vsftp_show_comments %}
+# anon_umask - INTEGER {POSIX}
+#   umask for anon user file creation (prefix with 0 for octal)
+#   default: 077
+{% endif %}
+anon_umask={{ vsftp_anon_umask | default('077') }}
+
+{% if vsftp_show_comments %}
+# chown_upload_mode - INTEGER {POSIX}
+#   file mode to force for chowned anon ULs 
+#   default" 0600
+{% endif %}
+chown_upload_mode={{ vsftp_chown_upload_mode | default('0600') }}
+
+{% if vsftp_show_comments %}
+# anon_mkdir_write_enable - BOOLEAN
+#   allow anon to create new dirs
+#   only if write_enable={{ CHANGEME | default('YES and ftp user has write perms to parent') }}
+#   default: NO
+{% endif %}
+anon_mkdir_write_enable={{ vsftp_anon_mkdir_write_enable  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# anon_other_write_enable - BOOLEAN
+#   allow anon user to delete and rename
+#   default: NO
+{% endif %}
+anon_other_write_enable={{ vsftp_anon_other_write_enable  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+#========
+# Download Settings
+#========
+
+# anon_world_readable_only - BOOLEAN
+#   anon user only allowed to DL files which are world read
+#   default: YES
+{% endif %}
+anon_world_readable_only={{ vsftp_anon_world_readable_only  | default(true) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+#=============================
+# Local User Settings
+#=============================
+
+# local_enable - BOOLEAN
+#   allow normal users in /etc/passwd (or PAM) to login
+#   must be enabled to non-anon login to work
+#   default: NO
+{% endif %}
+local_enable={{ vsftp_local_enable  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# userlist_enable - BOOLEAN
+#   if YES, users in 'userlist_file' denied
+#   default: NO
+{% endif %}
+userlist_enable={{ vsftp_userlist_enable  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# userlist_deny - BOOLEAN
+#   if userlist_enable YES and this is NO, users denied unless in userlist_file
+#   default: YES
+{% endif %}
+userlist_deny={{ vsftp_userlist_deny  | default(true) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# userlist_file - STRING {path}
+#   if userlist_enable enabled, file path containing names
+#   dfault: /etc/vsftpd/user_list
+{% endif %}
+userlist_file={{ vsftp_userlist_file | default('/etc/vsftpd/user_list') }}
+
+{% if vsftp_show_comments %}
+# chroot_list_enable - BOOLEAN
+#   chown local users specified in /etc/vsftpd/chroot_list or 'chroot_list_file'
+#   if chroot_local_user is YES, reverses and doesn't chroot given users
+#   default: NO
+{% endif %}
+chroot_list_enable={{ vsftp_chroot_list_enable  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# chroot_local_user - BOOLEAN
+#   place local users in chroot jail into home dir
+#   security implications.....if users have shell or upload perms. use with caution
+#   default: NO
+{% endif %}
+chroot_local_user={{ vsftp_chroot_local_user  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# chroot_list_file - STRING {file path}
+#   if chroot_list_enable enabled, file with list of local users which will be chroot'd in their home dirs
+#   if chroot_local_user enabled, becomes users NOT in chroot
+#   default: /etc/vsftpd/vsftpd.chroot_list
+{% endif %}
+chroot_list_file={{ vsftp_chroot_list_file | default('/etc/vsftpd/vsftpd.chroot_list') }}
+
+{% if vsftp_show_comments %}
+# passwd_chroot_enable - BOOLEAN
+#   works with chroot_local_user 
+#   user jails derive from home dir string in /etc/passwd
+#   default: NO
+{% endif %}
+passwd_chroot_enable={{ vsftp_passwd_chroot_enable  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# chmod_enable - BOOLEAN
+#   for local users, anon never can
+#   default: YES
+{% endif %}
+chmod_enable={{ vsftp_chmod_enable  | default(true) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# local_max_rate - INTEGER
+#   max xfer in bytes/sec for local auth users
+#   default: 0 (unlimited)
+{% endif %}
+local_max_rate={{ vsftp_local_max_rate | default('0') }}
+
+{% if vsftp_show_comments %}
+# local_umask - INTEGER {POSIX}
+#   umask for local user file creation (prefix with 0 for octal)
+#   default: 077
+{% endif %}
+local_umask={{ vsftp_local_umask | default('077') }}
+
+{% if vsftp_show_comments %}
+# local_root - STRING {dir path}
+#   dir to put local users into.  fails silently
+#   default: (none)
+{% endif %}
+local_root={{ vsftp_local_root | default('') }}
+
+{% if vsftp_show_comments %}
+# guest_enable - BOOLEAN
+#   all non-anon classed as 'guest' and remapped to user in guest_username
+#   default: NO
+{% endif %}
+guest_enable={{ vsftp_guest_enable  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# guest_username - STRING {username}
+#   username of guest user mapped to. 
+#   default: ftp
+{% endif %}
+guest_username={{ vsftp_guest_username | default('') }}
+
+
+{% if vsftp_show_comments %}
+#=============================
+# Virtual User Settings
+#=============================
+
+# virtual_use_local_privs - BOOLEAN
+#   virtual users have same privileges as local users
+#   default v users same as anon
+#   default: NO
+{% endif %}
+virtual_use_local_privs={{ vsftp_virtual_use_local_privs  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# user_sub_token - STRING {dir}
+#   useful for virt users - gen home dir for virt user.  
+#   if set to'$USER' and home dir of real user specified via guest_username is /home/virtual/$USER
+#   default: (none)
+{% endif %}
+user_sub_token={{ vsftp_user_sub_token | default('') }}
+
+{% if vsftp_show_comments %}
+#=============================
+# Log Settings
+#=============================
+
+# dual_log_enable - BOOLEAN
+#   log to /var/log/xferlog and /var/log/vsftpd.log
+#   former is a wu-ftpd style transfer log, parseable by standard tools
+#   latter is vsftpd's own style log.
+#   default: NO
+{% endif %}
+dual_log_enable={{ vsftp_dual_log_enable  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# xferlog_enable - BOOLEAN
+#   logs maintained for UL and DL. normally /var/log/vsftpd.log, change with vsftpd_log_file
+#   default: NO (enabled in default config file)
+{% endif %}
+xferlog_enable={{ vsftp_xferlog_enable  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# xferlog_std_format - BOOLEAN
+#   transfer log file in standard xferlog format (like wu-ftpd). 
+#   useful for xfer stat generators, default format more readable. 
+#   log file set by xferlog_file
+#   default: NO
+{% endif %}
+xferlog_std_format={{ vsftp_xferlog_std_format  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# xferlog_file - STRING {dfile path}
+#   if (dual_log_enable set) OR (if xferlog_enable and xferlog_std_format is set), 
+#      file to write wu-ftpd style transfer
+#   default: /var/log/xferlog
+{% endif %}
+xferlog_file={{ vsftp_xferlog_file | default('/var/log/xferlog') }}
+
+{% if vsftp_show_comments %}
+# if xferlog_enable set and NOT xferlog_std_format, name of file to write vsftpd style logs to
+#  Alternatively, if dual_log_enable set, write to this file.
+#  if syslog_enable set, not written to, send to syslog
+{% endif %}
+vsftpd_log_file={{ vsftp_vsftpd_log_file | default('/var/log/vsftpd.log') }}
+
+{% if vsftp_show_comments %}
+# log_ftp_protocol - BOOLEAN
+#   all FTP reqs and resp logged; provided xferlog_std_format is not enabled
+#   default: NO
+{% endif %}
+log_ftp_protocol={{ vsftp_log_ftp_protocol  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# syslog_enable - BOOLEAN
+#   log output for /var/log/vsftpd.log geos to syslog as FTPD facility
+#   default: NO
+{% endif %}
+syslog_enable={{ vsftp_syslog_enable  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# delay_failed_login - INTEGER
+#   num of sec to pause before reporting failed login
+#   default: 1
+{% endif %}
+delay_failed_login={{ vsftp_delay_failed_login | default('1') }}
+
+{% if vsftp_show_comments %}
+# userlist_log - BOOLEAN
+#   if userlist_enable is activated, every login denial based on the user list will be logged
+#   default: NO
+{% endif %}
+{{ '#' if not vsftp_userlist_enable else '' }}userlist_log={{ vsftp_userlist_log  | default(false) | bool | ternary('YES', 'NO') }}
+
+{% if vsftp_show_comments %}
+# no_log_lock - BOOLEAN
+#   prevent vsftpd locking log files
+#   only use on Solaris and Veritas
+#   default: NO
+{% endif %}
+no_log_lock={{ vsftp_no_log_lock  | default(false) | bool | ternary('YES', 'NO') }}
+
+#==EOF=====EOF=====EOF=====EOF=====EOF=====EOF=====EOF=======
+

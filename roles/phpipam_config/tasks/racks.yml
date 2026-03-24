@@ -1,0 +1,67 @@
+---
+
+- name: phpipam_config racks - Manage racks
+  when: phpipam_config_racks | length > 0
+  block:
+
+    - name: phpipam_config racks - Query existing racks
+      ansible.builtin.uri:
+        url: "{{ phpipam_config_url }}/api/{{ phpipam_config_app_id }}/tools/racks/"
+        method: GET
+        headers:
+          token: "{{ _phpipam_token }}"
+        status_code: [200, 404]
+      register: _phpipam_racks_query
+      changed_when: false
+
+    - name: phpipam_config racks - Build existing rack map
+      ansible.builtin.set_fact:
+        _phpipam_rack_map: >-
+          {{ (_phpipam_racks_query.json.data | default([]))
+             | items2dict(key_name='name', value_name='id') }}
+
+    - name: phpipam_config racks - Create racks
+      ansible.builtin.uri:
+        url: "{{ phpipam_config_url }}/api/{{ phpipam_config_app_id }}/tools/racks/"
+        method: POST
+        headers:
+          token: "{{ _phpipam_token }}"
+        body_format: json
+        body:
+          name: "{{ item.name }}"
+          size: "{{ item.size | default(42) }}"
+          location_id: "{{ _phpipam_location_map[item.location] | default(omit) }}"
+          description: "{{ item.description | default('') }}"
+        status_code: 201
+      loop: "{{ phpipam_config_racks }}"
+      when:
+        - item.state | default('present') == 'present'
+        - item.name not in _phpipam_rack_map
+
+    - name: phpipam_config racks - Delete racks
+      ansible.builtin.uri:
+        url: "{{ phpipam_config_url }}/api/{{ phpipam_config_app_id }}/tools/racks/{{ _phpipam_rack_map[item.name] }}/"
+        method: DELETE
+        headers:
+          token: "{{ _phpipam_token }}"
+        status_code: 200
+      loop: "{{ phpipam_config_racks }}"
+      when:
+        - item.state | default('present') == 'absent'
+        - item.name in _phpipam_rack_map
+
+    - name: phpipam_config racks - Refresh rack map
+      ansible.builtin.uri:
+        url: "{{ phpipam_config_url }}/api/{{ phpipam_config_app_id }}/tools/racks/"
+        method: GET
+        headers:
+          token: "{{ _phpipam_token }}"
+        status_code: [200, 404]
+      register: _phpipam_racks_query
+      changed_when: false
+
+    - name: phpipam_config racks - Store refreshed rack map
+      ansible.builtin.set_fact:
+        _phpipam_rack_map: >-
+          {{ (_phpipam_racks_query.json.data | default([]))
+             | items2dict(key_name='name', value_name='id') }}

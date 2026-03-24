@@ -1,0 +1,68 @@
+---
+
+- name: phpipam_config nameservers - Manage nameservers
+  when: phpipam_config_nameservers | length > 0
+  block:
+
+    - name: phpipam_config nameservers - Query existing nameservers
+      ansible.builtin.uri:
+        url: "{{ phpipam_config_url }}/api/{{ phpipam_config_app_id }}/tools/nameservers/"
+        method: GET
+        headers:
+          token: "{{ _phpipam_token }}"
+        status_code: [200, 404]
+      register: _phpipam_ns_query
+      changed_when: false
+
+    - name: phpipam_config nameservers - Build existing nameserver map
+      ansible.builtin.set_fact:
+        _phpipam_ns_map: >-
+          {{ (_phpipam_ns_query.json.data | default([]))
+             | items2dict(key_name='name', value_name='id') }}
+
+    - name: phpipam_config nameservers - Create nameservers
+      ansible.builtin.uri:
+        url: "{{ phpipam_config_url }}/api/{{ phpipam_config_app_id }}/tools/nameservers/"
+        method: POST
+        headers:
+          token: "{{ _phpipam_token }}"
+        body_format: json
+        body:
+          name: "{{ item.name }}"
+          namesrv1: "{{ item.nameserver1 }}"
+          namesrv2: "{{ item.nameserver2 | default('') }}"
+          namesrv3: "{{ item.nameserver3 | default('') }}"
+          description: "{{ item.description | default('') }}"
+        status_code: 201
+      loop: "{{ phpipam_config_nameservers }}"
+      when:
+        - item.state | default('present') == 'present'
+        - item.name not in _phpipam_ns_map
+
+    - name: phpipam_config nameservers - Delete nameservers
+      ansible.builtin.uri:
+        url: "{{ phpipam_config_url }}/api/{{ phpipam_config_app_id }}/tools/nameservers/{{ _phpipam_ns_map[item.name] }}/"
+        method: DELETE
+        headers:
+          token: "{{ _phpipam_token }}"
+        status_code: 200
+      loop: "{{ phpipam_config_nameservers }}"
+      when:
+        - item.state | default('present') == 'absent'
+        - item.name in _phpipam_ns_map
+
+    - name: phpipam_config nameservers - Refresh nameserver map
+      ansible.builtin.uri:
+        url: "{{ phpipam_config_url }}/api/{{ phpipam_config_app_id }}/tools/nameservers/"
+        method: GET
+        headers:
+          token: "{{ _phpipam_token }}"
+        status_code: [200, 404]
+      register: _phpipam_ns_query
+      changed_when: false
+
+    - name: phpipam_config nameservers - Store refreshed nameserver map
+      ansible.builtin.set_fact:
+        _phpipam_ns_map: >-
+          {{ (_phpipam_ns_query.json.data | default([]))
+             | items2dict(key_name='name', value_name='id') }}

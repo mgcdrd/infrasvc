@@ -1,0 +1,66 @@
+---
+
+- name: phpipam_config locations - Manage locations
+  when: phpipam_config_locations | length > 0
+  block:
+
+    - name: phpipam_config locations - Query existing locations
+      ansible.builtin.uri:
+        url: "{{ phpipam_config_url }}/api/{{ phpipam_config_app_id }}/tools/locations/"
+        method: GET
+        headers:
+          token: "{{ _phpipam_token }}"
+        status_code: [200, 404]
+      register: _phpipam_locations_query
+      changed_when: false
+
+    - name: phpipam_config locations - Build existing location map
+      ansible.builtin.set_fact:
+        _phpipam_location_map: >-
+          {{ (_phpipam_locations_query.json.data | default([]))
+             | items2dict(key_name='name', value_name='id') }}
+
+    - name: phpipam_config locations - Create locations
+      ansible.builtin.uri:
+        url: "{{ phpipam_config_url }}/api/{{ phpipam_config_app_id }}/tools/locations/"
+        method: POST
+        headers:
+          token: "{{ _phpipam_token }}"
+        body_format: json
+        body:
+          name: "{{ item.name }}"
+          description: "{{ item.description | default('') }}"
+          address: "{{ item.address | default('') }}"
+        status_code: 201
+      loop: "{{ phpipam_config_locations }}"
+      when:
+        - item.state | default('present') == 'present'
+        - item.name not in _phpipam_location_map
+
+    - name: phpipam_config locations - Delete locations
+      ansible.builtin.uri:
+        url: "{{ phpipam_config_url }}/api/{{ phpipam_config_app_id }}/tools/locations/{{ _phpipam_location_map[item.name] }}/"
+        method: DELETE
+        headers:
+          token: "{{ _phpipam_token }}"
+        status_code: 200
+      loop: "{{ phpipam_config_locations }}"
+      when:
+        - item.state | default('present') == 'absent'
+        - item.name in _phpipam_location_map
+
+    - name: phpipam_config locations - Refresh location map
+      ansible.builtin.uri:
+        url: "{{ phpipam_config_url }}/api/{{ phpipam_config_app_id }}/tools/locations/"
+        method: GET
+        headers:
+          token: "{{ _phpipam_token }}"
+        status_code: [200, 404]
+      register: _phpipam_locations_query
+      changed_when: false
+
+    - name: phpipam_config locations - Store refreshed location map
+      ansible.builtin.set_fact:
+        _phpipam_location_map: >-
+          {{ (_phpipam_locations_query.json.data | default([]))
+             | items2dict(key_name='name', value_name='id') }}

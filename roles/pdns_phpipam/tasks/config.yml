@@ -1,0 +1,98 @@
+---
+
+# =====================
+# docker-compose
+
+- name: pdns_phpipam config - Template docker-compose.yaml
+  ansible.builtin.template:
+    src: docker-compose.yaml.j2
+    dest: "{{ pdns_phpipam_runtime_dir }}/docker-compose.yaml"
+    mode: '0644'
+    owner: root
+    group: root
+
+# =====================
+# MariaDB init scripts — only read by MariaDB on first container start
+
+- name: pdns_phpipam config - Template MariaDB init scripts
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ pdns_phpipam_mariadb_dir }}/init/{{ item.dest }}"
+    mode: '0644'
+    owner: root
+    group: root
+  loop:
+    - { src: mariadb/init/01-createdb-users.sql.j2, dest: 01-createdb-users.sql }
+    - { src: mariadb/init/02-powerdns-schema.sql.j2, dest: 02-powerdns-schema.sql }
+    - { src: mariadb/init/03-phpipam-schema.sql.j2, dest: 03-phpipam-schema.sql }
+    - { src: mariadb/init/04-customize.sql.j2,       dest: 04-customize.sql }
+
+# =====================
+# PowerDNS Auth
+
+- name: pdns_phpipam config - Template Auth server configs
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ pdns_phpipam_auth_dir }}/{{ item.dest }}"
+    mode: '0640'
+    owner: '953'
+    group: '953'
+  loop:
+    - { src: pdns_auth/pdns.conf.j2,       dest: pdns.conf }
+    - { src: pdns_auth/pdns.d/_api.conf.j2, dest: pdns.d/_api.conf }
+  notify: restart auth
+
+# =====================
+# PowerDNS Recursor
+
+- name: pdns_phpipam config - Template Recursor configs
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ pdns_phpipam_recu_dir }}/{{ item.dest }}"
+    mode: '0640'
+    owner: '953'
+    group: '953'
+  loop:
+    - { src: pdns_recu/recursor.yml.j2,          dest: recursor.yml }
+    - { src: pdns_recu/recursor.d/_api.yml.j2,   dest: recursor.d/_api.yml }
+  notify: restart recursor
+
+# =====================
+# DNSDist
+
+- name: pdns_phpipam config - Template DNSDist configs
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ pdns_phpipam_dist_dir }}/{{ item.dest }}"
+    mode: '0640'
+    owner: '953'
+    group: '953'
+  loop:
+    - { src: pdns_dist/dnsdist.yml.j2,         dest: dnsdist.yml }
+    - { src: pdns_dist/conf.d/_api.conf.j2,    dest: conf.d/_api.conf }
+  notify: restart dnsdist
+
+# =====================
+# Apache SSL config (optional — only when pdns_phpipam_ssl_enabled)
+
+- name: pdns_phpipam config - Template nginx SSL config
+  ansible.builtin.template:
+    src: nginx/phpipam.conf.j2
+    dest: "{{ pdns_phpipam_ssl_dir }}/phpipam.conf"
+    mode: '0644'
+    owner: root
+    group: root
+  notify: restart nginx
+  when: pdns_phpipam_ssl_enabled
+
+# =====================
+# DNSDist
+
+- name: pdns_phpipam config - Copy DNSDist resolver Lua module (static)
+  ansible.builtin.copy:
+    src: pdns_dist/dnsdist-resolver.lua
+    dest: "{{ pdns_phpipam_dist_dir }}/dnsdist-resolver.lua"
+    mode: '0640'
+    owner: '953'
+    group: '953'
+  notify: restart dnsdist

@@ -1,0 +1,19 @@
+---
+
+- hosts: vip_cluster
+  gather_facts: true
+  become: true
+  roles:
+    - mgcdrd.infrasvc.keepalived
+  vars:
+    keepalived_vip_for:
+      - webproxy
+
+    keepalived_vrrp_instances:
+      - name: VI_WEB
+        master_node: node1.example.com
+        backup_nodes:
+          - node2.example.com
+        virt_ip:
+          - 192.168.1.100/24
+        smtp_alert: false

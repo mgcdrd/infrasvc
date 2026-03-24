@@ -1,0 +1,6 @@
+{% if nginx_shared_configs.logging is defined and nginx_shared_configs.logging | length > 0 %}
+{% set logs = nginx_shared_configs.logging %}
+{% for single in logs %}
+{{ single.type }} {{ single.path }} {{ single.format -}};
+{% endfor %}
+{% endif %}

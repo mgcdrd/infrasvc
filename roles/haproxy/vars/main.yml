@@ -1,0 +1,113 @@
+---
+
+# This file is reference documentation only — all variables are commented out.
+# Set values in your play vars or group_vars. Defaults live in defaults/main.yml.
+
+
+# haproxy_global:
+#   logs:
+#   - target:   /dev/log       # required
+#     format:   rfc5424        # optional
+#     facility: local0         # optional
+#     level:    notice         # optional — emerg|alert|crit|err|warning|notice|info|debug
+#     minlevel: debug          # optional
+#
+#   chroot: /var/lib/haproxy   # optional; if set, user and group are required
+#   user:   haproxy            # optional; required when chroot is set
+#   group:  haproxy            # optional; defaults to user value
+#
+#   stats:
+#     socket:
+#     - path:  /run/haproxy/admin.sock
+#       mode:  660
+#       level: admin
+#       extra: ''              # optional extra args on the stats socket line
+#     raw:
+#     - timeout 30s
+#
+#   ssl:
+#     dh-param-file: /etc/haproxy/dhparam.pem
+#     default-bind-ciphers: ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384
+#
+#   additional:
+#   - hard-stop-after 30s
+
+
+# haproxy_defaults:
+# - block_name: tcp
+#   mode: tcp
+#   log:  global
+#   options:
+#   - tcplog
+#   - dontlognull
+#   timeout_connect: 5000
+#   timeout_client:  50000
+#   timeout_server:  50000
+#   email_alert:                 # all fields required if section is present
+#     mailers:    mail_relays
+#     from:       haproxy@example.com
+#     to:         admin@example.com
+#     level:      crit
+#     myhostname: lb1.example.com
+
+
+# haproxy_mailers:
+# - block_name: mail_relays
+#   relays:
+#   - name:       mail1
+#     connection: smtp1.example.com:25
+#   - name:       mail2
+#     connection: smtp2.example.com:25
+
+
+# haproxy_resolvers:
+# - block_name: internal
+#   nameservers:
+#   - name:       prim
+#     connection: 192.168.1.53:53
+#   parse_resolve_conf: false
+#   holds:
+#     valid:   10s
+#     other:   30s
+#     refused: 30s
+#     nx:      30s
+#     timeout: 30s
+#   retries: 3
+#   timeouts:
+#     retry:   1s
+#     resolve: 1s
+
+
+# haproxy_frontends:
+# - block_name: ftp
+#   mode: tcp
+#   options:
+#   - tcplog
+#   log: global
+#   binds:
+#   - 10.0.1.10:21           name ftp-control
+#   - 10.0.1.10:50000-50010  name ftp-data
+#   default_backend: ftp_servers
+#   acls: []         # optional, each element becomes: acl <element>
+#   additional: []   # optional, raw lines added verbatim
+#   use_backend: []  # optional, each element becomes: use_backend <element>
+
+
+# haproxy_backends:
+# - block_name: ftp_servers
+#   mode: tcp
+#   balance: leastconn
+#   servers:
+#   - server1  10.0.1.101:21 init-addr none
+#   - server2  10.0.1.102:21 init-addr none
+#   server-template: []   # optional, each element becomes: server-template <element>
+#   additional:
+#   - stick-table type ip size 100k expire 1h
+#   - stick on src
+
+
+# haproxy_additional:
+# - src:   /etc/ssl/certs/bundle.pem
+#   dest:  /var/lib/haproxy/ssl/bundle.pem
+#   owner: haproxy
+#   group: haproxy

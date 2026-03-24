@@ -1,0 +1,109 @@
+---
+
+# This file is reference documentation only — all variables are commented out.
+# Set values in your play vars or group_vars. Defaults live in defaults/main.yml.
+
+
+# nginx_process_user: nginx
+# nginx_process_group: nginx
+# nginx_worker_processes: auto
+# nginx_pid_file: /run/nginx.pid
+# nginx_load_dynamic_mods: false   # adds include /usr/share/nginx/modules/*.conf
+
+
+# nginx_events:
+#   conns: 1024
+
+
+# nginx_http_block:
+#   log_formats:
+#     main: |
+#       '$remote_addr - $remote_user [$time_local] "$request" '
+#       '$status $body_bytes_sent "$http_referer" '
+#       '"$http_user_agent" "$http_x_forwarded_for"'
+#     reverse_proxy: |
+#       '$remote_addr - $remote_user [$time_local] '
+#       '"$request" $status $body_bytes_sent '
+#       'host="$host" upstream="$upstream_addr" '
+#       'request_time=$request_time'
+#
+#   log_lines:
+#   - type:   access_log
+#     file:   /var/log/nginx/access.log
+#     format: main
+#   - type:   error_log
+#     file:   /var/log/nginx/error.log
+#     format: info
+#
+#   add_opts:
+#     sendfile:              on
+#     tcp_nopush:            on
+#     tcp_nodelay:           on
+#     keepalive_timeout:     65
+#     types_hash_max_size:   4096
+#     client_max_body_size:  10240M
+#     server_tokens:         off
+#
+#   add_mime: true
+#
+#   caching:
+#     enabled:        true
+#     cache_path:     /var/cache/nginx
+#     levels:         "1:2"
+#     keys_zone:      "STATIC:10m"
+#     inactive:       24h
+#     max_size:       10g
+#     user_temp_path: off
+#
+#   client_body_buffer_size:     1k
+#   client_header_buffer_size:   8k
+#   large_client_header_buffers: "4 8k"
+#
+#   gzip_comp_lvl: 6
+#   gzip_buffers:  "4 8k"
+#
+#   block_badagents: true        # adds $blockedagent map block to http section
+#
+#   force_80_redirect: true      # adds a catch-all server block redirecting HTTP→HTTPS
+#   hsts_max_age: 63072000
+#
+#   default_443:
+#     enabled:         true       # adds a default_server block on 443 for unmatched traffic
+#     ssl_cert_path:   /etc/nginx/ssl/ssl-dummy.crt
+#     ssl_key_path:    /etc/nginx/ssl/ssl-dummy.key
+#     redir_302_uri:   https://example.com   # where to redirect unmatched HTTPS traffic
+
+
+# nginx_shared_configs:
+#   ssl:
+#     ssl_protos:    "TLSv1.2 TLSv1.3"
+#     ssl_ciphers:   "ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384"
+#     ssl_cert_path: /etc/nginx/ssl/server.crt
+#     ssl_key_path:  /etc/nginx/ssl/server.key
+#     ssl_dhparam:   /etc/nginx/ssl/dhparam.pem
+#   logging:
+#   - type:   access_log
+#     path:   /var/log/nginx/shared_access.log
+#     format: main
+
+
+# nginx_server_blocks:
+# - name: mysite                 # becomes /etc/nginx/conf.d/mysite.conf
+#   server_names:
+#   - mysite.example.com
+#   - www.mysite.example.com
+#   exclude_proxy_files: false   # if true, skips the proxies include line
+#   proxy_files_path: /etc/nginx/conf.d/mysite.proxies
+
+
+# nginx_ssl_enable: false
+# nginx_ssl_scripting:           # passed to the ssl_scripting role if nginx_ssl_enable is true
+#   base_dir: /etc/nginx/ssl
+#   def_bits: 2048
+#   def_md:   sha256
+#   country:  US
+#   state:    XX
+#   locale:   YY
+#   org:      Example Corp
+#   orgunit:  IT
+#   email:    admin@example.com

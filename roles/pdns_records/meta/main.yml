@@ -1,0 +1,29 @@
+galaxy_info:
+  author: mgcdrd
+  description: >-
+    Manages PowerDNS Authoritative zones and DNS records via the PowerDNS HTTP API.
+    Supports creating and removing zones, and creating, updating, or removing any
+    record type with full idempotency.
+
+  license: GPL-3.0-or-later
+
+  min_ansible_version: "2.14"
+
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+        - trixie
+    - name: EL
+      versions:
+        - '9'
+        - '10'
+
+  galaxy_tags:
+    - mgcdrd
+    - dns
+    - powerdns
+    - records
+    - zones
+
+#dependencies: []

@@ -1,0 +1,203 @@
+#=================================
+#
+#  Global Settings
+#
+{% set glob = haproxy_global | default({}) %}
+global
+{% for log in glob.logs | default([]) %}
+  {%- set parts = ['log ' ~ log.target] %}
+  {%- if log.get('format')  %}    {%- set _ = parts.append('format ' ~ log.format) %}{% endif %}
+  {%- if log.get('facility') %}    {%- set _ = parts.append(log.facility) %}{% endif %}
+  {%- if log.get('level')    %}    {%- set _ = parts.append(log.level) %}{% endif %}
+  {%- if log.get('minlevel') %}    {%- set _ = parts.append('minlevel ' ~ log.minlevel) %}{% endif %}
+  {{ parts | join(' ') }}
+{% endfor %}
+
+{% if glob.chroot is defined  %}
+  chroot {{ glob.chroot }}
+  user   {{ glob.user }}
+  group  {{ glob.group | default(glob.user) }}
+{% else %}
+{% if glob.user is defined %}
+  user   {{ glob.user }}
+  group  {{ glob.group | default(glob.user) }}
+{% endif %}
+{% endif %}
+
+{% for stat in glob.stats.socket | default([]) %}
+  stats socket {{ stat.path }} mode {{ stat.mode }} level {{ stat.level }} {{ 'stat.extra' if stat.extra is defined }}
+{% endfor %}
+{% for stat in glob.stats.raw | default([]) %}
+  stats {{ stat }}
+{% endfor %}
+
+  #dns-accept-family {{ glob['dns-accept-family'] | default('auto') }}
+
+{% if glob.ssl is defined %}
+{% for k, v in glob.ssl.items() %}
+  ssl-{{ k }} {{ v }}
+{% endfor %}
+{% endif %}
+
+{% for item in glob.additional | default([]) %}
+  {{ item }}
+{% endfor %}
+
+#=================================
+#
+#  Default Settings
+#
+{% set defs = haproxy_defaults | default([]) %}
+{% for single_def in defs %}
+defaults {{ single_def.block_name }}
+  mode {{ single_def.mode }}
+  log  {{ single_def.log }}
+{% for opts in single_def.options | default([]) %}
+  option {{ opts }}
+{% endfor %}
+{% if single_def.timeout_connect is defined %}
+  timeout connect {{ single_def.timeout_connect }}
+{% endif %}
+{% if single_def.timeout_client is defined %}
+  timeout client {{ single_def.timeout_client }}
+{% endif %}
+{% if single_def.timeout_server is defined %}
+  timeout server {{ single_def.timeout_server }}
+{% endif %}
+
+{% set alert = single_def.email_alert | default(None) %}
+{% if alert is not none %}
+  {% set required_fields = ['mailers','from','to','level','myhostname'] %}
+  {% for field in required_fields %}
+    {% if alert[field] is not defined or alert[field] == '' %}
+      {% set _ = raise('email_alert field "' ~ field ~ '" is required when email_alert is defined') %}
+    {% endif %}
+  {% endfor %}
+  email-alert mailers {{ alert.mailers }}
+  email-alert from {{ alert.from }}
+  email-alert to {{ alert.to }}
+  email-alert level {{ alert.level }}
+  email-alert myhostname {{ alert.myhostname }}
+{% else %}
+{# no email-alert set #}
+{% endif %}
+{# this is the endfor for the defaults block #}
+
+{% endfor %}
+
+{% if haproxy_mailers is defined and haproxy_mailers | length > 0 %}
+#=================================
+#
+#  Mailers Settings
+#
+{% set mailer_list = haproxy_mailers %}
+{% for single in mailer_list %}
+mailers {{ single.block_name }}
+{% for relay in single.relays %}
+  mailer {{ relay.name }} {{ relay.connection }}
+{% endfor %}
+
+{# this is the endfor for the single mailer block#}
+{% endfor %}
+{# this is the endif for the mailers block #}
+{% endif %}
+
+{% if haproxy_resolvers is defined and haproxy_resolvers | length > 0 %}
+#=================================
+#
+#  Resolver Settings
+#
+{% set res_list = haproxy_resolvers %}
+{% for single in res_list %}
+resolvers {{ single.block_name }}
+{% for ns in single.nameservers %}
+  nameserver {{ ns.name }} {{ ns.connection }}
+{% endfor %}
+
+{% if single.max_size is defined %}
+  accepted_payload_size {{ single.max_size }}
+{% endif %}
+
+{{ 'parse-resolve-conf' if single.parse_resolve_conf else '' }}
+
+{% for k, v in (single.holds | default({})).items() %}
+  {{ 'hold {:<8} {:>4}'.format(k, v) if v is not none else '' }}
+{% endfor %}
+
+{% if single.retries is defined %}
+  {{ 'resolve_retries {}'.format(single.retries) if single.retries is not none else '' }}
+{% endif %}
+
+{% for k, v in (single.timeouts | default({})).items() %}
+  {{ 'timeout {:<10} {:>4s}'.format(k, v) if v is not none else '' }}
+{% endfor %}
+
+{# this is the endfor for the single resolver block #}
+{% endfor %}
+{# this is the endif for the resolvers block #}
+{% endif %}
+
+#=================================
+#
+#  Frontend Settings
+#
+{% set fe_list = haproxy_frontends | default([]) %}
+{% for single in fe_list %}
+frontend {{ single.block_name }}
+{% if single.mode is defined %}
+  mode {{ single.mode }}
+{% endif %}
+{% for item in single.options | default([]) %}
+  option {{ item }}
+{% endfor %}
+{% if single.log is defined %}
+  log {{ single.log }}
+{% endif %}
+
+{% for item in single.binds | default([]) %}
+  bind {{ item }}
+{% endfor %}
+
+{% for item in (single.acls | default([])) %}
+  acl {{ item }}
+{% endfor %}
+
+{% for item in (single.additional | default([])) %}
+  {{ item }}
+{% endfor %}
+
+{% for item in (single.use_backend | default([])) %}
+  use_backend {{ item }}
+{% endfor %}
+  default_backend {{ single.default_backend }}
+
+{# this is the endfor for the single frontend block #}
+{% endfor %}
+
+#=================================
+#
+#  Backend Settings
+#
+{% set be_list = haproxy_backends | default([]) %}
+{% for single in be_list %}
+backend {{ single.block_name }}
+{% if single.mode is defined %}
+  mode {{ single.mode }}
+{% endif %}
+{% if single.balance is defined %}
+  balance {{ single.balance }}
+{% endif %}
+
+{% for item in (single.additional | default([])) %}
+  {{ item }}
+{% endfor %}
+
+{% for item in (single.servers | default([])) %}
+  server {{ item }}
+{% endfor %}
+{% for item in (single['server-template'] | default([])) %}
+ server-template {{ item }}
+{% endfor %}
+
+{# this is the endfor for the single backend block #}
+{% endfor %}

@@ -1,0 +1,19 @@
+server {
+  listen 443 ssl http2;
+  listen [::]:443 ssl http2;
+  server_name {{ tpl.server_names | join(' ') }};
+
+  # include all the shared configs
+  include /etc/nginx/conf.d/shared_configs/*.conf;
+
+  error_log  /var/log/nginx/{{ tpl.name }}.error.log       info;
+
+{% if tpl.exclude_proxy_files is defined and not tpl.exclude_proxy_files %}
+  # to keep it a bit cleaner, put the proxies into their own file
+  include {{ tpl.proxy_files_path | default('/etc/nginx/conf.d/{}.proxies'.format(tpl.name)) }};
+{% endif %}
+
+#end of the server section
+}
+
+

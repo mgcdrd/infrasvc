@@ -1,0 +1,94 @@
+{% if keepalived.global_defs %}
+global_defs {
+  {% for key, value in keepalived.global_defs.items() %}
+  {{ key }} {{ value }}
+  {% endfor %}
+}
+{% endif %}
+
+#=======================================
+# vrrp_scripts
+{% set ns = namespace(preset_data=[]) %}
+{% for preset_vars in keepalived_vip_for %}
+{% set ns.preset_data = ns.preset_data + vars['keepalived_preset_' ~ preset_vars].vrrp_scripts %}
+{% endfor %}
+{% set complete_vrrp_scripts = ns.preset_data + (keepalived.vrrp_scripts if keepalived.vrrp_scripts is defined else []) %}
+{% for item in complete_vrrp_scripts %}
+vrrp_script {{ item.name }} {
+  script {{ item.script }}
+  interval {{ item.interval | default(vrrp_script_interval) }}
+  weight {{ -(keepalived_priority_max | int) }}
+  {% if item.user is defined or item.group is defined -%}
+  user {{ item.user | default(vrrp_script_user) }} {{ item.group | default(vrrp_script_group) }}
+  {% endif -%}
+  fall {{ item.fall | default(vrrp_script_fall) }}
+  rise {{ item.rise | default(vrrp_script_rise) }}
+  {{ 'init_fail' if item.init_fail is defined and item.init_fail == true }}  
+}
+{% endfor %}
+
+
+#=======================================
+# vrrp_instances
+{% for item in keepalived.vrrp_instances -%}
+{% if inventory_hostname in item.master_node or item.backup_nodes | select('search', inventory_hostname) | list | length > 0 %}
+vrrp_instance {{ item.name }} {
+  state {{ 'MASTER' if inventory_hostname == item.master_node else 'BACKUP'  }}
+  interface {{ item.interface | default(ansible_default_ipv4.interface) }}
+  {% set def_vrid = ( (item.virt_ip[0].split('.')[-2] | int) + (item.virt_ip[0].split('.')[-1] | int) ) % 100  -%}
+  virtual_router_id {{ item.virtual_router_id | default(def_vrid) }}
+{% set all_nodes = [item.master_node] + item.backup_nodes %}
+  {%- set n = all_nodes | length %}
+  {%- set e = all_nodes.index(inventory_hostname) %}
+  {%- set node_priority = keepalived_priority_max - ((keepalived_priority_max - keepalived_priority_min ) * e) / (n - 1) %}
+  priority {{ node_priority | round(0, 'floor') | int }}
+  authentication {
+    auth_type PASS
+    auth_pass {{ keepalived_auth_passwd_existingi[item.name] 
+                    | default( (group_names ~ item.master_node | join('-') ~ item.name)
+                    | hash('sha1')
+                    | truncate(8, True, '') 
+                     )
+                }}
+  }
+{% if item.smtp_alert is defined %}
+  smtp_alert
+{% endif %}
+  virtual_ipaddress {
+    {% for single_ip in item.virt_ip -%}
+    {{ single_ip }}
+    {%- endfor %}
+
+  }
+{% set peers = all_nodes | reject("equalto", inventory_hostname) | list %}
+  unicast_peer {
+{% for peer in peers %}
+    {{ hostvars[peer].ansible_default_ipv4.address }}
+{% endfor %}
+  }
+{% set script_ns = namespace(preset_scripts=[]) %}
+{% for preset_vars in keepalived_vip_for %}
+{% set script_ns.preset_scripts = script_ns.preset_scripts + vars['keepalived_preset_' ~ preset_vars].vrrp_scripts %}
+{% endfor %}
+{% set complete_track_set = script_ns.preset_scripts + (item.vrrp_scripts if item.vrrp_scripts is defined else []) %}
+{% for item in complete_track_set %}
+  track_script {
+    {{ item.name  }}
+  }
+{% endfor %}  
+{% if item.notify_master is defined -%}
+  notify_master "{{ item.notify_master }}"
+{%- endif -%}
+{% if item.notify_backup is defined -%}
+  notify_backup "{{ item.notify_backup }}"
+{%- endif -%}
+{% if item.notify_fault is defined -%}
+  notify_fault "{{ item.notify_fault }}"
+{%- endif -%}
+
+
+}
+{% endif  %}
+
+{% endfor %}
+
