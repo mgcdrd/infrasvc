@@ -1,0 +1,10 @@
+---
+
+# Set true to include inline comments in the generated /etc/vsftpd.conf.
+# Useful when reviewing the config on the target host.
+vsftp_show_comments: false
+
+# If YES, vsftpd starts in listen mode (daemonizes).
+# Set to NO when managed by systemd (the normal case).
+# default: YES
+vsftp_background: "NO"

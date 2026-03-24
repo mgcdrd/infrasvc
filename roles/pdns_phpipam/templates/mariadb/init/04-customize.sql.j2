@@ -1,0 +1,72 @@
+-- see: https://github.com/phpipam/phpipam/issues/3516
+ALTER TABLE ${MARIADB_PDNS_DB}.records ADD column change_date int(4);
+
+UPDATE ipam.settings SET
+  siteTitle = '{{ pdns_phpipam_ipam_site_title }}',
+  siteAdminName = '{{ pdns_phpipam_ipam_site_admname }}',
+  siteAdminMail = '{{ pdns_phpipam_ipam_site_admemail }}',
+  siteDomain = '{{ pdns_phpipam_ipam_site_domain }}',
+  siteURL = '{{ pdns_phpipam_ipam_site_url }}',
+  enablePowerDNS = 1,
+  api = {{ pdns_phpipam_ipam_init_api_enable | int }},
+  powerDNS = CONCAT('{"host":"mariadb",',
+                     '"name":"{{ pdns_phpipam_mariadb_pdns_db }}",',
+                     '"username":"{{ pdns_phpipam_mariadb_pdns_user }}",',
+                     '"password":"{{ _pdns_mariadb_pdns_passwd }}",',
+                     '"port":"3306",',
+                     '"autoserial":"No",',
+                     '"ns":null,',
+                     '"hostmaster":null,',
+                     '"def_ptr_domain":null,',
+                     '"refresh":null,',
+                     '"retry":null,',
+                     '"expire":null,',
+                     '"nxdomain_ttl":null,',
+                     '"ttl":null}'
+  ),
+  passwordPolicy = CONCAT('{"minLength":"{{ pdns_phpipam_ipam_site_passwd_minlength }}",',
+                           '"maxLength":"{{ pdns_phpipam_ipam_site_passwd_maxlength }}",',
+                           '"minNumbers":"{{ pdns_phpipam_ipam_site_passwd_minnumbers }}",',
+                           '"minLetters":"{{ pdns_phpipam_ipam_site_passwd_minletters }}",',
+                           '"minLowerCase":"{{ pdns_phpipam_ipam_site_passwd_minlowcase }}",',
+                           '"minUpperCase":"{{ pdns_phpipam_ipam_site_passwd_minupcase }}",',
+                           '"minSymbols":"{{ pdns_phpipam_ipam_site_passwd_minsymbols }}",',
+                           '"maxSymbols":"{{ pdns_phpipam_ipam_site_passwd_maxsymbols }}",',
+                           '"allowedSymbols":"{{pdns_phpipam_ipam_site_passwd_allowedsymbols }}"}'
+  )
+  WHERE id = 1;
+
+{% if pdns_phpipam_ipam_ldap_create %}
+INSERT INTO ipam.userAuthMethod SET
+  (type, params, protected, description)
+  VALUES
+  ("LDAP", 
+    CONCAT('{"domain_controllers":"{{ pdns_phpipam_ipam_ldap_dcs }}",',
+          '"base_dn":"{{ pdns_phpipam_ipam_ldap_basedn }}",',
+          '"users_base_dn":"{{ pdns_phpipam_ipam_ldap_userdn | default() }}",',
+          '"uid_attr":"{{ pdns_phpipam_ipam_ldap_uidattr }}",',
+          '"ldap_security":"{{ pdns_phpipam_ipam_ldap_security }}",',
+          '"ad_port":"{{ pdns_phpipam_ipam_ldap_port }}",',
+          '"adminUsername":"{{ pdns_phpipam_ipam_ldap_bindname | default()  }}",',
+          '"adminPassword":"{{ pdns_phpipam_ipam_ldap_bindpw | default()  }}"}'
+    ),
+    "No",
+    "{{ pdns_phpipam_ipam_ldap_descr }}"
+  );
+{% endif %}
+
+{% if pdns_phpipam_ipam_init_api_enable %}
+INSERT INTO ipam.api
+  (app_id, app_code, app_permissions, app_comment, app_security, app_lock, app_lock_wait, app_nest_custom_fields)
+  VALUES
+  (
+    "ansible",
+    "{{ _pdns_ipam_api_string | default('') }}",
+    3,
+    "used for ansible",
+    "user",
+    0,
+    0,
+    0
+  );
+{% endif %}

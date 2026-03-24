@@ -1,0 +1,10 @@
+---
+
+- hosts: all
+  gather_facts: true
+  become: true
+  roles:
+    - mgcdrd.infrasvc.pdns_phpipam
+  vars:
+    pdns_phpipam_domain: "lab.example.com"
+    pdns_phpipam_domain_ip_rev: "10.100.10"

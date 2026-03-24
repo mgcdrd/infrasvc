@@ -1,0 +1,122 @@
+---
+
+# ---- DIRECTORY LAYOUT ----
+
+pdns_phpipam_base_dir: /srv
+pdns_phpipam_runtime_dir: "{{ pdns_phpipam_base_dir }}/phpipam"
+
+pdns_phpipam_mariadb_dir: "{{ pdns_phpipam_runtime_dir }}/mariadb"
+pdns_phpipam_auth_dir: "{{ pdns_phpipam_runtime_dir }}/pdns_auth"
+pdns_phpipam_recu_dir: "{{ pdns_phpipam_runtime_dir }}/pdns_recursor"
+pdns_phpipam_dist_dir: "{{ pdns_phpipam_runtime_dir }}/pdns_dnsdist"
+
+# ---- DOCKER NETWORK ----
+
+pdns_phpipam_docker_network_name: dns_net
+pdns_phpipam_docker_network_cidr: "10.5.0.0/16"
+pdns_phpipam_docker_network_gateway: "10.5.0.1"
+pdns_phpipam_docker_network_mariadb: "10.5.0.2"
+pdns_phpipam_docker_network_auth: "10.5.0.3"
+pdns_phpipam_docker_network_recu: "10.5.0.4"
+pdns_phpipam_docker_network_dist: "10.5.0.5"
+pdns_phpipam_docker_network_ipam_web: "10.5.0.6"
+pdns_phpipam_docker_network_nginx:    "10.5.0.7"
+
+# ---- DATABASE ----
+
+pdns_phpipam_mariadb_pdns_db: pdns
+pdns_phpipam_mariadb_pdns_user: pdns
+pdns_phpipam_mariadb_ipam_db: ipam
+pdns_phpipam_mariadb_ipam_user: ipam
+
+# ---- DOMAIN ----
+
+pdns_phpipam_domain: "lab.example.com"
+pdns_phpipam_domain_ip_rev: "10.100.10"
+
+# ---- API PORT EXPOSURE ----
+# Set to a host port number to expose each service's HTTP API on the host.
+# Leave as 0 (the default) to keep the port internal to the Docker network.
+# Exposing the auth API is required if you want to run mgcdrd.infrasvc.pdns_records
+# from a host that is not the Docker host itself.
+#
+#   pdns_phpipam_auth_api_port: 8081   # pdns-auth HTTP API  (container: 8081)
+#   pdns_phpipam_recu_api_port: 8082   # pdns-recursor API   (container: 8082)
+#   pdns_phpipam_dist_api_port: 8083   # dnsdist webserver   (container: 8083)
+pdns_phpipam_auth_api_port: 0
+pdns_phpipam_recu_api_port: 0
+pdns_phpipam_dist_api_port: 0
+
+# ---- SSL (nginx frontend) ----
+# Set pdns_phpipam_ssl_enabled: true to add an nginx container that terminates
+# TLS in front of phpipam-web. Requires the acme_sh role (or another means) to
+# have already placed certs at pdns_phpipam_ssl_cert_dir.
+#
+# When enabled:
+#   - port 80 on the host redirects to HTTPS
+#   - port 443 on the host serves the phpIPAM UI over TLS
+#   - phpipam-web no longer exposes ports directly to the host
+#
+pdns_phpipam_ssl_enabled:  false
+pdns_phpipam_ssl_cert_dir: ""      # path to acme_sh cert dir, e.g. /etc/ssl/acme/dns.lab.example.com
+pdns_phpipam_ssl_hostname: ""      # ServerName / TLS SNI — defaults to inventory_hostname
+
+# Directory on the host where the nginx SSL config is written by the role.
+pdns_phpipam_ssl_dir: "{{ pdns_phpipam_runtime_dir }}/nginx"
+
+# ---- CA CERTIFICATES ----
+# Host path to the CA certificate bundle directory to mount into phpipam-web.
+# Leave as "" to auto-detect based on OS family (Debian: /etc/ssl/certs/,
+# Rocky/RHEL: /etc/pki/ca-trust/extracted/pem/).
+pdns_phpipam_ca_certs_dir: ""
+
+# ---- PHPIPAM SITE ----
+
+pdns_phpipam_ipam_site_title: "Acme IPAM"
+pdns_phpipam_ipam_site_admname: "Sysadmin"
+pdns_phpipam_ipam_site_admemail: "admin@{{ pdns_phpipam_domain }}"
+pdns_phpipam_ipam_site_domain: "example.com"
+pdns_phpipam_ipam_site_url: "http://dns.{{ pdns_phpipam_domain }}"
+
+pdns_phpipam_ipam_site_passwd_minlength: 8
+pdns_phpipam_ipam_site_passwd_maxlength: 0
+pdns_phpipam_ipam_site_passwd_minnumbers: 0
+pdns_phpipam_ipam_site_passwd_minletters: 0
+pdns_phpipam_ipam_site_passwd_minlowcase: 0
+pdns_phpipam_ipam_site_passwd_minupcase:  0
+pdns_phpipam_ipam_site_passwd_minsymbols: 0
+pdns_phpipam_ipam_site_passwd_maxsymbols: 0
+pdns_phpipam_ipam_site_passwd_allowedsymbols: "#,_,-,!,[,],=,~,@"
+
+pdns_phpipam_ipam_init_api_enable: true
+pdns_phpipam_ipam_init_api_string: ""
+
+pdns_phpipam_ipam_ldap_create: false
+pdns_phpipam_ipam_ldap_dcs: "ldap1.acme.com;ldap2.acme.com"
+pdns_phpipam_ipam_ldap_basedn: "cn=users,dc=acme,dc=com"
+pdns_phpipam_ipam_ldap_userdn: ""
+pdns_phpipam_ipam_ldap_uidattr: "uid"
+pdns_phpipam_ipam_ldap_security: "ssl"
+pdns_phpipam_ipam_ldap_port: 636
+pdns_phpipam_ipam_ldap_bindname: "uid=serviceaccount,cn=users,dc=acme,dc=com"
+pdns_phpipam_ipam_ldap_bindpw: "basicpassword"
+pdns_phpipam_ipam_ldap_descr: "blank"
+
+
+
+# ---- SECRETS ----
+# Leave as "" to have the role auto-generate and persist to pdns_phpipam_secrets_dir.
+# Set explicitly (preferably via Ansible Vault) to supply your own values.
+
+pdns_phpipam_mariadb_root_passwd: ""
+pdns_phpipam_mariadb_pdns_passwd: ""
+pdns_phpipam_mariadb_ipam_passwd: ""
+pdns_phpipam_auth_api_key: ""
+pdns_phpipam_auth_web_passwd: ""
+pdns_phpipam_recursor_api_key: ""
+pdns_phpipam_dnsdist_api_key: ""
+pdns_phpipam_dnsdist_web_passwd: ""
+
+# Directory on the Ansible controller where auto-generated secrets are persisted.
+# Secrets are written once and reused on subsequent runs — add this path to .gitignore.
+pdns_phpipam_secrets_dir: "{{ playbook_dir }}/secrets/{{ inventory_hostname }}/pdns_phpipam"

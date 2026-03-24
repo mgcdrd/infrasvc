@@ -1,0 +1,55 @@
+---
+
+- name: phpipam_config devices - Manage devices
+  when: phpipam_config_devices | length > 0
+  block:
+
+    - name: phpipam_config devices - Query existing devices
+      ansible.builtin.uri:
+        url: "{{ phpipam_config_url }}/api/{{ phpipam_config_app_id }}/devices/"
+        method: GET
+        headers:
+          token: "{{ _phpipam_token }}"
+        status_code: [200, 404]
+      register: _phpipam_devices_query
+      changed_when: false
+
+    - name: phpipam_config devices - Build existing device map
+      ansible.builtin.set_fact:
+        _phpipam_device_map: >-
+          {{ (_phpipam_devices_query.json.data | default([]))
+             | items2dict(key_name='hostname', value_name='id') }}
+
+    - name: phpipam_config devices - Create devices
+      ansible.builtin.uri:
+        url: "{{ phpipam_config_url }}/api/{{ phpipam_config_app_id }}/devices/"
+        method: POST
+        headers:
+          token: "{{ _phpipam_token }}"
+        body_format: json
+        body:
+          hostname: "{{ item.hostname }}"
+          ip: "{{ item.ip | default('') }}"
+          description: "{{ item.description | default('') }}"
+          type: "{{ item.type | default(omit) }}"
+          location: "{{ _phpipam_location_map[item.location] | default(omit) }}"
+          rack: "{{ _phpipam_rack_map[item.rack] | default(omit) }}"
+          rack_start: "{{ item.rack_start | default(omit) }}"
+          rack_size: "{{ item.rack_size | default(omit) }}"
+        status_code: 201
+      loop: "{{ phpipam_config_devices }}"
+      when:
+        - item.state | default('present') == 'present'
+        - item.hostname not in _phpipam_device_map
+
+    - name: phpipam_config devices - Delete devices
+      ansible.builtin.uri:
+        url: "{{ phpipam_config_url }}/api/{{ phpipam_config_app_id }}/devices/{{ _phpipam_device_map[item.hostname] }}/"
+        method: DELETE
+        headers:
+          token: "{{ _phpipam_token }}"
+        status_code: 200
+      loop: "{{ phpipam_config_devices }}"
+      when:
+        - item.state | default('present') == 'absent'
+        - item.hostname in _phpipam_device_map

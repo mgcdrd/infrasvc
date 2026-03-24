@@ -1,0 +1,14 @@
+---
+galaxy_info:
+  author: mgcdrd
+  description: ROLE_DESCRIPTION
+  role_name: ROLE_NAME
+
+  license: GPL-3.0-or-later
+
+  min_ansible_version: '2.14'
+
+  galaxy_tags:
+    - mgcdrd
+
+collections: []

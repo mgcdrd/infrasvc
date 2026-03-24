@@ -1,0 +1,25 @@
+---
+
+- name: restart auth
+  ansible.builtin.command:
+    cmd: docker compose restart auth
+    chdir: "{{ pdns_phpipam_runtime_dir }}"
+  changed_when: true
+
+- name: restart recursor
+  ansible.builtin.command:
+    cmd: docker compose restart recursor
+    chdir: "{{ pdns_phpipam_runtime_dir }}"
+  changed_when: true
+
+- name: restart dnsdist
+  ansible.builtin.command:
+    cmd: docker compose restart dnsdist
+    chdir: "{{ pdns_phpipam_runtime_dir }}"
+  changed_when: true
+
+- name: restart nginx
+  ansible.builtin.command:
+    cmd: docker compose restart nginx
+    chdir: "{{ pdns_phpipam_runtime_dir }}"
+  changed_when: true

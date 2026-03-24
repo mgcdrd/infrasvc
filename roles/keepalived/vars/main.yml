@@ -1,0 +1,72 @@
+---
+
+# This file is reference documentation only — all variables are commented out.
+# Set values in your play vars or group_vars. Defaults live in defaults/main.yml.
+
+
+# keepalived_global_defs:
+#   vrrp_startup_delay: 5
+#   notification_email:
+#   - admin@example.com
+#   notification_email_from: keepalived@example.com
+#   smtp_server: smtp.example.com
+#   smtp_connect_timeout: 10
+#   lvs_id: my_lvs
+
+
+# keepalived_vip_for:
+# - webproxy        # activates keepalived_preset_webproxy
+# - ftp             # activates keepalived_preset_ftp
+# - kubernetes      # activates keepalived_preset_kubernetes
+# - dockerswarm     # activates keepalived_preset_dockerswarm
+
+
+# keepalived_vrrp_scripts:   # extra scripts beyond what presets define
+# - name:      my_custom_check
+#   script:    /etc/keepalived/check_custom.sh
+#   template:  custom/check_custom.sh.j2   # relative to role templates/
+#   interval:  3
+#   user:      root
+#   group:     root
+#   weight:    26
+#   fall:      3
+#   rise:      4
+#   init_fail: true
+
+
+# keepalived_vrrp_instances:
+# - name: VI_1
+#
+#   # Which node is MASTER; all others become BACKUP
+#   master_node: node1.example.com
+#
+#   # All BACKUP nodes (do not include master here)
+#   backup_nodes:
+#   - node2.example.com
+#   - node3.example.com
+#
+#   # Optional — defaults to ansible_default_ipv4.interface
+#   interface: eth0
+#
+#   # Optional — auto-derived from VIP if omitted
+#   virtual_router_id: 51
+#
+#   # Optional — set to true to include smtp_alert (requires global_defs smtp config)
+#   smtp_alert: true
+#
+#   # Virtual IP(s) for this instance
+#   virt_ip:
+#   - 192.168.1.100/24
+#
+#   # Track scripts for this instance.
+#   # If omitted, all scripts from keepalived_vip_for presets are tracked.
+#   vrrp_scripts:
+#     presets:            # override which presets to use for this instance
+#     - webproxy
+#     extra:              # additional scripts to track beyond presets
+#     - my_custom_check
+#
+#   # Optional transition scripts
+#   notify_master: /etc/keepalived/notify_master.sh
+#   notify_backup: /etc/keepalived/notify_backup.sh
+#   notify_fault:  /etc/keepalived/notify_fault.sh

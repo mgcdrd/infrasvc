@@ -1,0 +1,13 @@
+---
+
+# Delegate per-record work to manage_record.yml so each iteration can use
+# set_fact freely without the values bleeding between loop items.
+# include_tasks (dynamic) is required here — import_tasks does not support
+# a loop variable in the same way.
+- name: pdns_records records - Manage records
+  ansible.builtin.include_tasks: roles/pdns_records/tasks/manage_record.yml
+  loop: "{{ pdns_records }}"
+  loop_control:
+    loop_var: _pdns_record
+    label: "{{ _pdns_record.type | upper }} {{ _pdns_record.name }}"
+  when: pdns_records | length > 0

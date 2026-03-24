@@ -1,0 +1,123 @@
+services:
+  mariadb:
+    image: mariadb:12-noble
+    environment:
+      MYSQL_ROOT_PASSWORD: {{ _pdns_mariadb_root_passwd }}
+    volumes:
+      - {{ pdns_phpipam_mariadb_dir }}/data:/var/lib/mysql
+      - {{ pdns_phpipam_mariadb_dir }}/init:/docker-entrypoint-initdb.d
+    networks:
+      {{ pdns_phpipam_docker_network_name }}:
+        ipv4_address: {{ pdns_phpipam_docker_network_mariadb }}
+    restart: unless-stopped
+
+  auth:
+    image: powerdns/pdns-auth-50:latest
+    environment:
+      PDNS_AUTH_API_KEY: {{ _pdns_auth_api_key }}
+    volumes:
+      - {{ pdns_phpipam_auth_dir }}:/etc/powerdns
+    tmpfs:
+      - /var/run/pdns:size=1m,mode=750,uid=953,gid=953
+    networks:
+      {{ pdns_phpipam_docker_network_name }}:
+        ipv4_address: {{ pdns_phpipam_docker_network_auth }}
+{% if pdns_phpipam_auth_api_port | int > 0 %}
+    ports:
+      - "{{ pdns_phpipam_auth_api_port }}:8081"
+{% endif %}
+    depends_on:
+      - mariadb
+    restart: unless-stopped
+
+  recursor:
+    image: powerdns/pdns-recursor-54:latest
+    environment:
+      PDNS_RECURSOR_API_KEY: {{ _pdns_recursor_api_key }}
+    volumes:
+      - {{ pdns_phpipam_recu_dir }}:/etc/powerdns
+    tmpfs:
+      - /var/run/pdns-recursor:size=1m,mode=750,uid=953,gid=953
+    networks:
+      {{ pdns_phpipam_docker_network_name }}:
+        ipv4_address: {{ pdns_phpipam_docker_network_recu }}
+{% if pdns_phpipam_recu_api_port | int > 0 %}
+    ports:
+      - "{{ pdns_phpipam_recu_api_port }}:8082"
+{% endif %}
+    restart: unless-stopped
+
+  dnsdist:
+    image: powerdns/dnsdist-20:latest
+    environment:
+      DNSDIST_API_KEY: {{ _pdns_dnsdist_api_key }}
+    volumes:
+      - {{ pdns_phpipam_dist_dir }}:/etc/dnsdist
+    command: ["-C", "/etc/dnsdist/dnsdist.yml"]
+    networks:
+      {{ pdns_phpipam_docker_network_name }}:
+        ipv4_address: {{ pdns_phpipam_docker_network_dist }}
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+{% if pdns_phpipam_dist_api_port | int > 0 %}
+      - "{{ pdns_phpipam_dist_api_port }}:8083"
+{% endif %}
+    cap_add:
+      - NET_BIND_SERVICE
+    depends_on:
+      - recursor
+      - auth
+    restart: unless-stopped
+
+  phpipam-web:
+    image: phpipam/phpipam-www:latest
+    environment:
+      TZ: US/Central
+      IPAM_DATABASE_HOST: "mariadb"
+      IPAM_DATABASE_NAME: "{{ pdns_phpipam_mariadb_ipam_db }}"
+      IPAM_DATABASE_USER: "{{ pdns_phpipam_mariadb_ipam_user }}"
+      IPAM_DATABASE_PASS: "{{ _pdns_mariadb_ipam_passwd }}"
+      IPAM_DATABASE_WEBHOST: "%"
+      IPAM_DISABLE_INSTALLER: 1
+{% if pdns_phpipam_ssl_enabled %}
+      IPAM_TRUST_X_FORWARDED: "true"
+{% endif %}
+    volumes:
+      - {{ _pdns_ca_certs_dir }}:/usr/local/share/ca-certificates/:ro
+    networks:
+      {{ pdns_phpipam_docker_network_name }}:
+        ipv4_address: {{ pdns_phpipam_docker_network_ipam_web }}
+{% if not pdns_phpipam_ssl_enabled %}
+    ports:
+      - "80:80"
+{% endif %}
+    cap_add:
+      - NET_BIND_SERVICE
+    depends_on:
+      - mariadb
+    restart: unless-stopped
+{% if pdns_phpipam_ssl_enabled %}
+
+  nginx:
+    image: nginx:stable-alpine
+    volumes:
+      - {{ pdns_phpipam_ssl_dir }}/phpipam.conf:/etc/nginx/conf.d/phpipam.conf:ro
+      - {{ pdns_phpipam_ssl_cert_dir }}:/etc/ssl/phpipam:ro
+    networks:
+      {{ pdns_phpipam_docker_network_name }}:
+        ipv4_address: {{ pdns_phpipam_docker_network_nginx }}
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - phpipam-web
+    restart: unless-stopped
+{% endif %}
+
+networks:
+  {{ pdns_phpipam_docker_network_name }}:
+    ipam:
+      config:
+        - subnet: {{ pdns_phpipam_docker_network_cidr }}
+          gateway: {{ pdns_phpipam_docker_network_gateway }}

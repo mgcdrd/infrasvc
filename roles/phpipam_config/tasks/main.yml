@@ -1,0 +1,45 @@
+---
+
+# module_defaults applies validate_certs to every ansible.builtin.uri call
+# in every included task file, so it only needs to be set once here.
+- name: phpipam_config main - Run all tasks
+  block:
+
+    - name: phpipam_config main - Preflight and authentication
+      include_tasks: roles/phpipam_config/tasks/preflight.yml
+
+    # Independent objects — no cross-references, safe to run in any order.
+    - name: phpipam_config main - Manage customers
+      include_tasks: roles/phpipam_config/tasks/customers.yml
+
+    - name: phpipam_config main - Manage sections
+      include_tasks: roles/phpipam_config/tasks/sections.yml
+
+    - name: phpipam_config main - Manage VLANs
+      include_tasks: roles/phpipam_config/tasks/vlans.yml
+
+    - name: phpipam_config main - Manage nameservers
+      include_tasks: roles/phpipam_config/tasks/nameservers.yml
+
+    - name: phpipam_config main - Manage NAT policies
+      include_tasks: roles/phpipam_config/tasks/nat.yml
+
+    - name: phpipam_config main - Manage locations
+      include_tasks: roles/phpipam_config/tasks/locations.yml
+
+    # Dependent objects — must run after their parents above.
+    - name: phpipam_config main - Manage racks
+      include_tasks: roles/phpipam_config/tasks/racks.yml
+
+    - name: phpipam_config main - Manage subnets and address assignments
+      include_tasks: roles/phpipam_config/tasks/subnets.yml
+
+    - name: phpipam_config main - Manage devices
+      include_tasks: roles/phpipam_config/tasks/devices.yml
+
+    - name: phpipam_config main - Manage circuits
+      include_tasks: roles/phpipam_config/tasks/circuits.yml
+
+  module_defaults:
+    ansible.builtin.uri:
+      validate_certs: "{{ phpipam_config_validate_certs }}"

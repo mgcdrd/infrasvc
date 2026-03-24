@@ -1,0 +1,10 @@
+CREATE DATABASE {{ pdns_phpipam_mariadb_pdns_db }};
+CREATE DATABASE {{ pdns_phpipam_mariadb_ipam_db }};
+
+CREATE USER '{{ pdns_phpipam_mariadb_pdns_user }}'@'%' IDENTIFIED BY '{{ _pdns_mariadb_pdns_passwd }}';
+CREATE USER '{{ pdns_phpipam_mariadb_ipam_user }}'@'%' IDENTIFIED BY '{{ _pdns_mariadb_ipam_passwd }}';
+
+GRANT ALL PRIVILEGES ON {{ pdns_phpipam_mariadb_pdns_db }}.* TO '{{ pdns_phpipam_mariadb_pdns_user }}'@'%';
+GRANT ALL PRIVILEGES ON {{ pdns_phpipam_mariadb_ipam_db }}.* TO '{{ pdns_phpipam_mariadb_ipam_user }}'@'%';
+
+FLUSH PRIVILEGES;

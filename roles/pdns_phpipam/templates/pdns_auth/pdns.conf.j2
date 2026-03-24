@@ -1,0 +1,19 @@
+launch=gmysql
+gmysql-host={{ pdns_phpipam_docker_network_mariadb }}
+gmysql-dbname={{ pdns_phpipam_mariadb_pdns_db }}
+gmysql-user={{ pdns_phpipam_mariadb_pdns_user }}
+gmysql-password={{ _pdns_mariadb_pdns_passwd }}
+local-port=53
+log-dns-details=yes
+log-dns-queries=yes
+log-timestamp=yes
+loglevel=4
+
+webserver=yes
+webserver-address=0.0.0.0
+webserver-port=8081
+webserver-allow-from=0.0.0.0/0
+webserver-password={{ _pdns_auth_web_passwd }}
+
+api=yes
+api-key={{ _pdns_auth_api_key }}

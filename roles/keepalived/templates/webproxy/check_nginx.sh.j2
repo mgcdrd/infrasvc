@@ -1,0 +1,19 @@
+#!/bin/bash
+
+# get the full path of nginx binary and exit if it doesn't exist
+NGINX_BIN=$(/usr/bin/which nginx)
+if [ -z "$NGINX_BIN" ]; then
+  exit 1
+fi
+
+# check if nginx is running...
+if ! systemctl is-active nginx.service > /dev/null; then
+  /usr/bin/systemctl restart nginx.service || exit 1
+fi
+
+# check on ports....
+if ! /usr/bin/curl http://localhost 2> /dev/null 1>&2 || ! /usr/bin/curl -k https://localhost 2> /dev/null 1>&2; then
+  exit 1
+fi
+
+exit 0

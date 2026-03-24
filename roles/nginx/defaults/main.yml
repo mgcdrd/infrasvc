@@ -1,0 +1,37 @@
+---
+
+# ---- PROCESS ----
+nginx_process_user: nginx
+# nginx_process_group: nginx   # optional; omit to let nginx use its default
+nginx_worker_processes: auto
+nginx_pid_file: /run/nginx.pid
+nginx_load_dynamic_mods: false
+
+# ---- EVENTS ----
+nginx_events:
+  conns: 1024
+
+# ---- HTTP BLOCK ----
+# Complex structure — see vars/main.yml for the full annotated example.
+nginx_http_block:
+  add_mime: true
+  force_80_redirect: true
+  hsts_max_age: 63072000
+  block_badagents: false
+  gzip_comp_lvl: 6
+  gzip_buffers: "4 8k"
+  client_body_buffer_size: 1k
+  client_header_buffer_size: 8k
+  large_client_header_buffers: "4 8k"
+
+# ---- SHARED CONFIGS ----
+# Variables consumed by templates in shared_configs/*.conf.j2.
+nginx_shared_configs: {}
+
+# ---- SERVER BLOCKS ----
+# List of server block definitions, one conf file per entry.
+nginx_server_blocks: []
+
+# ---- SSL ----
+nginx_ssl_enable: false
+nginx_ssl_scripting: {}

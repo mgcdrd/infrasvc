@@ -1,0 +1,132 @@
+# For more information on configuration, see:
+#   * Official English Documentation: http://nginx.org/en/docs/
+
+user {{ nginx_process_user | default('nginx') }};
+{{ 'group {};'.format(nginx_process_group) if nginx_process_group is defined and nginx_process_group is not none else '' }}
+worker_processes {{ nginx_worker_processes | default('auto') }};
+error_log /var/log/nginx/error.log;
+pid {{ nginx_pid_file | default('/run/nginx.pid') }};
+
+{% if nginx_load_dynamic_mods | default(false) %}
+# Load dynamic modules. See /usr/share/doc/nginx/README.dynamic.
+include /usr/share/nginx/modules/*.conf;
+{% endif %}
+
+events {
+    worker_connections {{ nginx_events.conns | default('1024') }};
+}
+
+http {
+{% if nginx_http_block.log_formats is defined %}
+{% set log_forms = (nginx_http_block.log_formats | default({})) | combine %}
+{% for k, v in log_forms.items() %}
+    log_format {{ k }} {{ v | indent(k | length + 16, first=false) }};
+{% endfor %}
+{% endif %}
+
+{% if nginx_http_block.log_lines is defined %}
+{% for item in (nginx_http_block.log_lines | default([])) %}
+    {{ '{:<10} {:<32} {:>8}'.format(item.type, item.file, item.format) }};
+{% endfor %}
+{% endif %}
+
+{% if nginx_http_block.add_opts is defined %}
+{% for k, v in (nginx_http_block.add_opts | default({})).items() %}
+    {{ '{:<20} {};'.format(k, v) }}
+{% endfor %}
+{% endif %}
+
+{% if nginx_http_block.add_mime is defined and nginx_http_block.add_mime %}
+    include             /etc/nginx/mime.types;
+    default_type        application/octet-stream;
+{% endif %}
+
+
+{% if nginx_http_block.caching.enabled is defined and nginx_http_block.caching.enabled %}
+    # Provide a cache location that NGINX can cache proxied results
+    proxy_cache_path    {{ nginx_http_block.caching.cache_path    | default('/var/cache/nginx') }}
+                        levels={{ nginx_http_block.caching.levels | default('1:2') }}
+                        keys_zone={{ nginx_http_block.caching.keys_zone | default('STATIC:10m') }}
+                        inactive={{ nginx_http_block.caching.inactive   | default('24h') }}
+                        max_size={{ nginx_http_block.caching.max_size   | default('10g') }}
+                        use_temp_path={{ nginx_http_block.caching.user_temp_path | default('off') }};
+{% endif %}
+
+    # HTTP level hardening items
+    client_body_buffer_size     {{ nginx_http_block.client_body_buffer_size     | default('1k')   }};
+    client_header_buffer_size   {{ nginx_http_block.client_header_buffer_size   | default('8k')   }};
+    large_client_header_buffers {{ nginx_http_block.large_client_header_buffers | default('4 8k') }};
+
+
+    ## Enable Gzip
+    gzip  on;
+    gzip_vary on;
+    gzip_proxied any;
+    gzip_http_version 1.1;
+    gzip_comp_level {{ nginx_http_block.gzip_comp_lvl | default('6') }};
+    gzip_buffers    {{ nginx_http_block.gzip_buffers  | default('6') }};
+    gzip_types
+      text/css
+      text/javascript
+      text/xml
+      text/plain
+      text/x-component
+      application/javascript
+      application/json
+      application/xml
+      application/rss+xml
+      font/truetype
+      font/opentype
+      application/vnd.ms-fontobject
+      image/svg+xml;
+
+    gzip_static on;
+    gzip_proxied        expired no-cache no-store private auth;
+
+
+{% if nginx_http_block.block_badagents is defined and nginx_http_block.block_badagents %}
+    #block unnecessary user agents
+    map $http_user_agent $blockedagent {
+      ~*HarvesterBot 0;
+      default     0;
+      ~*malicious 1;
+      ~*bot       1;
+      ~*backdoor  1;
+      ~*crawler   1;
+      ~*bandit    1;
+    }
+{% endif %}
+
+{% if nginx_http_block.force_80_redirect is defined and nginx_http_block.force_80_redirect %}
+    # do port 80 redirect here so don't have to do it on all hosts...
+    server {
+      listen 80 default_server;
+      server_name _;
+
+      add_header Strict-Transport-Security "max-age={{ nginx_http_block.hsts_max_age | default(63072000) }}; includeSubdomains;" always;
+
+      if ($request_method ~ ^(TRACE|TRACK)$) {
+        return 403;
+      }
+
+      return 301 https://$host$request_uri;
+    }
+{% endif %}
+
+    # include all the sites this host will handle
+    include /etc/nginx/conf.d/*.conf;
+
+{% if nginx_http_block.default_443 is defined and nginx_http_block.default_443.enabled is defined and nginx_http_block.default_443.enabled %}
+    # make a default if traffic is improperly routed
+    server {
+       listen 443 ssl default_server;
+
+       ssl_certificate     {{ nginx_http_block.default_443.ssl_cert_path | default('/etc/nginx/ssl/ssl-dummy.crt') }};
+       ssl_certificate_key {{ nginx_http_block.default_443.ssl_key_path  | default('/etc/nginx/ssl/ssl-dummy.key') }};
+
+       location / {
+         return 302 {{ nginx_http_block.default_443.redir_302_uri }};
+       }
+    }
+{% endif %}
+}

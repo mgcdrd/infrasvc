@@ -1,0 +1,5 @@
+---
+
+- name: nginx handlers - reload nginx
+  ansible.builtin.shell:
+    cmd: /usr/sbin/nginx -t && /usr/sbin/nginx -s reload

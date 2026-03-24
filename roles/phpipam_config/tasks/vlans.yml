@@ -1,0 +1,68 @@
+---
+
+- name: phpipam_config vlans - Manage VLANs
+  when: phpipam_config_vlans | length > 0
+  block:
+
+    - name: phpipam_config vlans - Query existing VLANs
+      ansible.builtin.uri:
+        url: "{{ phpipam_config_url }}/api/{{ phpipam_config_app_id }}/vlan/"
+        method: GET
+        headers:
+          token: "{{ _phpipam_token }}"
+        status_code: [200, 404]
+      register: _phpipam_vlans_query
+      changed_when: false
+
+    # Key on name — VLAN names are the human-facing identifier used in subnet vars.
+    - name: phpipam_config vlans - Build existing VLAN map
+      ansible.builtin.set_fact:
+        _phpipam_vlan_map: >-
+          {{ (_phpipam_vlans_query.json.data | default([]))
+             | items2dict(key_name='name', value_name='vlanId') }}
+
+    - name: phpipam_config vlans - Create VLANs
+      ansible.builtin.uri:
+        url: "{{ phpipam_config_url }}/api/{{ phpipam_config_app_id }}/vlan/"
+        method: POST
+        headers:
+          token: "{{ _phpipam_token }}"
+        body_format: json
+        body:
+          name: "{{ item.name }}"
+          number: "{{ item.number }}"
+          description: "{{ item.description | default('') }}"
+          domainId: "{{ _phpipam_l2domain_map[item.l2domain] | default(1) }}"
+        status_code: 201
+      loop: "{{ phpipam_config_vlans }}"
+      when:
+        - item.state | default('present') == 'present'
+        - item.name not in _phpipam_vlan_map
+
+    - name: phpipam_config vlans - Delete VLANs
+      ansible.builtin.uri:
+        url: "{{ phpipam_config_url }}/api/{{ phpipam_config_app_id }}/vlan/{{ _phpipam_vlan_map[item.name] }}/"
+        method: DELETE
+        headers:
+          token: "{{ _phpipam_token }}"
+        status_code: 200
+      loop: "{{ phpipam_config_vlans }}"
+      when:
+        - item.state | default('present') == 'absent'
+        - item.name in _phpipam_vlan_map
+
+    - name: phpipam_config vlans - Refresh VLAN map
+      ansible.builtin.uri:
+        url: "{{ phpipam_config_url }}/api/{{ phpipam_config_app_id }}/vlan/"
+        method: GET
+        headers:
+          token: "{{ _phpipam_token }}"
+        status_code: [200, 404]
+      register: _phpipam_vlans_query
+      changed_when: false
+
+    - name: phpipam_config vlans - Store refreshed VLAN map
+      ansible.builtin.set_fact:
+        _phpipam_vlan_map: >-
+          {{ (_phpipam_vlans_query.json.data | default([]))
+             | items2dict(key_name='name', value_name='vlanId') }}

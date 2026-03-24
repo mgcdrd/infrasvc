@@ -1,0 +1,22 @@
+---
+
+- name: pdns_records preflight - Assert required variables are set
+  ansible.builtin.assert:
+    that:
+      - pdns_records_api_key | length > 0
+      - pdns_records_api_url | length > 0
+    fail_msg: >-
+      pdns_records_api_key and pdns_records_api_url must both be set.
+      pdns_records_api_key should match the API key your PowerDNS auth server
+      was configured with (pdns_phpipam_auth_api_key if using that role).
+
+- name: pdns_records preflight - Verify API connectivity
+  ansible.builtin.uri:
+    url: "{{ pdns_records_api_url }}/api/v1/servers/{{ pdns_records_server_id }}"
+    method: GET
+    headers:
+      X-API-Key: "{{ pdns_records_api_key }}"
+    status_code: 200
+  register: _pdns_server_info
+  changed_when: false
+  failed_when: _pdns_server_info.status != 200

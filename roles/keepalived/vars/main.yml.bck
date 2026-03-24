@@ -1,0 +1,133 @@
+---
+
+
+# This determines the templates that are moved
+keepalived_vip_for: webproxy # 'kubernetes' or 'docker swarm'
+
+
+vrrp_script_interval: 3
+vrrp_script_weight: 26
+vrrp_script_fall: 10
+vrrp_script_rise: 2
+
+keepalived:
+  # global_defs block.  This is completely options, but if included.  
+  # Each sub level is optional, but format is required
+  global_defs:
+    
+    # delay the VRRP advertisements after becoming master
+    vrrp_startup_delay: 5
+    
+    # list of emails to send notifications to
+    #  vrrp_instances need to have 'smtp_alert: true' 
+    notification_email: 
+    - admins@acme.co
+    
+    # email to use as send as, or From
+    notification_email_from: keepalived@$(hostname)
+
+    # SMTP server to send to
+    smtp_server: smtp.acme.co
+    
+    # timeout for SMTP stream processing
+    smtp_connect_timeout: 10
+    
+    # name of the LVS director
+    lvs_id:
+
+  # optional if not pointed to in vrrp_instances.
+  # A list of vrrp_scripts to setup.
+  vrrp_scripts:
+  
+    # name of the vrrp_script, also used in the vrrp_instances
+  - name:
+  
+    # full path to the script
+    script:
+    
+    # optional
+    # interval in seconds, default 3
+    interval:
+    
+    # optional
+    # seconds after script is considered failure
+    timeout:
+    
+    # optional
+    # user the script will be run as, defaults to root
+    user:
+    
+    # optional
+    # group script is ran as, defaults to root
+    # user is required to use this, else will take place of user
+    group:
+    
+    # amount priority changes when pass/fail
+    weight:
+    
+    # how many times success is necessary for KO transition 
+    fall:
+    
+    # how man times failure is necessary for KO transition
+    rise:
+    
+    # assume script initially in failed state
+    init_fail: true
+    
+
+  # A list of vrrp_instances to setup, each element will be used to generate
+  #   a block on each node of the cluster.
+  # 'master_node' denotes which will be marked as MASTER in each
+  #   cluster, all others will be marked as BACKUPs 
+  vrrp_instances:
+  
+    #  will become the name of the vrrp_instance block
+    #    vrrp_instance name {
+  - name: 
+
+    # denotes which becomes the master, all others are backups
+    master_node:
+    
+    # optional 
+    # If a specific interface is necessary on ALL nodes, otherwise
+    #   the default interface will be used 
+    interface: 
+    
+    # optional
+    # This will needs to be unique for all vrrp_instances in the subnet
+    #   If left blank, a simple algorithm will be used
+    virtual_router_id:
+    
+    # optional
+    # If left blank, master will be set to 150, and others will used
+    #   incrementals based on contents in the track_script section
+    priority:
+    
+    # optional
+    # Sets the priority difference between nodes bases on index of common
+    #   inventory group of hosts
+    pri_diff:
+    
+    # optional
+    # If set to 'true', the smtp_alert line will be included
+    smtp_alert: true
+    
+    # List of virtual IPs to include in this vrrp_instance block
+    virt_ip:
+    - 0.0.0.0
+    
+    track_script:
+    - vrrp_script1
+    
+    # optional
+    # Script that will be run to during transition to master state
+    # Will automatically be quoted for simplicity
+    notify_master: 
+      
+    # optional
+    # Script that will be run to during transition to backup state
+    notify_backup:
+      
+    # optional
+    # Script that will be run to during transition to fault state
+    notify_fault:

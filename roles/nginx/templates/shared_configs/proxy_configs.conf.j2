@@ -1,0 +1,44 @@
+# These are hardening options for proxying content.
+
+proxy_http_version 1.1;
+proxy_cache_bypass $http_upgrade;
+proxy_hide_header X-Powered-By;
+
+proxy_set_header Upgrade $http_upgrade;
+proxy_set_header Connection 'upgrade';
+proxy_set_header X-Forwarded-Host $host;
+proxy_set_header X-Forwarded-Server $host;
+proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+proxy_set_header X-Real-IP $remote_addr;
+proxy_set_header Host $host;
+
+## AAP-262
+proxy_read_timeout      300;
+proxy_connect_timeout   300;
+proxy_redirect          off;
+
+add_header X-Content-Type-Options nosniff;
+
+# if the upstream is also giving the HSTS header, remove it and add out own
+proxy_hide_header Strict-Transport-Security;
+add_header Strict-Transport-Security "max-age=3.1536e+07; includeSubDomains";
+add_header X-Frame-Options SAMEORIGIN;
+
+add_header X-XSS-Protection "1; mode=block";
+
+add_header X-Cache-Status $upstream_cache_status;
+proxy_cache STATIC;
+proxy_cache_valid 200 3h;
+proxy_cache_use_stale  error timeout invalid_header updating http_500 http_502 http_503 http_504;
+expires 10800;
+
+# Redirect TRACE and TRACK methods
+if ($request_method ~ ^(TRACE|TRACK)$) {
+  return 403;
+}
+
+# Enable ModSecurity WAF, if need
+#modsecurity on;
+# Load ModSecurity CRS, if need
+#modsecurity_rules_file /etc/nginx/modsecurity.conf;
+#modsecurity_rules_file /etc/nginx/modsecurity.conf;

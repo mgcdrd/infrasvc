@@ -1,0 +1,101 @@
+---
+
+# ---- VRRP SCRIPT DEFAULTS ----
+# Applied to any vrrp_script block that doesn't specify the field explicitly.
+
+vrrp_script_interval: 3
+vrrp_script_fall: 3
+vrrp_script_rise: 4
+vrrp_script_init_fail: true
+vrrp_script_user: root
+vrrp_script_group: root
+
+
+# ---- PRIORITY CALCULATION ----
+# Priorities are spread linearly across nodes from max (master) to min (last backup).
+
+keepalived_priority_max: 210
+keepalived_priority_min: 90
+keepalived_script_weight_default: "-150"
+
+
+# ---- TOP-LEVEL ROLE VARIABLES ----
+# Set these in your play vars or inventory.
+
+# List of preset names to activate (webproxy, ftp, kubernetes, dockerswarm).
+keepalived_vip_for: []
+
+# Optional global_defs block. Leave empty to omit.
+keepalived_global_defs: {}
+
+# Optional extra vrrp_scripts beyond what the presets provide.
+keepalived_vrrp_scripts: []
+
+# List of vrrp_instance definitions. Required for the role to do anything useful.
+keepalived_vrrp_instances: []
+
+
+# ---- PRESETS ----
+# Built-in preset definitions. Override by redefining the variable in your play.
+
+keepalived_preset_webproxy:
+  vrrp_scripts:
+    - name:      check_nginx
+      script:    /etc/keepalived/check_nginx.sh
+      template:  webproxy/check_nginx.sh.j2
+      interval:  3
+      user:      root
+      group:     root
+      weight:    26
+      fall:      3
+      rise:      4
+      init_fail: true
+
+keepalived_preset_ftp:
+  vrrp_scripts:
+    - name:      check_haproxy
+      script:    /etc/keepalived/check_haproxy.sh
+      template:  haproxy/check_haproxy.sh.j2
+      interval:  3
+      user:      root
+      group:     root
+      weight:    26
+      fall:      3
+      rise:      4
+      init_fail: true
+
+keepalived_preset_dockerswarm:
+  vrrp_scripts:
+    - name:      check_node_active
+      script:    /etc/keepalived/check_node_active.sh
+      template:  dockerswarm/check_node_active.sh.j2
+      interval:  3
+      user:      root
+      group:     root
+      weight:    26
+      fall:      3
+      rise:      4
+      init_fail: true
+    - name:      check_node_ready
+      script:    /etc/keepalived/check_node_ready.sh
+      template:  dockerswarm/check_node_ready.sh.j2
+      interval:  3
+      user:      root
+      group:     root
+      weight:    26
+      fall:      3
+      rise:      4
+      init_fail: false
+
+keepalived_preset_kubernetes:
+  vrrp_scripts:
+    - name:      check_apiserver
+      script:    /etc/keepalived/check_apiserver.sh
+      template:  kubernetes/check_apiserver.sh
+      interval:  3
+      user:      root
+      group:     root
+      weight:    26
+      fall:      3
+      rise:      4
+      init_fail: false

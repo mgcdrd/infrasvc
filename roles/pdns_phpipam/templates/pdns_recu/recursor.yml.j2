@@ -1,0 +1,21 @@
+dnssec:
+  log_bogus: true
+
+incoming:
+  listen:
+  - 0.0.0.0
+  - '::'
+  allow_from:
+  - 0.0.0.0/0
+
+recursor:
+  extended_resolution_errors: true
+  forward_zones:
+  - zone: {{ pdns_phpipam_domain }}
+    forwarders:
+    - {{ pdns_phpipam_docker_network_auth }}:53
+
+outgoing:
+  source_address:
+  - 0.0.0.0
+  - '::'

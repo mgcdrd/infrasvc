@@ -1,0 +1,8 @@
+---
+
+- name: pdns_phpipam deploy - Bring up stack
+  ansible.builtin.command:
+    cmd: docker compose -f {{ pdns_phpipam_runtime_dir }}/docker-compose.yaml up -d --remove-orphans
+    chdir: "{{ pdns_phpipam_runtime_dir }}"
+  register: _pdns_compose_up
+  changed_when: "'Started' in _pdns_compose_up.stderr or 'Created' in _pdns_compose_up.stderr"

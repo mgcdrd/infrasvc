@@ -1,0 +1,27 @@
+---
+
+- name: pdns_phpipam directories - Create runtime directory layout
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ pdns_phpipam_runtime_dir }}"
+    - "{{ pdns_phpipam_mariadb_dir }}/data"
+    - "{{ pdns_phpipam_mariadb_dir }}/init"
+    - "{{ pdns_phpipam_auth_dir }}/pdns.d"
+    - "{{ pdns_phpipam_recu_dir }}/recursor.d"
+    - "{{ pdns_phpipam_dist_dir }}/conf.d"
+    - "{{ pdns_phpipam_ssl_dir }}"
+
+# PowerDNS containers run as uid/gid 953
+- name: pdns_phpipam directories - Set ownership on PowerDNS directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    owner: '953'
+    group: '953'
+    recurse: true
+  loop:
+    - "{{ pdns_phpipam_auth_dir }}"
+    - "{{ pdns_phpipam_recu_dir }}"
+    - "{{ pdns_phpipam_dist_dir }}"

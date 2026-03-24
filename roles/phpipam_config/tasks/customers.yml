@@ -1,0 +1,89 @@
+---
+
+- name: phpipam_config customers - Query existing customers
+  ansible.builtin.uri:
+    url: "{{ phpipam_config_url }}/api/{{ phpipam_config_app_id }}/customers/"
+    method: GET
+    headers:
+      token: "{{ _phpipam_token }}"
+    status_code: [200, 400, 404]
+  register: _phpipam_customers_query
+  changed_when: false
+  when: phpipam_config_customers | length > 0
+
+- name: phpipam_config customers - Warn and skip if endpoint not supported
+  ansible.builtin.debug:
+    msg: >-
+      phpIPAM returned 400 (Invalid controller) for the customers endpoint.
+      Enable the Customers module in phpIPAM: Administration > phpIPAM settings,
+      or leave phpipam_config_customers empty to suppress this warning.
+  when:
+    - phpipam_config_customers | length > 0
+    - _phpipam_customers_query.status == 400
+
+- name: phpipam_config customers - Build existing customer map
+  ansible.builtin.set_fact:
+    _phpipam_customer_map: >-
+      {{ (_phpipam_customers_query.json.data | default([]))
+         | items2dict(key_name='name', value_name='id') }}
+  when:
+    - phpipam_config_customers | length > 0
+    - _phpipam_customers_query.status != 400
+
+- name: phpipam_config customers - Create customers
+  ansible.builtin.uri:
+    url: "{{ phpipam_config_url }}/api/{{ phpipam_config_app_id }}/customers/"
+    method: POST
+    headers:
+      token: "{{ _phpipam_token }}"
+    body_format: json
+    body:
+      name: "{{ item.name }}"
+      description: "{{ item.description | default('') }}"
+      contact: "{{ item.contact | default('') }}"
+      email: "{{ item.email | default('') }}"
+      phone: "{{ item.phone | default('') }}"
+    status_code: 201
+  loop: "{{ phpipam_config_customers }}"
+  when:
+    - phpipam_config_customers | length > 0
+    - _phpipam_customers_query.status != 400
+    - item.state | default('present') == 'present'
+    - item.name not in _phpipam_customer_map
+
+- name: phpipam_config customers - Delete customers
+  ansible.builtin.uri:
+    url: "{{ phpipam_config_url }}/api/{{ phpipam_config_app_id }}/customers/{{ _phpipam_customer_map[item.name] }}/"
+    method: DELETE
+    headers:
+      token: "{{ _phpipam_token }}"
+    status_code: 200
+  loop: "{{ phpipam_config_customers }}"
+  when:
+    - phpipam_config_customers | length > 0
+    - _phpipam_customers_query.status != 400
+    - item.state | default('present') == 'absent'
+    - item.name in _phpipam_customer_map
+
+- name: phpipam_config customers - Refresh customer map
+  ansible.builtin.uri:
+    url: "{{ phpipam_config_url }}/api/{{ phpipam_config_app_id }}/customers/"
+    method: GET
+    headers:
+      token: "{{ _phpipam_token }}"
+    status_code: [200, 404]
+  register: _phpipam_customers_query
+  changed_when: false
+  when:
+    - phpipam_config_customers | length > 0
+    - _phpipam_customers_query.status != 400
+
+- name: phpipam_config customers - Store refreshed customer map
+  ansible.builtin.set_fact:
+    _phpipam_customer_map: >-
+      {{ (_phpipam_customers_query.json.data | default([]))
+         | items2dict(key_name='name', value_name='id') }}
+  when:
+    - phpipam_config_customers | length > 0
+    - _phpipam_customers_query.status is defined
+    - _phpipam_customers_query.status != 400

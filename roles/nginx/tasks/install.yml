@@ -1,0 +1,23 @@
+---
+
+# =====================
+# Debian install
+- name: nginx install - Install nginx
+  ansible.builtin.apt:
+    pkg:
+    - nginx
+    state: latest
+    update_cache: true
+  register: nginx_installed
+  notify: nginx handlers - reload nginx
+  when: ansible_facts['os_family'] == 'Debian'
+
+# =====================
+# RH-based install
+- name: nginx install - Install nginx
+  ansible.builtin.dnf:
+    name:  nginx
+    state: latest
+  register: nginx_installed
+  notify: nginx handlers - reload nginx
+  when: ansible_facts['os_family'] == 'RedHat'

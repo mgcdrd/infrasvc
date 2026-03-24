@@ -1,0 +1,46 @@
+---
+
+- name: pdns_phpipam preflight - Assert Docker is available
+  ansible.builtin.command:
+    cmd: docker info
+  register: _pdns_docker_info
+  changed_when: false
+  failed_when: _pdns_docker_info.rc != 0
+
+- name: pdns_phpipam preflight - Assert docker compose is available
+  ansible.builtin.command:
+    cmd: docker compose version
+  register: _pdns_compose_info
+  changed_when: false
+  failed_when: _pdns_compose_info.rc != 0
+
+- name: pdns_phpipam preflight - Resolve CA certificates host path
+  ansible.builtin.set_fact:
+    _pdns_ca_certs_dir: >-
+      {%- if pdns_phpipam_ca_certs_dir | length > 0 -%}
+        {{ pdns_phpipam_ca_certs_dir }}
+      {%- elif ansible_os_family == 'Debian' -%}
+        /etc/ssl/certs/
+      {%- elif ansible_os_family == 'RedHat' -%}
+        /etc/pki/ca-trust/extracted/pem/
+      {%- else -%}
+        {{ pdns_phpipam_ca_certs_dir | mandatory('pdns_phpipam_ca_certs_dir must be set for OS family: ' ~ ansible_os_family) }}
+      {%- endif -%}
+
+- name: pdns_phpipam preflight - Assert SSL cert dir is set when SSL is enabled
+  ansible.builtin.assert:
+    that:
+      - pdns_phpipam_ssl_cert_dir | length > 0
+    fail_msg: >-
+      pdns_phpipam_ssl_cert_dir must point to the directory containing
+      fullchain.pem and key.pem (e.g. the output of mgcdrd.infrabase.acme_sh).
+  when: pdns_phpipam_ssl_enabled
+
+- name: pdns_phpipam preflight - Assert required variables are set
+  ansible.builtin.assert:
+    that:
+      - pdns_phpipam_domain | length > 0
+      - pdns_phpipam_domain_ip_rev | length > 0
+    fail_msg: >-
+      pdns_phpipam_domain and pdns_phpipam_domain_ip_rev must be set.
+      These define the authoritative zone and reverse lookup zone for PowerDNS.
