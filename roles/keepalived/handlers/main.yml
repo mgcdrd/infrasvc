@@ -1,17 +1,7 @@
 ---
-# handlers file for keepalived
 
-- name: restart keepalived
+- name: keepalived restart
   ansible.builtin.systemd_service:
-    name:  keepalived.service
-    state: restarted
+    name:    keepalived.service
+    state:   restarted
     enabled: true
-
-#- name: set password
-#  ansible.builtin.copy:
-#    content: "{{ keepalived_auth_passwd }}"
-#    dest: "{{ keepalived_passwd_file }}"
-#    owner: root
-#    group: root
-#    mode:  0600
-    

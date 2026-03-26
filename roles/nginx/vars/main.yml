@@ -97,7 +97,14 @@
 
 
 # nginx_ssl_enable: false
-# nginx_ssl_scripting:           # passed to the ssl_scripting role if nginx_ssl_enable is true
+#
+# nginx_ssl_provider: ""
+#   Which role manages certs when nginx_ssl_enable is true:
+#     ssl_scripting  — self-signed via mgcdrd.infrabase.ssl_scripting (testing/internal)
+#     acme_sh        — ACME certs via mgcdrd.infrabase.acme_sh (production)
+#     ""             — manage certs externally; nginx uses whatever is at the configured paths
+#
+# nginx_ssl_scripting:           # used when nginx_ssl_provider: ssl_scripting
 #   base_dir: /etc/nginx/ssl
 #   def_bits: 2048
 #   def_md:   sha256
@@ -107,3 +114,18 @@
 #   org:      Example Corp
 #   orgunit:  IT
 #   email:    admin@example.com
+#
+# When nginx_ssl_provider: acme_sh, set acme_sh_* variables directly in your
+# play vars or group_vars alongside the nginx_* variables. Example:
+#
+#   acme_sh_email:    admin@example.com
+#   acme_sh_ca:       letsencrypt
+#   acme_sh_cf_token: "{{ vault_cf_token }}"
+#   acme_sh_certs:
+#     - domain:    example.com
+#       state:     present
+#       challenge: dns_cf
+#
+# nginx_dhparam_bits: 2048
+#   Bit size for dhparam generation. Used when ssl_dhparam path is configured
+#   and provider is acme_sh or "". ssl_scripting generates its own dhparam.

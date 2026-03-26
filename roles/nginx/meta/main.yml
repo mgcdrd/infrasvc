@@ -1,9 +1,9 @@
 ---
 
 galaxy_info:
-  role_name: k8s
+  role_name: nginx
   author: mgcdrd
-  description: Provisions a Kubernetes cluster — node prep, control plane init, and worker join.
+  description: Installs and configures nginx with server blocks, shared config snippets, SSL hardening, and proxy headers.
   license: GPL-3.0-or-later
   min_ansible_version: "2.14"
   platforms:

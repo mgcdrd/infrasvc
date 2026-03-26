@@ -1,5 +1,6 @@
 ---
 
-- name: nginx handlers - reload nginx
+- name: nginx reload
   ansible.builtin.shell:
     cmd: /usr/sbin/nginx -t && /usr/sbin/nginx -s reload
+  changed_when: false

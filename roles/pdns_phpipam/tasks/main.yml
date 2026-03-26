@@ -1,16 +1,16 @@
 ---
 
 - name: pdns_phpipam main - Preflight validation
-  import_tasks: roles/pdns_phpipam/tasks/preflight.yml
+  import_tasks: preflight.yml
 
 - name: pdns_phpipam main - Resolve secrets
-  import_tasks: roles/pdns_phpipam/tasks/secrets.yml
+  import_tasks: secrets.yml
 
 - name: pdns_phpipam main - Create directory layout
-  import_tasks: roles/pdns_phpipam/tasks/directories.yml
+  import_tasks: directories.yml
 
 - name: pdns_phpipam main - Deploy configuration files
-  import_tasks: roles/pdns_phpipam/tasks/config.yml
+  import_tasks: config.yml
 
 - name: pdns_phpipam main - Deploy stack
-  import_tasks: roles/pdns_phpipam/tasks/deploy.yml
+  import_tasks: deploy.yml

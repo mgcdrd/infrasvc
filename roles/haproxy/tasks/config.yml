@@ -1,16 +1,16 @@
 ---
 
-- name: haproxy config - set net.ipv4.ip_nonlocal_bind
+- name: haproxy config - Set net.ipv4.ip_nonlocal_bind
   ansible.posix.sysctl:
-    name: net.ipv4.ip_nonlocal_bind
-    value: '1'
-    state: present
+    name:        net.ipv4.ip_nonlocal_bind
+    value:       '1'
+    state:       present
     sysctl_file: /etc/sysctl.d/haproxy.conf
 
 
 # =====================
-#  Check for chroot AND user/group or not, and fail out if incorrect
-- name: haproxy config - Checking if chroot is set
+# Validate chroot requires user/group
+- name: haproxy config - Assert chroot has required user/group
   ansible.builtin.assert:
     that:
       - haproxy_global.chroot is not defined
@@ -22,25 +22,32 @@
     fail_msg: >
       If haproxy_global.chroot is defined,
       haproxy_global.user and haproxy_global.group must also be defined.
+  when: haproxy_global | length > 0
+
 
 # =====================
-#  Create user if defined - homedir declared, not created here
-- name: haproxy config - Create user, if defined
+# Create haproxy user if defined
+- name: haproxy config - Create haproxy system user
   ansible.builtin.user:
-    name:    "{{ haproxy_global.user }}"
-    group:   "{{ haproxy_global.group | default(haproxy_global.user) }}"
-    comment: haproxy user
-    home:    "{{ haproxy_global.chroot | default('/dev/null') }}"
+    name:        "{{ haproxy_global.user }}"
+    group:       "{{ haproxy_global.group | default(haproxy_global.user) }}"
+    comment:     haproxy user
+    home:        "{{ haproxy_global.chroot | default('/dev/null') }}"
     create_home: false
-    shell:   "/usr/bin/false"
-    password:  "!"
-    state:   present
-    system:  true
-  when: haproxy_global.user is defined
+    shell:       /usr/bin/false
+    password:    "!"
+    state:       present
+    system:      true
+  when:
+    - haproxy_global | length > 0
+    - haproxy_global.user is defined
 
-- name: haproxy config - Gathering paths to create
+
+# =====================
+# Discover directories that need to exist
+- name: haproxy config - Gather paths to create
   ansible.builtin.set_fact:
-    haproxy_dirs_defined: >-
+    _haproxy_dirs_defined: >-
       {{
         [
           haproxy_global.chroot               | default(omit),
@@ -95,59 +102,62 @@
         )
       }}
 
-- name: haproxy config - Normalizing paths for creation
+- name: haproxy config - Normalize paths for directory creation
   ansible.builtin.set_fact:
-    haproxy_required_directories: >-
+    _haproxy_required_directories: >-
       {{
-        haproxy_dirs_defined
+        _haproxy_dirs_defined
         | select('string')
         | map('dirname')
         | list
         | unique
       }}
 
+
 # =====================
-#  Setup chroot directory and such, if necessary
-- name: haproxy config - Chroot setup
+# Create chroot directory
+- name: haproxy config - Create chroot directory
   ansible.builtin.file:
     path:  "{{ haproxy_global.chroot }}"
     state: directory
     owner: "{{ haproxy_global.user }}"
     group: "{{ haproxy_global.group | default(haproxy_global.user) }}"
-    mode:  0755
-  when: haproxy_global.chroot is defined
+    mode:  "0755"
+  when:
+    - haproxy_global | length > 0
+    - haproxy_global.chroot is defined
 
-# =====================
-#
-- name: haproxy config - Making necessary directories
+- name: haproxy config - Create required directories
   ansible.builtin.file:
     path:  "{{ (haproxy_global.chroot ~ item) if haproxy_global.chroot is defined else item }}"
     state: directory
     owner: "{{ haproxy_global.user | default('root') }}"
     group: "{{ haproxy_global.group | default(haproxy_global.user | default('root')) }}"
-    mode:  0755
-  loop: "{{ haproxy_required_directories | unique }}"
+    mode:  "0755"
+  loop: "{{ _haproxy_required_directories | unique }}"
 
 
-- name: haproxy config - Pushing additional files
+# =====================
+# Hard-link additional files (e.g. SSL certs) into place
+- name: haproxy config - Link additional files
   ansible.builtin.file:
     src:   "{{ item.src }}"
     dest:  "{{ item.dest }}"
     owner: "{{ item.owner }}"
     group: "{{ item.group }}"
-    state:  hard
-  loop: "{{ haproxy_additional | default([]) }}"
-  when: haproxy_additional is defined
+    state: hard
+  loop: "{{ haproxy_additional }}"
+  when: haproxy_additional | length > 0
+
 
 # =====================
-# Push the primary configs
-- name: haproxy config - Pushing /etc/haproxy/haproxy.cfg
+# Deploy primary config
+- name: haproxy config - Deploy /etc/haproxy/haproxy.cfg
   ansible.builtin.template:
-    src:   haproxy.cfg.j2
-    dest:  /etc/haproxy/haproxy.cfg
-    owner: root
-    group: root
-    mode:  0644
+    src:    haproxy.cfg.j2
+    dest:   /etc/haproxy/haproxy.cfg
+    owner:  root
+    group:  root
+    mode:   "0644"
     backup: true
-  notify:
-  - restart haproxy
+  notify: haproxy restart

@@ -1,17 +1,17 @@
 ---
 
-- name: keepalived install - Install keepalived (Debian)
+- name: vsftp install - Install vsftpd (Debian)
   ansible.builtin.apt:
     pkg:
-      - keepalived
+      - vsftpd
     state: latest
     update_cache: true
-  notify: keepalived restart
+  notify: vsftp restart
   when: ansible_facts['os_family'] == 'Debian'
 
-- name: keepalived install - Install keepalived (RedHat)
+- name: vsftp install - Install vsftpd (RedHat)
   ansible.builtin.dnf:
-    name:  keepalived
+    name:  vsftpd
     state: latest
-  notify: keepalived restart
+  notify: vsftp restart
   when: ansible_facts['os_family'] == 'RedHat'

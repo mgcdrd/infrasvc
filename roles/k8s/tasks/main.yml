@@ -1,2 +1,30 @@
 ---
-# tasks file for k8s
+
+# ---- Node preparation (k8s_run: config) ----
+- name: k8s main - Node preparation
+  import_tasks: prep-node.yml
+  when: k8s_run == 'config'
+
+- name: k8s main - Install repositories and packages (Debian)
+  import_tasks: debian-repos.yml
+  when:
+    - k8s_run == 'config'
+    - ansible_facts['os_family'] == 'Debian'
+
+- name: k8s main - Install repositories and packages (RedHat)
+  import_tasks: el-repos.yml
+  when:
+    - k8s_run == 'config'
+    - ansible_facts['os_family'] == 'RedHat'
+
+# ---- Cluster initialization (k8s_run: init, first master only) ----
+- name: k8s main - Initialize cluster
+  import_tasks: initialize.yml
+  when:
+    - k8s_run == 'init'
+    - inventory_hostname == k8s_init_master
+
+# ---- Node join (k8s_run: init or addnodes) ----
+- name: k8s main - Add nodes to cluster
+  import_tasks: addnodes.yml
+  when: k8s_run in ['init', 'addnodes']

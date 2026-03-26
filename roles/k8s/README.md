@@ -1,38 +1,94 @@
-Role Name
-=========
+# k8s
 
-A brief description of the role goes here.
+Provisions a Kubernetes cluster across Debian and Rocky Linux nodes. Handles node preparation (swap, sysctl, kernel modules, NetworkManager, CRI-O/kubeadm repos), control plane initialization, Calico CNI deployment, and worker/additional-master joins.
 
-Requirements
-------------
+## Requirements
 
-Any pre-requisites that may not be covered by Ansible itself or the role should be mentioned here. For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
+Collections:
+- `ansible.posix`
+- `community.general`
+- `mgcdrd.infrabase` (uses the `etc_hosts` role for `/etc/hosts` management)
 
-Role Variables
---------------
+## Role Variables
 
-A description of the settable variables for this role should go here, including any variables that are in defaults/main.yml, vars/main.yml, and any variables that can/should be set via parameters to the role. Any variables that are read from other roles and/or the global scope (ie. hostvars, group vars, etc.) should be mentioned here as well.
+### Required (no defaults)
 
-Dependencies
-------------
+| Variable | Description |
+|----------|-------------|
+| `k8s_init_master` | FQDN of the node that runs `kubeadm init`. All other masters join after it. |
+| `k8s_control_plane_endpoint` | DNS name for the HA API endpoint (VIP). Used in kubeadm config and cert SANs. |
+| `k8s_init_token` | Bootstrap token. Generate with: `printf '%s.%s\n' "$(tr -dc a-z0-9 </dev/urandom \| head -c 6)" "$(tr -dc a-f0-9 </dev/urandom \| head -c 16)"`. Store in vault. |
 
-A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
+### Optional (defaults in `defaults/main.yml`)
 
-Example Playbook
-----------------
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `k8s_run` | `config` | Phase: `config`, `init`, or `addnodes` |
+| `k8s_version` | `1.32` | Kubernetes and CRI-O version |
+| `k8s_calico_version` | `3.31.0` | Calico CNI version |
+| `k8s_svc_cidr` | `10.96.0.0/12` | Kubernetes service CIDR |
+| `k8s_pod_cidr` | `10.112.0.0/12` | Pod network CIDR |
+| `k8s_modules` | `[br_netfilter, overlay]` | Kernel modules loaded on all nodes |
+| `k8s_sysctl` | standard k8s params | sysctl parameters written to `/etc/sysctl.d/kubernetes.conf` |
+| `k8s_selinux_state` | `Permissive` | SELinux state (RedHat only) |
 
-Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
+## Phases (`k8s_run`)
 
-    - hosts: servers
-      roles:
-         - { role: username.rolename, x: 42 }
+| Value | What runs | Target hosts |
+|-------|-----------|--------------|
+| `config` | Swap disable, NetworkManager, `/etc/hosts`, kernel modules, sysctl, repos, package install | All nodes |
+| `init` | `kubeadm init` on `k8s_init_master`, Calico deploy, then all nodes join | All nodes |
+| `addnodes` | Join nodes to an already-initialized cluster | All nodes not yet joined |
 
-License
--------
+## Inventory Structure
 
-BSD
+```ini
+[k8smasters]
+k8s-cp1.example.com
+k8s-cp2.example.com
+k8s-cp3.example.com
 
-Author Information
-------------------
+[k8sworkers]
+k8s-node1.example.com
+k8s-node2.example.com
 
-An optional section for the role authors to include contact information, or a website (HTML is not allowed).
+[k8s_nodes:children]
+k8smasters
+k8sworkers
+```
+
+## Example Playbook
+
+```yaml
+# Phase 1 — prepare all nodes
+- name: k8s node preparation
+  hosts: k8s_nodes
+  become: true
+  roles:
+    - mgcdrd.infrasvc.k8s
+  vars:
+    k8s_run: config
+
+# Phase 2 — initialize and join
+- name: k8s cluster init and join
+  hosts: k8s_nodes
+  become: true
+  roles:
+    - mgcdrd.infrasvc.k8s
+  vars:
+    k8s_run:                    init
+    k8s_init_master:            k8s-cp1.example.com
+    k8s_control_plane_endpoint: k8s-api.example.com
+    k8s_init_token:             "{{ vault_k8s_init_token }}"
+```
+
+## Companion Roles
+
+- **keepalived** (`keepalived_vip_for: [kubernetes]`) — floats a VIP across control plane nodes using `check_apiserver.sh`.
+
+## Platforms
+
+| OS | Version |
+|----|---------|
+| Debian | 12 (bookworm), 13 (trixie) |
+| Rocky Linux | 9, 10 |

@@ -1,34 +1,7 @@
 ---
 
-# =====================
-# Debian install
-- name: vsftp main - Install vsftp
-  ansible.builtin.apt:
-    pkg:
-    - vsftpd
-    state: latest
-    update_cache: true
-  register: vsftp_installed
-  notify: vsftpd handlers - Restart vsftpd.service
-  when: ansible_facts['os_family'] == 'Debian'
+- name: vsftp main - Install
+  import_tasks: install.yml
 
-# =====================
-# RH-based install
-- name: vsftp main - Install vsftp
-  ansible.builtin.dnf:
-    name:  vsftpd
-    state: latest
-  register: vsftp_installed
-  notify: vsftpd handlers - Restart vsftpd.service
-  when: ansible_facts['os_family'] == 'RedHat'
-
-
-- name: vsftp main - Pushing /etc/vsftpd.conf
-  ansible.builtin.template:
-    src:  vsftpd.conf.j2
-    dest: /etc/vsftpd.conf
-    owner: root
-    group: root
-    mode:  0644
-  notify: vsftpd handlers - Restart vsftpd.service
-
+- name: vsftp main - Configure
+  import_tasks: config.yml

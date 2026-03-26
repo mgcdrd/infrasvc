@@ -1,0 +1,3 @@
+{% for item in k8s_sysctl %}
+{{ item.name }} = {{ item.value }}
+{% endfor %}

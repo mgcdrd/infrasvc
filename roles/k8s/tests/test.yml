@@ -1,5 +1,29 @@
 ---
-- hosts: localhost
-  remote_user: root
+
+# Phase 1 — prepare all nodes (repos, packages, sysctl, swap, NM)
+- name: k8s node preparation
+  hosts: k8s_nodes
+  gather_facts: true
+  become: true
   roles:
-    - k8s
+    - mgcdrd.infrasvc.k8s
+  vars:
+    k8s_run: config
+    k8s_version: "1.32"
+
+# Phase 2 — initialize cluster (run once against all nodes;
+#            kubeadm init only fires on k8s_init_master)
+- name: k8s cluster initialization and node join
+  hosts: k8s_nodes
+  gather_facts: true
+  become: true
+  roles:
+    - mgcdrd.infrasvc.k8s
+  vars:
+    k8s_run:                    init
+    k8s_version:                "1.32"
+    k8s_init_master:            k8s-cp1.example.com
+    k8s_control_plane_endpoint: k8s-api.example.com
+    k8s_init_token:             "{{ vault_k8s_init_token }}"
+    k8s_svc_cidr:               "10.96.0.0/12"
+    k8s_pod_cidr:               "10.112.0.0/12"
