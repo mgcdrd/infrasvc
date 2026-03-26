@@ -1,0 +1,26 @@
+---
+
+- name: k8s el-repos - Deploy CRI-O and Kubernetes repo files
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "/etc/yum.repos.d/{{ item.dest }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - { src: el-repos_crio.repo.j2, dest: cri-o.repo }
+    - { src: el-repos_k8s.repo.j2,  dest: kubernetes.repo }
+  notify: k8s dnf clean
+
+- name: k8s el-repos - Flush handlers to refresh repo metadata
+  ansible.builtin.meta: flush_handlers
+
+- name: k8s el-repos - Install CRI-O and Kubernetes packages
+  ansible.builtin.dnf:
+    name:
+      - cri-o
+      - kubelet
+      - kubeadm
+      - kubectl
+    state: latest
+    disable_excludes: kubernetes

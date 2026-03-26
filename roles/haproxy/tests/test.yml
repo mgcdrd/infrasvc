@@ -1,0 +1,56 @@
+---
+
+- hosts: all
+  gather_facts: true
+  become: true
+  roles:
+    - mgcdrd.infrasvc.haproxy
+  vars:
+    haproxy_global:
+      logs:
+        - target: /dev/log
+          facility: local0
+          level: notice
+      chroot: /var/lib/haproxy
+      user:   haproxy
+      group:  haproxy
+      stats:
+        socket:
+          - path:  /run/haproxy/admin.sock
+            mode:  660
+            level: admin
+        raw:
+          - timeout 30s
+
+    haproxy_defaults:
+      - block_name: tcp
+        mode: tcp
+        log:  global
+        options:
+          - tcplog
+          - dontlognull
+        timeout_connect: 5000
+        timeout_client:  50000
+        timeout_server:  50000
+
+    haproxy_frontends:
+      - block_name: ftp
+        mode: tcp
+        options:
+          - tcplog
+        log: global
+        binds:
+          - 10.0.1.10:21           name ftp-control
+          - 10.0.1.10:50000-50010  name ftp-data
+        default_backend: ftp_servers
+
+    haproxy_backends:
+      - block_name: ftp_servers
+        mode: tcp
+        balance: leastconn
+        servers:
+          - ftp1  10.0.1.101:21 init-addr none
+          - ftp2  10.0.1.102:21 init-addr none
+        additional:
+          - stick-table type ip size 100k expire 1h
+          - stick on src

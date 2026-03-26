@@ -1,2 +1,47 @@
 ---
-# vars file for k8s
+
+# This file is reference documentation only — all variables are commented out.
+# Set values in your play vars or group_vars. Defaults live in defaults/main.yml.
+
+
+# ---- REQUIRED ----
+
+# k8s_init_master: k8s-cp1.example.com
+#   The node that kubeadm init runs on. All other masters join after it.
+
+# k8s_control_plane_endpoint: k8s-api.example.com
+#   DNS name (or VIP) that all API traffic goes through. Requires keepalived
+#   or an external load balancer. Used in kubeadm config and cert SANs.
+
+# k8s_init_token: "abc123.0123456789abcdef"
+#   Bootstrap token for kubeadm. Generate with:
+#   printf '%s.%s\n' "$(tr -dc a-z0-9 </dev/urandom | head -c 6)" "$(tr -dc a-f0-9 </dev/urandom | head -c 16)"
+#   Store in vault — do not commit plaintext.
+
+
+# ---- OPTIONAL OVERRIDES ----
+
+# k8s_cluster_group: k8s_nodes
+#   Inventory group written to /etc/hosts on all nodes.
+#   Passed to mgcdrd.infrabase.etc_hosts as etc_hosts_group.
+#   Auto-detected from play_hosts when omitted.
+
+
+# k8s_version: "1.32"
+# k8s_calico_version: "3.31.0"
+
+# k8s_svc_cidr: "10.96.0.0/12"
+# k8s_pod_cidr: "10.112.0.0/12"
+
+# k8s_run: config     # config | init | addnodes
+
+# k8s_modules:
+# - br_netfilter
+# - overlay
+
+# k8s_sysctl:
+# - { name: net.bridge.bridge-nf-call-ip6tables, value: 1 }
+# - { name: net.bridge.bridge-nf-call-iptables,  value: 1 }
+# - { name: net.ipv4.ip_forward,                 value: 1 }
+# - { name: net.ipv4.conf.all.arp_ignore,        value: 1 }
+# - { name: net.ipv4.conf.all.arp_announce,      value: 2 }

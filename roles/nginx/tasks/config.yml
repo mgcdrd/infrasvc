@@ -1,78 +1,150 @@
 ---
 
-# ================
-# Make sure the nginx user is given
-- name: nginx config - Create {{ nginx_process_user | default('nginx') }}
+- name: nginx config - Create nginx system user
   ansible.builtin.user:
-    name:    "{{ nginx_process_user }}"
-    comment: Nginx web server
-    state:   present
-    system:  true
-    home:    /var/lib/nginx
-    shell:   /sbin/nologin
+    name:        "{{ nginx_process_user }}"
+    comment:     Nginx web server
+    state:       present
+    system:      true
+    home:        /var/lib/nginx
+    shell:       /sbin/nologin
     create_home: false
   when: nginx_process_user is defined and nginx_process_user | length > 0
 
 
 # ================
-# make all necessary directories
-- name: nginx config - Create needed directories
+# Ensure required directories exist
+- name: nginx config - Create required directories
   ansible.builtin.file:
-    path:   "{{ item }}"
-    state:  directory
-    owner:  root
-    group:  root
-    mode:   '0755'
-  with_items:
+    path:  "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode:  "0755"
+  loop:
     - /etc/nginx/conf.d
     - /etc/nginx/conf.d/shared_configs
+    - /etc/nginx/ssl
+
 
 # ================
-#  adding ssl_scripting role if enabled
-- name: nginx config - setting up ssl
-  ansible.builtin.include_role:
-    name: ssl_scripting
-  vars:
-    ssl_scripting: "{{ nginx_ssl_scripting }}"
-  when: nginx_ssl_enable is defined and nginx_ssl_enable | bool
+# Self-signed dummy cert for the default_443 catch-all block.
+# Prevents nginx from failing to load when no real cert matches an SNI.
+- name: nginx config - Check for existing dummy cert
+  ansible.builtin.stat:
+    path: /etc/nginx/ssl/ssl-dummy.crt
+  register: _nginx_dummy_cert_stat
+  when: nginx_http_block.default_443 is defined and nginx_http_block.default_443.enabled | default(false)
+
+- name: nginx config - Generate self-signed dummy cert
+  ansible.builtin.command:
+    cmd: >-
+      openssl req -x509 -nodes -newkey rsa:2048
+      -keyout /etc/nginx/ssl/ssl-dummy.key
+      -out    /etc/nginx/ssl/ssl-dummy.crt
+      -days   3650
+      -subj   "/CN=default"
+  when:
+    - nginx_http_block.default_443 is defined
+    - nginx_http_block.default_443.enabled | default(false)
+    - not _nginx_dummy_cert_stat.stat.exists
+  changed_when: true
+
 
 # ================
-# Deploy shared config snippets to conf.d/shared_configs/
+# dhparam — generated before cert management and config deployment so it exists
+# when acme_sh fires its reload command mid-play.
+# ssl_scripting manages its own dhparam; this covers acme_sh and external providers.
+- name: nginx config - Check for existing dhparam
+  ansible.builtin.stat:
+    path: "{{ nginx_shared_configs.ssl.ssl_dhparam }}"
+  register: _nginx_dhparam_stat
+  when:
+    - nginx_shared_configs.ssl is defined
+    - nginx_shared_configs.ssl.ssl_dhparam is defined
+    - nginx_ssl_provider != 'ssl_scripting'
+
+- name: nginx config - Generate dhparam
+  ansible.builtin.command:
+    cmd: "openssl dhparam -out {{ nginx_shared_configs.ssl.ssl_dhparam }} {{ nginx_dhparam_bits }}"
+  when:
+    - nginx_shared_configs.ssl is defined
+    - nginx_shared_configs.ssl.ssl_dhparam is defined
+    - nginx_ssl_provider != 'ssl_scripting'
+    - not _nginx_dhparam_stat.stat.exists
+  changed_when: true
+
+
+# ================
+# Shared config snippets — deployed before cert management so nginx config is
+# valid when acme_sh triggers its reload command.
 - name: nginx config - Deploy shared config files
   ansible.builtin.template:
     src:   "{{ item }}"
     dest:  "/etc/nginx/conf.d/shared_configs/{{ item | basename | regex_replace('\\.j2$', '') }}"
     owner: root
     group: root
-    mode:  '0644'
+    mode:  "0644"
   loop:
     - shared_configs/logging.conf.j2
     - shared_configs/proxy_configs.conf.j2
     - shared_configs/ssl.conf.j2
     - shared_configs/useragent.conf.j2
-  notify: nginx handlers - reload nginx
+  notify: nginx reload
+
 
 # ================
-# file: /etc/nginx/nginx.conf
-- name: nginx config - Copying nginx.conf template
+# Primary nginx.conf
+- name: nginx config - Deploy nginx.conf
   ansible.builtin.template:
     src:   nginx.conf.j2
     dest:  /etc/nginx/nginx.conf
     owner: root
     group: root
-    mode:  '0644'
-  notify: nginx handlers - reload nginx
+    mode:  "0644"
+  notify: nginx reload
+
 
 # ================
-#
-- name: nginx config - creating server blocks
+# Server block conf files
+- name: nginx config - Deploy server block configs
   ansible.builtin.template:
     src:   server_block.conf.j2
     dest:  "/etc/nginx/conf.d/{{ tpl.name }}.conf"
     owner: root
     group: root
-    mode:  '0644'
-  loop: "{{ nginx_server_blocks | default([]) }}"
+    mode:  "0644"
+  loop: "{{ nginx_server_blocks }}"
   loop_control:
     loop_var: tpl
-  notify: nginx handlers - reload nginx
+  notify: nginx reload
+
+
+# ================
+# SSL cert management — runs after configs are deployed so nginx is fully
+# configured when acme_sh triggers its --reloadcmd.
+- name: nginx config - Obtain SSL certificate (ssl_scripting)
+  ansible.builtin.include_role:
+    name: mgcdrd.infrabase.ssl_scripting
+  vars:
+    ssl_scripting: "{{ nginx_ssl_scripting }}"
+  when:
+    - nginx_ssl_enable | bool
+    - nginx_ssl_provider == 'ssl_scripting'
+
+# acme_sh_* variables must be set in play vars or group_vars alongside nginx vars.
+# include_role picks them up from scope — no explicit passing needed.
+- name: nginx config - Obtain SSL certificate (acme_sh)
+  ansible.builtin.include_role:
+    name: mgcdrd.infrabase.acme_sh
+  when:
+    - nginx_ssl_enable | bool
+    - nginx_ssl_provider == 'acme_sh'
+
+
+# ================
+# Always validate the final config — catches broken configs even when no files changed.
+- name: nginx config - Validate nginx configuration
+  ansible.builtin.command:
+    cmd: /usr/sbin/nginx -t
+  changed_when: false

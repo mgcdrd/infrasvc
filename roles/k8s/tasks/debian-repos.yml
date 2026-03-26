@@ -1,0 +1,42 @@
+---
+
+- name: k8s debian-repos - Download CRI-O release key
+  ansible.builtin.get_url:
+    url: "https://download.opensuse.org/repositories/isv:/cri-o:/stable:/v{{ k8s_version }}/deb/Release.key"
+    dest: /etc/apt/trusted.gpg.d/cri-o-apt-keyring.asc
+    mode: "0644"
+  notify: k8s apt update
+
+- name: k8s debian-repos - Add CRI-O apt repository
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by=/etc/apt/trusted.gpg.d/cri-o-apt-keyring.asc] https://download.opensuse.org/repositories/isv:/cri-o:/stable:/v{{ k8s_version }}/deb/ /"
+    filename: cri-o
+    state: present
+  notify: k8s apt update
+
+- name: k8s debian-repos - Download Kubernetes release key
+  ansible.builtin.get_url:
+    url: "https://pkgs.k8s.io/core:/stable:/v{{ k8s_version }}/deb/Release.key"
+    dest: /etc/apt/trusted.gpg.d/kubernetes-apt-keyring.asc
+    mode: "0644"
+  notify: k8s apt update
+
+- name: k8s debian-repos - Add Kubernetes apt repository
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by=/etc/apt/trusted.gpg.d/kubernetes-apt-keyring.asc] https://pkgs.k8s.io/core:/stable:/v{{ k8s_version }}/deb/ /"
+    filename: kubernetes
+    state: present
+  notify: k8s apt update
+
+- name: k8s debian-repos - Flush handlers to update apt cache
+  ansible.builtin.meta: flush_handlers
+
+- name: k8s debian-repos - Install CRI-O and Kubernetes packages
+  ansible.builtin.apt:
+    pkg:
+      - cri-o
+      - kubelet
+      - kubeadm
+      - kubectl
+    state: latest
+    update_cache: true

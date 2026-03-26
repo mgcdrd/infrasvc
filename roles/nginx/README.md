@@ -14,10 +14,10 @@ Requirements
 
 `become: true` and `gather_facts: true` are required.
 
-Optionally integrates with a `ssl_scripting` role for self-signed cert
-generation. Set `nginx_ssl_enable: true` and populate `nginx_ssl_scripting`
-if you need that. For production certs use the `mgcdrd.infrabase.acme_sh` role
-independently and point the cert paths at the issued certificates.
+For SSL cert management, install the appropriate infrabase collection role:
+
+- `ansible-galaxy collection install mgcdrd.infrabase` for both `ssl_scripting`
+  and `acme_sh`.
 
 
 Role Variables
@@ -29,9 +29,9 @@ All variables are prefixed `nginx_`. The full annotated structure is in
 ### Process
 
 ```yaml
-nginx_process_user: nginx
-nginx_worker_processes: auto
-nginx_pid_file: /run/nginx.pid
+nginx_process_user:      nginx
+nginx_worker_processes:  auto
+nginx_pid_file:          /run/nginx.pid
 nginx_load_dynamic_mods: false
 ```
 
@@ -44,8 +44,21 @@ nginx_events:
 
 ### HTTP block
 
+`log_formats` must be a **dict**, not a list:
+
 ```yaml
 nginx_http_block:
+  log_formats:
+    main: |
+      '$remote_addr - $remote_user [$time_local] "$request" '
+      '$status $body_bytes_sent "$http_referer" "$http_user_agent"'
+    reverse_proxy: |
+      '$remote_addr - $remote_user [$time_local] "$request" $status '
+      'host="$host" upstream="$upstream_addr" request_time=$request_time'
+  log_lines:
+    - type:   access_log
+      file:   /var/log/nginx/access.log
+      format: main
   add_mime: true
   force_80_redirect: true     # global HTTP→HTTPS redirect server block
   hsts_max_age: 63072000
@@ -74,7 +87,8 @@ nginx_http_block:
 
 ### Shared config snippets
 
-These variables are consumed by the templates in `shared_configs/`:
+These variables are consumed by the templates in `shared_configs/`. Each
+section is optional — if omitted the corresponding config file renders empty.
 
 ```yaml
 nginx_shared_configs:
@@ -83,7 +97,7 @@ nginx_shared_configs:
     ssl_ciphers:   "ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384"
     ssl_cert_path: /etc/nginx/ssl/server.crt
     ssl_key_path:  /etc/nginx/ssl/server.key
-    ssl_dhparam:   /etc/nginx/ssl/dhparam.pem
+    ssl_dhparam:   /etc/nginx/ssl/dhparam.pem   # optional; omit to skip directive
   logging:
     - type:   access_log
       path:   /var/log/nginx/shared_access.log
@@ -103,18 +117,83 @@ nginx_server_blocks:
     proxy_files_path: /etc/nginx/conf.d/mysite.proxies
 ```
 
+### SSL cert management
+
+```yaml
+nginx_ssl_enable:   true
+nginx_ssl_provider: ""   # ssl_scripting | acme_sh | "" (external/none)
+nginx_dhparam_bits: 2048 # bit size for dhparam generation
+```
+
+| Provider | Description |
+|----------|-------------|
+| `ssl_scripting` | Calls `mgcdrd.infrabase.ssl_scripting` to generate self-signed certs and dhparam. Good for internal/testing use. |
+| `acme_sh` | Calls `mgcdrd.infrabase.acme_sh` to issue certs via ACME/DNS challenge. For production use. |
+| `""` | No cert management — nginx uses whatever certs are already at the configured paths. Run `acme_sh` as a separate play or manage certs externally. |
+
+**ssl_scripting provider** — pass config via `nginx_ssl_scripting`:
+
+```yaml
+nginx_ssl_enable:   true
+nginx_ssl_provider: ssl_scripting
+nginx_ssl_scripting:
+  base_dir: /etc/nginx/ssl
+  def_bits: 2048
+  def_md:   sha256
+  country:  US
+  state:    XX
+  locale:   YY
+  org:      Example Corp
+  orgunit:  IT
+  email:    admin@example.com
+```
+
+**acme_sh provider** — set `acme_sh_*` variables directly in your play vars
+alongside the `nginx_*` variables (no wrapper needed):
+
+```yaml
+nginx_ssl_enable:   true
+nginx_ssl_provider: acme_sh
+
+acme_sh_email:    admin@example.com
+acme_sh_ca:       letsencrypt
+acme_sh_cf_token: "{{ vault_cf_token }}"
+acme_sh_certs:
+  - domain:    proxy.example.com
+    state:     present
+    challenge: dns_cf
+    reload_cmd: systemctl reload nginx
+```
+
+**dhparam**: generated automatically at the path set in
+`nginx_shared_configs.ssl.ssl_dhparam` when the provider is `acme_sh` or `""`.
+`ssl_scripting` generates its own dhparam — the standalone generation task is
+skipped for that provider.
+
 
 Example Playbook
 ----------------
 
 ```yaml
-- name: Deploy nginx reverse proxy
+- name: Deploy nginx reverse proxy (acme_sh certs)
   hosts: proxy_servers
   gather_facts: true
   become: true
   roles:
     - mgcdrd.infrasvc.nginx
   vars:
+    nginx_ssl_enable:   true
+    nginx_ssl_provider: acme_sh
+
+    acme_sh_email:    admin@example.com
+    acme_sh_ca:       letsencrypt
+    acme_sh_cf_token: "{{ vault_cf_token }}"
+    acme_sh_certs:
+      - domain:    proxy.example.com
+        state:     present
+        challenge: dns_cf
+        reload_cmd: systemctl reload nginx
+
     nginx_http_block:
       add_mime: true
       force_80_redirect: true
@@ -132,16 +211,16 @@ Example Playbook
         max_size:   10g
       default_443:
         enabled:       true
-        ssl_cert_path: /etc/ssl/certs/proxy.example.com.crt
-        ssl_key_path:  /etc/ssl/private/proxy.example.com.key
+        ssl_cert_path: /etc/nginx/ssl/ssl-dummy.crt
+        ssl_key_path:  /etc/nginx/ssl/ssl-dummy.key
         redir_302_uri: https://example.com
 
     nginx_shared_configs:
       ssl:
         ssl_protos:    "TLSv1.2 TLSv1.3"
         ssl_ciphers:   "ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384"
-        ssl_cert_path: /etc/ssl/certs/proxy.example.com.crt
-        ssl_key_path:  /etc/ssl/private/proxy.example.com.key
+        ssl_cert_path: /etc/nginx/ssl/proxy.example.com.crt
+        ssl_key_path:  /etc/nginx/ssl/proxy.example.com.key
         ssl_dhparam:   /etc/nginx/ssl/dhparam.pem
 
     nginx_server_blocks:
@@ -156,22 +235,23 @@ Example Playbook
 Notes
 -----
 
+- **`log_formats`**: Must be a YAML dict (not a list of dicts). Each key becomes
+  a `log_format` directive name.
 - **Shared configs**: `ssl.conf.j2`, `proxy_configs.conf.j2`, `logging.conf.j2`,
   and `useragent.conf.j2` are deployed to `/etc/nginx/conf.d/shared_configs/` and
-  included by each server block template via `include .../shared_configs/*.conf`.
-- **`block_badagents`**: The `$blockedagent` map must be defined in the `http`
-  block (nginx.conf) before it can be used in server blocks. Set
-  `nginx_http_block.block_badagents: true` to emit the map, then include
-  `useragent.conf` in each server block that should enforce it.
-- **`default_443`**: The catch-all 443 block requires `redir_302_uri` to be
-  set — there is no default to avoid accidentally redirecting traffic to an
-  unintended destination.
-- **`old_shared/`**: The templates in `templates/old_shared/` are superseded by
-  `templates/shared_configs/*.j2` and can be removed once you have confirmed the
-  new shared configs work in your environment.
-- **keepalived integration**: This role pairs with `mgcdrd.infrasvc.keepalived`
-  using the `webproxy` preset, which deploys a check script that monitors the
-  nginx process.
+  included by each server block via `include .../shared_configs/*.conf`. Each
+  renders empty if its corresponding `nginx_shared_configs` section is not defined.
+- **`block_badagents`**: The `$blockedagent` map must be in the `http` block
+  (nginx.conf) before it can be used in server blocks. Set
+  `nginx_http_block.block_badagents: true`, then include `useragent.conf` in each
+  server block that should enforce it.
+- **`default_443`**: The catch-all 443 block requires `redir_302_uri` — there is
+  no default to avoid accidentally redirecting traffic.
+- **`old_shared/`**: Templates in `templates/old_shared/` are superseded by
+  `templates/shared_configs/*.j2` and can be removed once the new shared configs
+  are confirmed working.
+- **keepalived integration**: Pairs with `mgcdrd.infrasvc.keepalived` using the
+  `webproxy` preset, which deploys a check script that monitors the nginx process.
 
 
 License

@@ -757,7 +757,7 @@ anon_root={{ vsftp_anon_root | default('') }}
 #   home dir is root dir of anon FTP area
 #   default: ftp
 {% endif %}
-ftp_username={{ vsftp_ftp_username | default('') }}
+ftp_username={{ vsftp_ftp_username | default('ftp') }}
 
 {% if vsftp_show_comments %}
 # check_shell - BOOLEAN

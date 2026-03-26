@@ -1,2 +1,49 @@
 ---
-# defaults file for k8s
+
+# ---- KUBERNETES VERSION ----
+k8s_version: "1.32"
+
+# ---- CALICO CNI VERSION ----
+k8s_calico_version: "3.31.0"
+
+# ---- NETWORK CIDRS ----
+k8s_svc_cidr: "10.96.0.0/12"
+k8s_pod_cidr: "10.112.0.0/12"
+
+# ---- SELINUX (RedHat only) ----
+k8s_selinux_state: Permissive
+
+# ---- KERNEL MODULES ----
+# Loaded on all nodes during prep phase.
+k8s_modules:
+  - br_netfilter
+  - overlay
+
+# ---- SYSCTL PARAMETERS ----
+# Written to /etc/sysctl.d/kubernetes.conf on all nodes during prep phase.
+k8s_sysctl:
+  - { name: net.bridge.bridge-nf-call-ip6tables, value: 1 }
+  - { name: net.bridge.bridge-nf-call-iptables,  value: 1 }
+  - { name: net.ipv4.ip_forward,                 value: 1 }
+  - { name: net.ipv4.conf.all.arp_ignore,        value: 1 }
+  - { name: net.ipv4.conf.all.arp_announce,      value: 2 }
+
+# ---- ROLE PHASE ----
+# Controls which phase the role executes.
+#   config    - node preparation (swap, NM, hosts, modules, sysctl, repos, packages)
+#   init      - initialize cluster on k8s_init_master, then join all nodes
+#   addnodes  - join nodes to an already-initialized cluster
+k8s_run: config
+
+# ---- /etc/hosts ----
+# Inventory group whose members get written to /etc/hosts on every node.
+# If left empty the role auto-detects the group from play_hosts.
+# Set explicitly when running against a sub-group (e.g. k8smasters only).
+k8s_cluster_group: ""
+
+# ---- REQUIRED VARIABLES (no defaults) ----
+# These must be set in your play vars or inventory:
+#
+#   k8s_init_master:             # FQDN of the node that runs kubeadm init
+#   k8s_control_plane_endpoint:  # DNS name for the HA API endpoint (VIP)
+#   k8s_init_token:              # bootstrap token — printf '%s.%s\n' $(tr -dc a-z0-9 </dev/urandom | head -c 6) $(tr -dc a-f0-9 </dev/urandom | head -c 16)

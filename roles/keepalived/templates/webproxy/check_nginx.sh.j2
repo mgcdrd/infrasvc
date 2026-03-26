@@ -11,8 +11,13 @@ if ! systemctl is-active nginx.service > /dev/null; then
   /usr/bin/systemctl restart nginx.service || exit 1
 fi
 
-# check on ports....
-if ! /usr/bin/curl http://localhost 2> /dev/null 1>&2 || ! /usr/bin/curl -k https://localhost 2> /dev/null 1>&2; then
+# check nginx is accepting connections on expected ports.
+# nc -z returns 0 if the port is open, 1 if not.
+# upstream health is irrelevant — nginx returning 502 is still nginx working.
+if ! /usr/bin/nc -z -w2 localhost 80 > /dev/null 2>&1; then
+  exit 1
+fi
+if ! /usr/bin/nc -z -w2 localhost 443 > /dev/null 2>&1; then
   exit 1
 fi
 

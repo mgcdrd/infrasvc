@@ -33,5 +33,22 @@ nginx_shared_configs: {}
 nginx_server_blocks: []
 
 # ---- SSL ----
+# Whether SSL cert management is enabled at all.
 nginx_ssl_enable: false
+
+# Which role handles cert management when nginx_ssl_enable is true.
+#   ssl_scripting  — self-signed certs via mgcdrd.infrabase.ssl_scripting (testing/internal)
+#   acme_sh        — ACME certs via mgcdrd.infrabase.acme_sh (production)
+#   ""             — manage certs externally; nginx just uses whatever is at the configured paths
+nginx_ssl_provider: ""
+
+# Vars passed to ssl_scripting when nginx_ssl_provider: ssl_scripting
 nginx_ssl_scripting: {}
+
+# When nginx_ssl_provider: acme_sh, set acme_sh_* variables directly in your
+# play vars or group_vars alongside nginx vars — no wrapper needed.
+# See mgcdrd.infrabase.acme_sh defaults/main.yml for available variables.
+
+# Bit size for dhparam generation (used when ssl_dhparam path is set and
+# provider is acme_sh or "" — ssl_scripting generates its own dhparam).
+nginx_dhparam_bits: 2048

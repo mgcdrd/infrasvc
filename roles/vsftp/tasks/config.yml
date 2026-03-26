@@ -1,0 +1,10 @@
+---
+
+- name: vsftp config - Deploy /etc/vsftpd.conf
+  ansible.builtin.template:
+    src:   vsftpd.conf.j2
+    dest:  /etc/vsftpd.conf
+    owner: root
+    group: root
+    mode:  "0644"
+  notify: vsftp restart

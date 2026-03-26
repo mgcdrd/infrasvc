@@ -1,36 +1,28 @@
 ---
 
 # =====================
-# Seeing if keepalived.conf exists to get password if already generated
-- name: keepalive config - Checking for /etc/keepalived/keepalived.conf
+# Preserve existing VRRP passwords from current config
+- name: keepalived config - Check for existing keepalived.conf
   ansible.builtin.stat:
     path: /etc/keepalived/keepalived.conf
-  register: keepalived_conf_stat
+  register: _keepalived_conf_stat
 
-
-# =====================
-# If config exists get the current password
-#- name: keepalive config - Config exists, getting password
-#  ansible.builtin.set_fact:
-#    keepalived_auth_passwd_existing: "{{ lookup('file', '/etc/keepalived/keepalived.conf') | regex_search('auth_pass(\\S+)') }}"
-#  when: keepalived_conf_stat.stat.exists
-
-- name: keepalived config - Getting keepalived.conf sensitive data
+- name: keepalived config - Read existing keepalived.conf
   ansible.builtin.slurp:
     src: /etc/keepalived/keepalived.conf
-  register: keepalived_conf_contents
-  when: keepalived_conf_stat.stat.exists
-  ignore_errors: true
+  register: _keepalived_conf_contents
+  when: _keepalived_conf_stat.stat.exists
+  failed_when: false
 
-- name:  keepalived config - saving existing passwords
+- name: keepalived config - Save existing VRRP passwords
   ansible.builtin.set_fact:
     keepalived_auth_passwd_existing: >-
       {{
         dict(
           (
-            keepalived_conf_contents.content | default('') | b64decode
+            _keepalived_conf_contents.content | default('') | b64decode
           )
-          | regex_findall('vrrp_instance\\s+(\\S+)\\s*\\{[\\s\\S]*?(?:auth_pass\\s+(\\S+))?', multiline=True )
+          | regex_findall('vrrp_instance\\s+(\\S+)\\s*\\{[\\s\\S]*?(?:auth_pass\\s+(\\S+))?', multiline=True)
         )
         | dict2items
         | selectattr('value', 'defined')
@@ -38,35 +30,38 @@
         | items2dict
       }}
 
-# =====================
-# Push conf file
-- name: keepalived config - Pushing configuration file
-  ansible.builtin.template:
-    src: keepalived.conf.j2
-    dest: /etc/keepalived/keepalived.conf
-    owner: root
-    group: root
-    mode:  0644
-    backup: true
-  notify: 
-  - restart keepalived
 
-- name: keepalived config - Get all check scripts for processing
+# =====================
+# Deploy keepalived.conf
+- name: keepalived config - Deploy keepalived.conf
+  ansible.builtin.template:
+    src:    keepalived.conf.j2
+    dest:   /etc/keepalived/keepalived.conf
+    owner:  root
+    group:  root
+    mode:   "0644"
+    backup: true
+  notify: keepalived restart
+
+
+# =====================
+# Collect and deploy check scripts
+- name: keepalived config - Collect preset check scripts
   ansible.builtin.set_fact:
-    all_vrrp_scripts:  >-
+    _keepalived_all_scripts: >-
       {{
-        all_vrrp_scripts | default([]) +
-        (vars['keepalived_preset_' ~ item].vrrp_scripts  )
+        _keepalived_all_scripts | default([]) +
+        (vars['keepalived_preset_' ~ item].vrrp_scripts)
       }}
   loop: "{{ keepalived_vip_for }}"
+  when: keepalived_vip_for | length > 0
 
-- name: keepalived config - Pushing check scripts
+- name: keepalived config - Deploy check scripts
   ansible.builtin.template:
     src:   "{{ item.template }}"
     dest:  "{{ item.script }}"
     owner: "{{ item.user  | default('root') }}"
     group: "{{ item.group | default('root') }}"
-    mode:  0740
-  notify: restart keepalived
-  loop: "{{ all_vrrp_scripts + (keepalived_vrrp_scripts | default([])) }}"
-  
+    mode:  "0740"
+  loop: "{{ _keepalived_all_scripts | default([]) + keepalived_vrrp_scripts }}"
+  notify: keepalived restart

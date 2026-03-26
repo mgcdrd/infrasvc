@@ -1,0 +1,37 @@
+---
+
+- name: k8s initialize - Gather listening port facts
+  community.general.listen_ports_facts:
+
+- name: k8s initialize - Ensure CRI-O is running
+  ansible.builtin.service:
+    name: crio.service
+    state: started
+    enabled: true
+
+- name: k8s initialize - Deploy kubeadm init config
+  ansible.builtin.template:
+    src: k8s-initconfig.yml.j2
+    dest: /root/k8s-initconfig.yml
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: k8s initialize - Initialize cluster
+  ansible.builtin.command:
+    cmd: kubeadm init --config /root/k8s-initconfig.yml
+  vars:
+    ansible_command_timeout: 1800
+  when: ansible_facts.tcp_listen | selectattr('port', 'equalto', 10250) | list | length == 0
+  register: _k8s_initialized
+
+- name: k8s initialize - Deploy Calico CNI
+  ansible.builtin.shell: |
+    kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v{{ k8s_calico_version }}/manifests/operator-crds.yaml
+    kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v{{ k8s_calico_version }}/manifests/tigera-operator.yaml
+    curl https://raw.githubusercontent.com/projectcalico/calico/v{{ k8s_calico_version }}/manifests/custom-resources.yaml \
+      | sed -e "/cidr\:/s/192.168.0.0\/16/{{ k8s_pod_cidr | regex_replace('/', '\\/') }}/" \
+            -e "/blockSize/s/[0-9]\{1,2\}/24/" \
+      > /root/calico_config.yml
+    kubectl apply -f /root/calico_config.yml
+  when: _k8s_initialized is defined and _k8s_initialized.changed

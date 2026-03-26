@@ -1,0 +1,101 @@
+---
+
+# ===============
+# Disable swap
+- name: k8s prep-node - Check for active swap
+  ansible.builtin.command:
+    cmd: /usr/sbin/swapon --show
+  register: _k8s_swap_status
+  changed_when: false
+
+- name: k8s prep-node - Disable active swap
+  ansible.builtin.shell:
+    argv:
+      - /usr/sbin/swapoff
+      - -a
+  when: _k8s_swap_status.stdout != ""
+
+- name: k8s prep-node - Remove swap entry from fstab
+  ansible.builtin.lineinfile:
+    path: /etc/fstab
+    regexp: '.*swap.*'
+    state: absent
+  notify: k8s daemon-reload
+
+- name: k8s prep-node - Remove swap logical volume
+  community.general.lvol:
+    vg: "{{ ansible_lvm.lvs['lv_swap']['vg'] }}"
+    lv: lv_swap
+    state: absent
+    force: true
+  when:
+    - ansible_lvm is defined
+    - ansible_lvm.lvs is defined
+    - "'lv_swap' in ansible_lvm.lvs"
+
+
+# ===============
+# NetworkManager — ignore Calico interfaces
+- name: k8s prep-node - Gather service facts
+  ansible.builtin.service_facts:
+
+- name: k8s prep-node - Determine network management type
+  ansible.builtin.set_fact:
+    _k8s_network_manager: >-
+      {% if 'NetworkManager.service' in ansible_facts.services
+         and ansible_facts.services['NetworkManager.service'].state == 'running' %}
+        NetworkManager
+      {% else %}
+        ifupdown
+      {% endif %}
+
+- name: k8s prep-node - Configure NetworkManager to disregard K8s interfaces
+  ansible.builtin.copy:
+    src: networkmanager-calico.conf
+    dest: /etc/NetworkManager/conf.d/calico.conf
+    owner: root
+    group: root
+    mode: "0644"
+  when: _k8s_network_manager | trim == "NetworkManager"
+  notify: k8s restart NetworkManager
+
+
+# ===============
+# /etc/hosts — cluster node entries (delegated to infrabase.etc_hosts)
+- name: k8s prep-node - Resolve cluster group for /etc/hosts
+  ansible.builtin.set_fact:
+    _k8s_cluster_group: >-
+      {{ k8s_cluster_group if k8s_cluster_group | length > 0 else
+         (groups | dict2items
+           | selectattr('value', 'equalto', play_hosts)
+           | map(attribute='key')
+           | select('match', '^(?!ungrouped$).*')
+           | list | first) }}
+
+- name: k8s prep-node - Write cluster node entries to /etc/hosts
+  ansible.builtin.include_role:
+    name: mgcdrd.infrabase.etc_hosts
+  vars:
+    etc_hosts_group: "{{ _k8s_cluster_group }}"
+
+
+# ===============
+# Kernel modules
+- name: k8s prep-node - Load required kernel modules
+  community.general.modprobe:
+    name: "{{ item }}"
+    state: present
+    persistent: present
+  loop: "{{ k8s_modules }}"
+
+
+# ===============
+# sysctl
+- name: k8s prep-node - Configure sysctl parameters
+  ansible.builtin.template:
+    src: sysctl_kubernetes.conf.j2
+    dest: /etc/sysctl.d/kubernetes.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: k8s reload sysctl

@@ -1,8 +1,7 @@
 # For more information on configuration, see:
 #   * Official English Documentation: http://nginx.org/en/docs/
 
-user {{ nginx_process_user | default('nginx') }};
-{{ 'group {};'.format(nginx_process_group) if nginx_process_group is defined and nginx_process_group is not none else '' }}
+user {{ nginx_process_user | default('nginx') }}{% if nginx_process_group is defined and nginx_process_group %} {{ nginx_process_group }}{% endif %};
 worker_processes {{ nginx_worker_processes | default('auto') }};
 error_log /var/log/nginx/error.log;
 pid {{ nginx_pid_file | default('/run/nginx.pid') }};
