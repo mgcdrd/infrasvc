@@ -18,11 +18,11 @@
 
 - name: k8s initialize - Deploy kubeadm init config
   ansible.builtin.template:
-    src: k8s-initconfig.yml.j2
-    dest: /root/k8s-initconfig.yml
+    src:   k8s-initconfig.yml.j2
+    dest:  /root/k8s-initconfig.yml
     owner: root
     group: root
-    mode: "0600"
+    mode:  "0600"
 
 - name: k8s initialize - Initialize cluster
   ansible.builtin.command:
@@ -45,37 +45,52 @@
     src:        /etc/kubernetes/admin.conf
     dest:       /root/.kube/config
     remote_src: true
-    owner: root
-    group: root
-    mode:  "0600"
+    owner:      root
+    group:      root
+    mode:       "0600"
+
+
+# ================
+# Calico CNI — idempotency is based on whether the tigera-operator namespace
+# exists, not on whether kubeadm init ran this execution. This ensures Calico
+# is deployed even when re-running after a failed previous attempt.
+
+- name: k8s initialize - Check if Calico is already deployed
+  ansible.builtin.command:
+    cmd: kubectl get namespace tigera-operator
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  register: _k8s_calico_deployed
+  failed_when: false
+  changed_when: false
 
 - name: k8s initialize - Apply Tigera operator CRDs
   ansible.builtin.command:
     cmd: kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v{{ k8s_calico_version }}/manifests/operator-crds.yaml
   environment:
     KUBECONFIG: /etc/kubernetes/admin.conf
-  when: _k8s_initialized.changed
+  when: _k8s_calico_deployed.rc != 0
 
 - name: k8s initialize - Deploy Tigera operator
   ansible.builtin.command:
     cmd: kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v{{ k8s_calico_version }}/manifests/tigera-operator.yaml
   environment:
     KUBECONFIG: /etc/kubernetes/admin.conf
-  when: _k8s_initialized.changed
+  when: _k8s_calico_deployed.rc != 0
 
 - name: k8s initialize - Wait for Tigera operator to be ready
   ansible.builtin.command:
     cmd: kubectl rollout status deployment/tigera-operator -n tigera-operator --timeout=120s
   environment:
     KUBECONFIG: /etc/kubernetes/admin.conf
-  when: _k8s_initialized.changed
+  when: _k8s_calico_deployed.rc != 0
 
 - name: k8s initialize - Wait for Installation CRD to be established
   ansible.builtin.command:
     cmd: kubectl wait --for=condition=established crd/installations.operator.tigera.io --timeout=60s
   environment:
     KUBECONFIG: /etc/kubernetes/admin.conf
-  when: _k8s_initialized.changed
+  when: _k8s_calico_deployed.rc != 0
 
 - name: k8s initialize - Build Calico custom resources config
   ansible.builtin.shell:
@@ -84,11 +99,11 @@
       | sed -e "/cidr\:/s/192.168.0.0\/16/{{ k8s_pod_cidr | regex_replace('/', '\\/') }}/"
             -e "/blockSize/s/[0-9]\{1,2\}/24/"
       > /root/calico_config.yml
-  when: _k8s_initialized.changed
+  when: _k8s_calico_deployed.rc != 0
 
 - name: k8s initialize - Apply Calico custom resources
   ansible.builtin.command:
     cmd: kubectl apply -f /root/calico_config.yml
   environment:
     KUBECONFIG: /etc/kubernetes/admin.conf
-  when: _k8s_initialized.changed
+  when: _k8s_calico_deployed.rc != 0
