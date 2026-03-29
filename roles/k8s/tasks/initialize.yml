@@ -32,6 +32,23 @@
   when: not _k8s_admin_conf.stat.exists
   register: _k8s_initialized
 
+- name: k8s initialize - Create .kube directory
+  ansible.builtin.file:
+    path:  /root/.kube
+    state: directory
+    owner: root
+    group: root
+    mode:  "0700"
+
+- name: k8s initialize - Copy admin kubeconfig
+  ansible.builtin.copy:
+    src:        /etc/kubernetes/admin.conf
+    dest:       /root/.kube/config
+    remote_src: true
+    owner: root
+    group: root
+    mode:  "0600"
+
 - name: k8s initialize - Deploy Calico CNI
   ansible.builtin.shell: |
     kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v{{ k8s_calico_version }}/manifests/operator-crds.yaml
