@@ -58,4 +58,6 @@
             -e "/blockSize/s/[0-9]\{1,2\}/24/" \
       > /root/calico_config.yml
     kubectl apply -f /root/calico_config.yml
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
   when: _k8s_initialized.changed
