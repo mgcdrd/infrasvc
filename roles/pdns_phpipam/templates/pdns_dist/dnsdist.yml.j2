@@ -43,6 +43,21 @@ query_rules:
       type: Pool
       pool_name: recursor
 
+# Set the recursive bit (RA) on auth replies (prevents some errors)
+response_rules:
+  - name: "set domain RA"
+    selector:
+      type: QNameSuffix
+      suffixes:
+        - {{ pdns_phpipam_domain }}
+    action:
+      type: Lua
+      function_code: |
+        return function(dr)
+          dr.dh:setRA(true)
+          return DNSResponseAction.HeaderModify
+        end
+
 pools:
   - name: auth
   - name: recursor
