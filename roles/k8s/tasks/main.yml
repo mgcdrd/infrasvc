@@ -5,6 +5,29 @@
   import_tasks: prep-node.yml
   when: k8s_run == 'config'
 
+- name: k8s main - Install container runtime (cri-o)
+  ansible.builtin.include_role:
+    name: mgcdrd.infrabase.crio
+  vars:
+    crio_version: "{{ k8s_version }}"
+  when:
+    - k8s_run == 'config'
+    - k8s_container_runtime == 'cri-o'
+
+- name: k8s main - Install container runtime (docker)
+  ansible.builtin.include_role:
+    name: mgcdrd.infrabase.docker
+  when:
+    - k8s_run == 'config'
+    - k8s_container_runtime == 'docker'
+
+- name: k8s main - Install container runtime (podman)
+  ansible.builtin.include_role:
+    name: mgcdrd.infrabase.podman
+  when:
+    - k8s_run == 'config'
+    - k8s_container_runtime == 'podman'
+
 - name: k8s main - Install repositories and packages (Debian)
   import_tasks: debian-repos.yml
   when:

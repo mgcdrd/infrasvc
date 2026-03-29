@@ -17,15 +17,15 @@
 
 - name: k8s prep-node - Remove swap entry from fstab
   ansible.builtin.lineinfile:
-    path: /etc/fstab
+    path:   /etc/fstab
     regexp: '.*swap.*'
-    state: absent
+    state:  absent
   notify: k8s daemon-reload
 
 - name: k8s prep-node - Remove swap logical volume
   community.general.lvol:
-    vg: "{{ ansible_lvm.lvs['lv_swap']['vg'] }}"
-    lv: lv_swap
+    vg:    "{{ ansible_lvm.lvs['lv_swap']['vg'] }}"
+    lv:    lv_swap
     state: absent
     force: true
   when:
@@ -51,17 +51,17 @@
 
 - name: k8s prep-node - Configure NetworkManager to disregard K8s interfaces
   ansible.builtin.copy:
-    src: networkmanager-calico.conf
-    dest: /etc/NetworkManager/conf.d/calico.conf
+    src:   networkmanager-calico.conf
+    dest:  /etc/NetworkManager/conf.d/calico.conf
     owner: root
     group: root
-    mode: "0644"
+    mode:  "0644"
   when: _k8s_network_manager | trim == "NetworkManager"
   notify: k8s restart NetworkManager
 
 
 # ===============
-# /etc/hosts — cluster node entries (delegated to infrabase.etc_hosts)
+# /etc/hosts — cluster node entries
 - name: k8s prep-node - Resolve cluster group for /etc/hosts
   ansible.builtin.set_fact:
     _k8s_cluster_group: >-
@@ -82,20 +82,17 @@
 # ===============
 # Kernel modules
 - name: k8s prep-node - Load required kernel modules
-  community.general.modprobe:
-    name: "{{ item }}"
-    state: present
-    persistent: present
-  loop: "{{ k8s_modules }}"
+  ansible.builtin.include_role:
+    name: mgcdrd.infrabase.kernel_modules
+  vars:
+    kernel_modules_list: "{{ k8s_modules }}"
 
 
 # ===============
 # sysctl
 - name: k8s prep-node - Configure sysctl parameters
-  ansible.builtin.template:
-    src: sysctl_kubernetes.conf.j2
-    dest: /etc/sysctl.d/kubernetes.conf
-    owner: root
-    group: root
-    mode: "0644"
-  notify: k8s reload sysctl
+  ansible.builtin.include_role:
+    name: mgcdrd.infrabase.sysctl
+  vars:
+    sysctl_params:     "{{ k8s_sysctl }}"
+    sysctl_conf_file:  /etc/sysctl.d/kubernetes.conf

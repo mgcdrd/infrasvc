@@ -28,6 +28,12 @@ k8s_sysctl:
   - { name: net.ipv4.conf.all.arp_ignore,        value: 1 }
   - { name: net.ipv4.conf.all.arp_announce,      value: 2 }
 
+# ---- CONTAINER RUNTIME ----
+# Which runtime to install. Passed to mgcdrd.infrabase.container_runtime.
+# Supported: cri-o | docker | podman
+# Note: docker and podman require cri-dockerd shim for k8s CRI compliance.
+k8s_container_runtime: cri-o
+
 # ---- ROLE PHASE ----
 # Controls which phase the role executes.
 #   config    - node preparation (swap, NM, hosts, modules, sysctl, repos, packages)
