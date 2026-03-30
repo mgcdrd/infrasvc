@@ -1,5 +1,13 @@
 ---
 
+- name: k8s initialize - Debug init conditions
+  ansible.builtin.debug:
+    msg:
+      - "inventory_hostname: {{ inventory_hostname }}"
+      - "k8s_init_master:    {{ k8s_init_master }}"
+      - "k8s_run:            {{ k8s_run }}"
+      - "match: {{ inventory_hostname == k8s_init_master }}"
+
 - name: k8s initialize - Check if cluster is already initialized
   ansible.builtin.stat:
     path: /etc/kubernetes/admin.conf
@@ -82,14 +90,24 @@
     KUBECONFIG: /etc/kubernetes/admin.conf
   changed_when: false
 
-- name: k8s initialize - Build Calico custom resources config
-  ansible.builtin.shell:
-    cmd: >-
-      curl -fsSL https://raw.githubusercontent.com/projectcalico/calico/v{{ k8s_calico_version }}/manifests/custom-resources.yaml
-      | sed -e "/cidr\:/s/192.168.0.0\/16/{{ k8s_pod_cidr | regex_replace('/', '\\/') }}/"
-            -e "/blockSize/s/[0-9]\{1,2\}/24/"
-      > /root/calico_config.yml
-  changed_when: true
+- name: k8s initialize - Download Calico custom resources template
+  ansible.builtin.get_url:
+    url:   "https://raw.githubusercontent.com/projectcalico/calico/v{{ k8s_calico_version }}/manifests/custom-resources.yaml"
+    dest:  /root/calico_config.yml
+    force: true
+    mode:  "0600"
+
+- name: k8s initialize - Set pod CIDR in Calico config
+  ansible.builtin.replace:
+    path:    /root/calico_config.yml
+    regexp:  '192\.168\.0\.0/16'
+    replace: "{{ k8s_pod_cidr }}"
+
+- name: k8s initialize - Set Calico block size
+  ansible.builtin.replace:
+    path:    /root/calico_config.yml
+    regexp:  '(blockSize:\s*)\d+'
+    replace: '\g<1>24'
 
 - name: k8s initialize - Apply Calico custom resources
   ansible.builtin.command:
