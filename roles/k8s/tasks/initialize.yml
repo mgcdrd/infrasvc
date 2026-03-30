@@ -1,13 +1,5 @@
 ---
 
-- name: k8s initialize - Debug init conditions
-  ansible.builtin.debug:
-    msg:
-      - "inventory_hostname: {{ inventory_hostname }}"
-      - "k8s_init_master:    {{ k8s_init_master }}"
-      - "k8s_run:            {{ k8s_run }}"
-      - "match: {{ inventory_hostname == k8s_init_master }}"
-
 - name: k8s initialize - Check if cluster is already initialized
   ansible.builtin.stat:
     path: /etc/kubernetes/admin.conf
