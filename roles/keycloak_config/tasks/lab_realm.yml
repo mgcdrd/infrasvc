@@ -1,0 +1,198 @@
+---
+
+# ============================================================
+# Lab realm — LDAP federation, k8s client, group mappings
+# ============================================================
+
+- name: keycloak_config lab - Create lab realm
+  community.general.keycloak_realm:
+    auth_keycloak_url:  "{{ keycloak_config_auth_url }}"
+    auth_realm:         master
+    auth_username:      "{{ keycloak_config_admin_user }}"
+    auth_password:      "{{ keycloak_config_admin_password }}"
+    auth_client_id:     admin-cli
+    validate_certs:     "{{ keycloak_config_validate_certs }}"
+    id:                 "{{ keycloak_lab_realm_name }}"
+    realm:              "{{ keycloak_lab_realm_name }}"
+    display_name:       "{{ keycloak_lab_realm_display }}"
+    enabled:            true
+    ssl_required:       "{{ keycloak_lab_ssl_required }}"
+    sso_session_idle_timeout:   "{{ keycloak_lab_session_idle }}"
+    sso_session_max_lifespan:   "{{ keycloak_lab_session_max }}"
+    access_token_lifespan:      "{{ keycloak_lab_token_lifespan }}"
+    state: present
+
+- name: keycloak_config lab - Configure LDAP user federation
+  community.general.keycloak_user_federation:
+    auth_keycloak_url:  "{{ keycloak_config_auth_url }}"
+    auth_realm:         master
+    auth_username:      "{{ keycloak_config_admin_user }}"
+    auth_password:      "{{ keycloak_config_admin_password }}"
+    auth_client_id:     admin-cli
+    validate_certs:     "{{ keycloak_config_validate_certs }}"
+    realm:              "{{ keycloak_lab_realm_name }}"
+    name:               ldap
+    provider_id:        ldap
+    provider_type:      org.keycloak.storage.UserStorageProvider
+    state:              present
+    config:
+      enabled:                true
+      priority:               0
+      importEnabled:          true
+      editMode:               "{{ keycloak_ldap_edit_mode }}"
+      syncRegistrations:      "{{ keycloak_ldap_sync_registrations | bool }}"
+      vendor:                 "{{ keycloak_ldap_vendor }}"
+      usernameLDAPAttribute:  "{{ keycloak_ldap_username_ldap_attribute }}"
+      rdnLDAPAttribute:       "{{ keycloak_ldap_rdn_ldap_attribute }}"
+      uuidLDAPAttribute:      "{{ keycloak_ldap_uuid_ldap_attribute }}"
+      userObjectClasses:      "{{ keycloak_ldap_user_object_classes }}"
+      connectionUrl:          "{{ keycloak_ldap_url }}"
+      usersDn:                "{{ keycloak_ldap_users_dn }}"
+      authType:               "simple"
+      bindDn:                 "{{ keycloak_ldap_bind_dn }}"
+      bindCredential:         "{{ keycloak_ldap_bind_credential }}"
+      searchScope:            "{{ keycloak_ldap_search_scope }}"
+      validatePasswordPolicy: false
+      trustEmail:             false
+      useTruststoreSpi:       "{{ keycloak_ldap_use_truststore_spi }}"
+      connectionPooling:      "{{ keycloak_ldap_connection_pooling | bool }}"
+      pagination:             "{{ keycloak_ldap_pagination | bool }}"
+      connectionTimeout:      "{{ keycloak_ldap_connection_timeout | int }}"
+      readTimeout:            "{{ keycloak_ldap_read_timeout | int }}"
+      startTls:               "{{ keycloak_ldap_start_tls | bool }}"
+      fullSyncPeriod:         "{{ keycloak_ldap_full_sync_period | int }}"
+      changedSyncPeriod:      "{{ keycloak_ldap_changed_sync_period | int }}"
+      cachePolicy:            "DEFAULT"
+    mappers:
+      - name:         "username"
+        providerId:   "user-attribute-ldap-mapper"
+        providerType: "org.keycloak.storage.ldap.mappers.LDAPStorageMapper"
+        config:
+          ldap.attribute:              "{{ keycloak_ldap_username_ldap_attribute }}"
+          user.model.attribute:        "username"
+          read.only:                   true
+          always.read.value.from.ldap: false
+          is.mandatory.in.ldap:        true
+      - name:         "first name"
+        providerId:   "user-attribute-ldap-mapper"
+        providerType: "org.keycloak.storage.ldap.mappers.LDAPStorageMapper"
+        config:
+          ldap.attribute:              "givenName"
+          user.model.attribute:        "firstName"
+          read.only:                   true
+          always.read.value.from.ldap: false
+          is.mandatory.in.ldap:        false
+      - name:         "last name"
+        providerId:   "user-attribute-ldap-mapper"
+        providerType: "org.keycloak.storage.ldap.mappers.LDAPStorageMapper"
+        config:
+          ldap.attribute:              "sn"
+          user.model.attribute:        "lastName"
+          read.only:                   true
+          always.read.value.from.ldap: false
+          is.mandatory.in.ldap:        false
+      - name:         "email"
+        providerId:   "user-attribute-ldap-mapper"
+        providerType: "org.keycloak.storage.ldap.mappers.LDAPStorageMapper"
+        config:
+          ldap.attribute:              "mail"
+          user.model.attribute:        "email"
+          read.only:                   true
+          always.read.value.from.ldap: false
+          is.mandatory.in.ldap:        false
+      - name:         "groups"
+        providerId:   "group-ldap-mapper"
+        providerType: "org.keycloak.storage.ldap.mappers.LDAPStorageMapper"
+        config:
+          groups.dn:                            "{{ keycloak_ldap_groups_dn }}"
+          group.name.ldap.attribute:            "cn"
+          group.object.classes:                 "{{ keycloak_ldap_group_object_classes }}"
+          preserve.group.inheritance:           "{{ keycloak_ldap_preserve_group_inheritance | bool }}"
+          membership.ldap.attribute:            "{{ keycloak_ldap_group_membership_attribute }}"
+          membership.attribute.type:            "{{ keycloak_ldap_group_membership_attribute_type }}"
+          membership.user.ldap.attribute:       "{{ keycloak_ldap_username_ldap_attribute }}"
+          groups.ldap.filter:                   "{{ keycloak_ldap_groups_ldap_filter }}"
+          mode:                                 "READ_ONLY"
+          user.roles.retrieve.strategy:         "LOAD_GROUPS_BY_MEMBER_ATTRIBUTE"
+          mapped.group.attributes:              ""
+          drop.non.existing.groups.during.sync: "{{ keycloak_ldap_drop_non_existing_groups | bool }}"
+          groups.path:                          "{{ keycloak_ldap_groups_path }}"
+          ignore.missing.groups:                false
+
+- name: keycloak_config lab - Configure kubernetes client
+  ansible.builtin.import_tasks: k8s_client.yml
+
+- name: keycloak_config lab - Obtain admin API token
+  ansible.builtin.uri:
+    url:             "{{ keycloak_config_auth_url }}/realms/master/protocol/openid-connect/token"
+    method:          POST
+    body_format:     form-urlencoded
+    body:
+      client_id:     admin-cli
+      username:      "{{ keycloak_config_admin_user }}"
+      password:      "{{ keycloak_config_admin_password }}"
+      grant_type:    password
+    validate_certs:  "{{ keycloak_config_validate_certs }}"
+    status_code:     200
+  register: _kc_lab_token
+  no_log:   true
+
+- name: keycloak_config lab - Get LDAP federation ID
+  ansible.builtin.uri:
+    url:             "{{ keycloak_config_auth_url }}/admin/realms/{{ keycloak_lab_realm_name }}/components?type=org.keycloak.storage.UserStorageProvider"
+    method:          GET
+    headers:
+      Authorization: "Bearer {{ _kc_lab_token.json.access_token }}"
+    validate_certs:  "{{ keycloak_config_validate_certs }}"
+    status_code:     200
+  register: _kc_lab_fed_list
+
+- name: keycloak_config lab - Trigger LDAP full sync
+  ansible.builtin.uri:
+    url:             "{{ keycloak_config_auth_url }}/admin/realms/{{ keycloak_lab_realm_name }}/user-storage/{{ _kc_lab_fed_id }}/sync?action=triggerFullSync"
+    method:          POST
+    headers:
+      Authorization: "Bearer {{ _kc_lab_token.json.access_token }}"
+    validate_certs:  "{{ keycloak_config_validate_certs }}"
+    status_code:     [200, 204]
+  vars:
+    _kc_lab_fed_id: "{{ (_kc_lab_fed_list.json | selectattr('name', 'equalto', 'ldap') | list | first).id }}"
+  ignore_errors: true
+
+- name: keycloak_config lab - Get k8s cluster-admin role
+  ansible.builtin.uri:
+    url:             "{{ keycloak_config_auth_url }}/admin/realms/{{ keycloak_lab_realm_name }}/clients/{{ _kc_k8s_client_id }}/roles/cluster-admin"
+    method:          GET
+    headers:
+      Authorization: "Bearer {{ _kc_lab_token.json.access_token }}"
+    validate_certs:  "{{ keycloak_config_validate_certs }}"
+    status_code:     200
+  register: _kc_k8s_cluster_admin_role
+  vars:
+    _kc_k8s_client_id: "{{ _kc_k8s_client_result.end_state.id }}"
+
+- name: keycloak_config lab - Get admin group details
+  ansible.builtin.uri:
+    url:             "{{ keycloak_config_auth_url }}/admin/realms/{{ keycloak_lab_realm_name }}/groups?search={{ item | urlencode }}&exact=true"
+    method:          GET
+    headers:
+      Authorization: "Bearer {{ _kc_lab_token.json.access_token }}"
+    validate_certs:  "{{ keycloak_config_validate_certs }}"
+    status_code:     200
+  register: _kc_lab_admin_group_results
+  loop: "{{ keycloak_lab_admin_groups }}"
+
+- name: keycloak_config lab - Assign cluster-admin role to admin groups
+  ansible.builtin.uri:
+    url:             "{{ keycloak_config_auth_url }}/admin/realms/{{ keycloak_lab_realm_name }}/groups/{{ item.json[0].id }}/role-mappings/clients/{{ _kc_k8s_client_result.end_state.id }}"
+    method:          POST
+    headers:
+      Authorization: "Bearer {{ _kc_lab_token.json.access_token }}"
+      Content-Type:  "application/json"
+    body_format:     json
+    body:
+      - "{{ _kc_k8s_cluster_admin_role.json }}"
+    validate_certs:  "{{ keycloak_config_validate_certs }}"
+    status_code:     [200, 204]
+  loop: "{{ _kc_lab_admin_group_results.results }}"
+  when: item.json | length > 0

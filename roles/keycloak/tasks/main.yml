@@ -1,0 +1,92 @@
+---
+
+- name: keycloak main - Install Docker
+  ansible.builtin.include_role:
+    name: mgcdrd.infrabase.docker
+
+- name: keycloak main - Install NFS client (Debian)
+  ansible.builtin.apt:
+    name: nfs-common
+    state: present
+  when:
+    - keycloak_shared_storage == 'nfs'
+    - ansible_facts['os_family'] == 'Debian'
+
+- name: keycloak main - Install NFS client (RedHat)
+  ansible.builtin.dnf:
+    name: nfs-utils
+    state: present
+  when:
+    - keycloak_shared_storage == 'nfs'
+    - ansible_facts['os_family'] == 'RedHat'
+
+# Resolve the data root once so all subsequent tasks and the compose
+# template use a single consistent path regardless of storage mode.
+- name: keycloak main - Set data root fact
+  ansible.builtin.set_fact:
+    _keycloak_data_dir: >-
+      {{ keycloak_nfs_mount if keycloak_shared_storage == 'nfs'
+         else keycloak_base_dir + '/data' }}
+
+- name: keycloak main - Mount shared NFS volume
+  import_tasks: nfs.yml
+  when: keycloak_shared_storage == 'nfs'
+
+- name: keycloak main - Create local data directories
+  ansible.builtin.file:
+    path:  "{{ _keycloak_data_dir }}/{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode:  "0755"
+  loop: "{{ keycloak_data_subdirs }}"
+  when: keycloak_shared_storage == 'local'
+
+- name: keycloak main - Open Keycloak ports in firewalld
+  ansible.posix.firewalld:
+    port:      "{{ item }}/tcp"
+    permanent: true
+    state:     enabled
+    immediate: true
+  loop:
+    - "{{ keycloak_http_port }}"
+    - "{{ keycloak_https_port }}"
+    - "{{ keycloak_mgmt_port }}"
+    - "{{ keycloak_jgroups_port }}"
+    - "{{ keycloak_jgroups_fd_port }}"
+  when: keycloak_network_mode == 'host'
+
+- name: keycloak main - Forward privileged ports to Keycloak bind ports
+  ansible.posix.firewalld:
+    rich_rule: "rule family=ipv4 forward-port port={{ item.from }} protocol=tcp to-port={{ item.to }}"
+    permanent: true
+    state:     enabled
+    immediate: true
+  loop:
+    - { from: "80",  to: "{{ keycloak_http_port }}" }
+    - { from: "443", to: "{{ keycloak_https_port }}" }
+  when: keycloak_network_mode == 'host'
+
+- name: keycloak main - Issue TLS certificate
+  ansible.builtin.include_role:
+    name: mgcdrd.infrabase.acme_sh
+  vars:
+    acme_sh_certs:
+      - domains:
+          - "{{ keycloak_hostname }}"
+        challenge: dns_cf
+        reload_cmd: >-
+          chown -R 1000:1000 {{ keycloak_cert_dir }} &&
+          test -f {{ keycloak_base_dir }}/docker-compose.yml &&
+          docker compose -f {{ keycloak_base_dir }}/docker-compose.yml restart keycloak || true
+
+- name: keycloak main - Set cert directory ownership for Keycloak container
+  ansible.builtin.file:
+    path: "{{ keycloak_cert_dir }}"
+    state: directory
+    owner: "1000"
+    group: "1000"
+    recurse: true
+
+- name: keycloak main - Deploy Keycloak
+  import_tasks: deploy.yml

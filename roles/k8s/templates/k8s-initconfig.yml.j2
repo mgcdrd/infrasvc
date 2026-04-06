@@ -29,10 +29,37 @@ timeouts:
 ---
 apiVersion: kubeadm.k8s.io/v1beta4
 kind: ClusterConfiguration
-{% if k8s_control_plane_endpoint is defined %}
+{% if k8s_control_plane_endpoint is defined or k8s_psa_enabled or k8s_oidc_enabled %}
 apiServer:
+{% if k8s_control_plane_endpoint is defined %}
   certSANs:
     - {{ k8s_control_plane_endpoint }}
+{% endif %}
+{% if k8s_psa_enabled or k8s_oidc_enabled %}
+  extraArgs:
+{% if k8s_psa_enabled %}
+    - name: admission-control-config-file
+      value: /etc/kubernetes/psa-admission.yml
+{% endif %}
+{% if k8s_oidc_enabled %}
+    - name: oidc-issuer-url
+      value: "{{ k8s_oidc_issuer_url }}"
+    - name: oidc-client-id
+      value: "{{ k8s_oidc_client_id }}"
+    - name: oidc-username-claim
+      value: "{{ k8s_oidc_username_claim }}"
+    - name: oidc-groups-claim
+      value: "{{ k8s_oidc_groups_claim }}"
+{% endif %}
+{% endif %}
+{% if k8s_psa_enabled %}
+  extraVolumes:
+    - name: psa-admission-config
+      hostPath: /etc/kubernetes/psa-admission.yml
+      mountPath: /etc/kubernetes/psa-admission.yml
+      readOnly: true
+      pathType: File
+{% endif %}
 {% else %}
 apiServer: {}
 {% endif %}
@@ -57,3 +84,9 @@ controlPlaneEndpoint: "{{ k8s_control_plane_endpoint }}:6443"
 {% endif %}
 proxy: {}
 scheduler: {}
+---
+apiVersion: kubeadm.k8s.io/v1beta4
+kind: KubeProxyConfiguration
+mode: "ipvs"
+ipvs:
+  strictARP: true

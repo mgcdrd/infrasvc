@@ -1,0 +1,10 @@
+#!/bin/bash
+# Managed by Ansible — mgcdrd.infrasvc.keycloak
+# Checks the Keycloak management health endpoint.
+# Used by keepalived to determine VIP ownership.
+
+curl -sf \
+  --max-time 3 \
+  -o /dev/null \
+  "https://localhost:{{ keycloak_mgmt_port }}/health/ready" \
+  --insecure

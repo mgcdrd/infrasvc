@@ -1,0 +1,11 @@
+---
+
+- name: keycloak_config - Configure master realm
+  ansible.builtin.include_tasks: master_realm.yml
+  when: keycloak_configure_master | bool
+  tags: [kc_master]
+
+- name: keycloak_config - Configure lab realm
+  ansible.builtin.include_tasks: lab_realm.yml
+  when: keycloak_configure_lab | bool
+  tags: [kc_lab]

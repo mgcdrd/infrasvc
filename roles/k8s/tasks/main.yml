@@ -40,6 +40,56 @@
     - k8s_run == 'config'
     - ansible_facts['os_family'] == 'RedHat'
 
+# ---- Install helm + Python k8s lib on masters (k8s_run: config) ----
+# Required so masters can run kubernetes.core modules locally for platform
+# bootstrap without copying kubeconfig to the management host.
+- name: k8s main - Install helm and Python kubernetes library on masters (Debian)
+  when:
+    - k8s_run == 'config'
+    - inventory_hostname in groups['k8smasters']
+    - ansible_facts['os_family'] == 'Debian'
+  block:
+    - name: k8s main - Download helm install script (Debian)
+      ansible.builtin.get_url:
+        url:  "https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-{{ k8s_helm_version }}"
+        dest: /tmp/get-helm.sh
+        mode: "0700"
+        force: true
+
+    - name: k8s main - Run helm install script (Debian)
+      ansible.builtin.command:
+        cmd: /tmp/get-helm.sh
+        creates: /usr/local/bin/helm
+
+    - name: k8s main - Install Python kubernetes library (Debian)
+      ansible.builtin.apt:
+        name: python3-kubernetes
+        state: present
+
+- name: k8s main - Install helm and Python kubernetes library on masters (RedHat)
+  when:
+    - k8s_run == 'config'
+    - inventory_hostname in groups['k8smasters']
+    - ansible_facts['os_family'] == 'RedHat'
+  block:
+    - name: k8s main - Download helm install script (RedHat)
+      ansible.builtin.get_url:
+        url:  "https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-{{ k8s_helm_version }}"
+        dest: /tmp/get-helm.sh
+        mode: "0700"
+        force: true
+
+    - name: k8s main - Run helm install script (RedHat)
+      ansible.builtin.command:
+        cmd: /tmp/get-helm.sh
+        creates: /usr/local/bin/helm
+
+    - name: k8s main - Install Python kubernetes library (RedHat)
+      ansible.builtin.dnf:
+        name: python3-kubernetes
+        state: present
+
+
 # ---- Cluster initialization (k8s_run: init, first master only) ----
 - name: k8s main - Initialize cluster
   import_tasks: initialize.yml

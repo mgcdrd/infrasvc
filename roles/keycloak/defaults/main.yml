@@ -1,0 +1,103 @@
+---
+
+# ---- KEYCLOAK VERSION ----
+keycloak_version: "26.4"
+keycloak_image: "quay.io/keycloak/keycloak"
+
+# ---- HOSTNAMES ----
+# External FQDN served by keepalived VIP — used in TLS cert and KC_HOSTNAME
+keycloak_hostname: ""         # e.g. infra-kc.lab.provenzawt.dev
+
+# ---- NETWORK ----
+# host   — container shares the host network stack. JGroups multicast works
+#          natively between nodes; no port mapping required. Recommended for
+#          dedicated Keycloak nodes.
+# bridge — container uses an isolated bridge network. All ports are explicitly
+#          published. For cross-host Infinispan clustering you must also set
+#          KC_CACHE_STACK=tcp and configure TCPPING via keycloak_extra_env.
+keycloak_network_mode: host
+
+# ---- PORTS ----
+# Keycloak bind ports. Use unprivileged ports (>1024) so the container process
+# (uid 1000) can bind without CAP_NET_BIND_SERVICE.
+# When network_mode is host, firewalld rules forward 80→http_port and
+# 443→https_port so external clients still reach standard ports.
+keycloak_http_port:       8080
+keycloak_https_port:      8443
+keycloak_mgmt_port:       9000    # health/metrics endpoint
+keycloak_jgroups_port:    7800    # Infinispan JGroups cluster traffic
+keycloak_jgroups_fd_port: 57600   # JGroups failure detection (FD_SOCK)
+
+# ---- DIRECTORIES ----
+# Base directory on the managed host for the compose file.
+# Local data subdirs (conf_truststores, themes) are created here when
+# keycloak_shared_storage is 'local'.
+keycloak_base_dir: /srv/docker/keycloak
+
+# ---- SHARED STORAGE ----
+# Controls where themes and truststores are stored.
+#
+#   nfs   — mount an NFS share; required for active/passive HA so both nodes
+#            see the same files. Needs keycloak_nfs_server and keycloak_nfs_path.
+#   local — create directories under keycloak_base_dir/data on each node.
+#            Suitable for single-node or when you manage file sync yourself.
+#
+keycloak_shared_storage: nfs
+
+# NFS options — only used when keycloak_shared_storage: nfs
+keycloak_nfs_server: ""       # TrueNAS IP or hostname
+keycloak_nfs_path:   ""       # Export path on TrueNAS
+keycloak_nfs_mount:  /mnt/keycloak
+keycloak_nfs_opts:   "vers=3,_netdev"
+
+# Subdirectories created under the data root (NFS mount or local base/data).
+keycloak_data_subdirs:
+  - conf_truststores
+  - themes
+
+# ---- TLS ----
+# Directory where acme_sh deploys the cert for this host.
+# Must match acme_sh_cert_base_dir in the acme_sh role (default: /etc/ssl/acme).
+acme_sh_cert_base_dir: /etc/ssl/acme
+keycloak_cert_dir: "{{ acme_sh_cert_base_dir }}/{{ keycloak_hostname }}"
+
+# ---- POSTGRESQL ----
+postgres_version: "18"
+postgres_image:   "postgres"
+postgres_db:      keycloak
+postgres_host:    ""          # FQDN or IP of the PostgreSQL host — required
+postgres_port:    5432
+
+# Credentials — inject via AWX/Vault, never hardcode
+keycloak_db_user:     "{{ vault_keycloak_db_user }}"
+keycloak_db_password: "{{ vault_keycloak_db_password }}"
+
+# ---- KEYCLOAK ADMIN BOOTSTRAP ----
+# Bootstrap admin is only active on first start — Keycloak removes it once
+# a permanent admin is created. Inject via AWX/Vault.
+keycloak_admin_user:     "{{ vault_keycloak_admin_user }}"
+keycloak_admin_password: "{{ vault_keycloak_admin_password }}"
+
+# ---- KEYCLOAK EXTRA ENV ----
+# Additional KC_* environment variables merged into the compose service.
+# Example:
+#   keycloak_extra_env:
+#     KC_LOG_LEVEL: INFO
+#     KC_FEATURES: "token-exchange,admin-fine-grained-authz"
+keycloak_extra_env: {}
+
+# ---- KEEPALIVED PRESET ----
+# Registered here so the keepalived role can find it when
+# keepalived_vip_for includes 'keycloak'.
+keepalived_preset_keycloak:
+  vrrp_scripts:
+    - name:      check_keycloak
+      script:    /etc/keepalived/check_keycloak.sh
+      template:  keycloak/check_keycloak.sh.j2
+      interval:  5
+      user:      root
+      group:     root
+      weight:    26
+      fall:      3
+      rise:      2
+      init_fail: true

@@ -47,6 +47,44 @@ k8s_run: config
 # Set explicitly when running against a sub-group (e.g. k8smasters only).
 k8s_cluster_group: ""
 
+# ---- HELM (installed on masters for k8s-platform bootstrap) ----
+# Major version to install: 3 or 4. Script pulled from get.helm.sh.
+k8s_helm_version: 4
+
+# ---- POD SECURITY ADMISSION ----
+# Cluster-wide defaults applied via AdmissionConfiguration on the API server.
+# enforce:  pods violating this level are rejected
+# warn:     violation sends a warning to the kubectl client at apply time
+# audit:    violation is written to the k8s audit log
+#
+# Recommended pattern:
+#   enforce: baseline  — blocks known privilege escalations cluster-wide
+#   warn:    restricted — tells you at apply time what would break restricted
+#   audit:   restricted — logs restricted violations server-side
+#
+# Individual namespaces override with PSA labels (set in k8s-platform).
+k8s_psa_enabled: true
+k8s_psa_version: latest
+k8s_psa_enforce: baseline
+k8s_psa_warn: restricted
+k8s_psa_audit: restricted
+k8s_psa_exempt_namespaces:
+  - kube-system
+  - kube-node-lease
+  - kube-public
+
+
+# ---- OIDC AUTHENTICATION ----
+# Configures the API server to accept JWT tokens from an external OIDC provider
+# (e.g. Keycloak). Set k8s_oidc_enabled: true and populate the remaining vars.
+# These flags are only valid at cluster init time — changing them later requires
+# restarting the API server pod or re-running kubeadm with an updated config.
+k8s_oidc_enabled:        false
+k8s_oidc_issuer_url:     ""               # e.g. https://infra-kc.example.com/realms/lab
+k8s_oidc_client_id:      "kubernetes"
+k8s_oidc_username_claim: "preferred_username"
+k8s_oidc_groups_claim:   "groups"
+
 # ---- REQUIRED VARIABLES (no defaults) ----
 # These must be set in your play vars or inventory:
 #
