@@ -1,0 +1,34 @@
+---
+
+- name: keycloak deploy - Create base directory
+  ansible.builtin.file:
+    path:  "{{ keycloak_base_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode:  "0750"
+
+- name: keycloak deploy - Deploy docker-compose.yml
+  ansible.builtin.template:
+    src:   docker-compose.yml.j2
+    dest:  "{{ keycloak_base_dir }}/docker-compose.yml"
+    owner: root
+    group: root
+    mode:  "0640"
+  notify: keycloak compose restart
+
+- name: keycloak deploy - Start stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ keycloak_base_dir }}"
+    state: present
+    pull: missing
+
+- name: keycloak deploy - Wait for Keycloak health endpoint
+  ansible.builtin.uri:
+    url:            "https://localhost:{{ keycloak_mgmt_port }}/health/ready"
+    validate_certs: false
+    status_code:    200
+  register: _kc_health
+  until:    _kc_health.status == 200
+  retries:  30
+  delay:    10

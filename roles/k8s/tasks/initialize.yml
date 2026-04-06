@@ -24,6 +24,24 @@
     group: root
     mode:  "0600"
 
+- name: k8s initialize - Ensure /etc/kubernetes directory exists
+  ansible.builtin.file:
+    path:  /etc/kubernetes
+    state: directory
+    owner: root
+    group: root
+    mode:  "0755"
+  when: k8s_psa_enabled
+
+- name: k8s initialize - Deploy Pod Security Admission config
+  ansible.builtin.template:
+    src:   psa-admission.yml.j2
+    dest:  /etc/kubernetes/psa-admission.yml
+    owner: root
+    group: root
+    mode:  "0600"
+  when: k8s_psa_enabled
+
 - name: k8s initialize - Initialize cluster
   ansible.builtin.command:
     cmd: kubeadm init --config /root/k8s-initconfig.yml

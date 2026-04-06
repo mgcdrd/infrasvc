@@ -1,0 +1,15 @@
+---
+galaxy_info:
+  author: mgcdrd
+  description: Deploys Keycloak via Docker Compose with PostgreSQL backend and acme_sh TLS
+  role_name: keycloak
+
+  license: GPL-3.0-or-later
+
+  min_ansible_version: '2.14'
+
+  galaxy_tags:
+    - mgcdrd
+
+collections:
+  - community.docker

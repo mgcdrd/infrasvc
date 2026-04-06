@@ -1,0 +1,64 @@
+---
+
+# ============================================================
+# Kubernetes OIDC client in the lab realm
+# ============================================================
+
+- name: keycloak_config k8s - Create kubernetes client
+  community.general.keycloak_client:
+    auth_keycloak_url:  "{{ keycloak_config_auth_url }}"
+    auth_realm:         master
+    auth_username:      "{{ keycloak_config_admin_user }}"
+    auth_password:      "{{ keycloak_config_admin_password }}"
+    auth_client_id:     admin-cli
+    validate_certs:     "{{ keycloak_config_validate_certs }}"
+    realm:              "{{ keycloak_lab_realm_name }}"
+    client_id:          "{{ keycloak_k8s_client_id }}"
+    name:               "{{ keycloak_k8s_client_name }}"
+    description:        "Kubernetes cluster OIDC authentication"
+    enabled:            true
+    public_client:      "{{ keycloak_k8s_public_client }}"
+    standard_flow_enabled:          true
+    implicit_flow_enabled:          false
+    direct_access_grants_enabled:   false
+    service_accounts_enabled:       false
+    redirect_uris:      "{{ keycloak_k8s_redirect_uris }}"
+    web_origins:        "{{ keycloak_k8s_web_origins }}"
+    protocol_mappers:
+      - name:              "groups"
+        protocol:          openid-connect
+        protocolMapper:    oidc-group-membership-mapper
+        consentRequired:   false
+        config:
+          full.path:            "false"
+          id.token.claim:       "true"
+          access.token.claim:   "true"
+          claim.name:           "groups"
+          userinfo.token.claim: "true"
+      - name:              "username"
+        protocol:          openid-connect
+        protocolMapper:    oidc-usermodel-property-mapper
+        consentRequired:   false
+        config:
+          user.attribute:       "username"
+          id.token.claim:       "true"
+          access.token.claim:   "true"
+          claim.name:           "preferred_username"
+          jsonType.label:       "String"
+          userinfo.token.claim: "true"
+    state: present
+  register: _kc_k8s_client_result
+
+- name: keycloak_config k8s - Create cluster-admin client role
+  community.general.keycloak_role:
+    auth_keycloak_url:  "{{ keycloak_config_auth_url }}"
+    auth_realm:         master
+    auth_username:      "{{ keycloak_config_admin_user }}"
+    auth_password:      "{{ keycloak_config_admin_password }}"
+    auth_client_id:     admin-cli
+    validate_certs:     "{{ keycloak_config_validate_certs }}"
+    realm:              "{{ keycloak_lab_realm_name }}"
+    client_id:          "{{ keycloak_k8s_client_id }}"
+    name:               cluster-admin
+    description:        "Maps to Kubernetes cluster-admin ClusterRole"
+    state:              present

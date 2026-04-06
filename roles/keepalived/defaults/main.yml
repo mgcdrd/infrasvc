@@ -99,3 +99,16 @@ keepalived_preset_kubernetes:
       fall:      3
       rise:      4
       init_fail: false
+
+keepalived_preset_keycloak:
+  vrrp_scripts:
+    - name:      check_keycloak
+      script:    /etc/keepalived/check_keycloak.sh
+      template:  keycloak/check_keycloak.sh.j2
+      interval:  3
+      user:      root
+      group:     root
+      weight:    26
+      fall:      3
+      rise:      4
+      init_fail: false

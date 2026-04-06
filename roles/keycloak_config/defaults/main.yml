@@ -1,0 +1,85 @@
+---
+
+# ---- KEYCLOAK API CONNECTION ----
+# URL the Ansible modules use to reach the Keycloak admin API.
+# Defaults to localhost so tasks running on a keycloak host (run_once: true)
+# hit the local instance directly without depending on the VIP.
+keycloak_config_auth_url:      "https://localhost:{{ keycloak_https_port | default(8443) }}"
+keycloak_config_validate_certs: false
+
+# Admin credentials — inject via AWX/Vault, never hardcode
+keycloak_config_admin_user:     "{{ vault_keycloak_admin_user }}"
+keycloak_config_admin_password: "{{ vault_keycloak_admin_password }}"
+
+# ---- LDAP FEDERATION ----
+# Applied to both the master realm (admin access) and the lab realm (k8s access).
+# The same LDAP server is used for both; federation is configured independently
+# per realm as Keycloak does not share federation providers across realms.
+
+keycloak_ldap_url:                      ""       # ldap:// or ldaps://
+keycloak_ldap_bind_dn:                  ""       # CN=svc-keycloak,OU=...
+keycloak_ldap_bind_credential:          "{{ vault_keycloak_ldap_bind_credential }}"
+keycloak_ldap_users_dn:                 ""       # OU=Users,DC=...
+keycloak_ldap_vendor:                   "ad"     # ad | other (OpenLDAP/FreeIPA)
+keycloak_ldap_edit_mode:                "READ_ONLY"
+keycloak_ldap_username_ldap_attribute:  "sAMAccountName"   # uid for OpenLDAP/FreeIPA
+keycloak_ldap_rdn_ldap_attribute:       "cn"
+keycloak_ldap_uuid_ldap_attribute:      "objectGUID"       # entryUUID for OpenLDAP
+keycloak_ldap_user_object_classes:      "person, organizationalPerson, user"
+keycloak_ldap_search_scope:             "2"      # 1=ONE_LEVEL 2=SUBTREE (string enum)
+keycloak_ldap_connection_timeout:       5000
+keycloak_ldap_read_timeout:             10000
+keycloak_ldap_pagination:               true
+keycloak_ldap_connection_pooling:       true
+keycloak_ldap_start_tls:                false
+keycloak_ldap_use_truststore_spi:       "ldapsOnly"
+keycloak_ldap_sync_registrations:       false
+keycloak_ldap_full_sync_period:         -1       # -1 = disabled; seconds otherwise
+keycloak_ldap_changed_sync_period:      -1
+
+# ---- LDAP GROUP MAPPER ----
+keycloak_ldap_groups_dn:                      ""        # OU=Groups,DC=...
+keycloak_ldap_group_object_classes:           "group"   # groupOfNames for OpenLDAP
+keycloak_ldap_group_membership_attribute:     "member"
+keycloak_ldap_group_membership_attribute_type: "DN"     # DN or UID
+keycloak_ldap_groups_ldap_filter:             ""        # optional LDAP filter
+keycloak_ldap_groups_path:                    "/"
+keycloak_ldap_drop_non_existing_groups:       false
+keycloak_ldap_preserve_group_inheritance:     true
+
+# ---- EXECUTION GATES ----
+# Set to false to skip a section without removing it from the playbook.
+# Useful for re-running only part of the config (e.g. adding a new client).
+keycloak_configure_master: true
+keycloak_configure_lab:    true
+
+# ---- MASTER REALM ----
+# LDAP groups that receive the Keycloak 'admin' realm role on the master realm.
+keycloak_master_admin_groups: []
+# e.g.:
+#   - keycloak-admins
+
+# ---- LAB REALM ----
+keycloak_lab_realm_name:        "lab"
+keycloak_lab_realm_display:     "Lab"
+keycloak_lab_ssl_required:      "external"   # none | external | all
+keycloak_lab_session_idle:      1800         # seconds
+keycloak_lab_session_max:       36000        # seconds
+keycloak_lab_token_lifespan:    300          # seconds
+
+# LDAP groups that receive the k8s cluster-admin role in the lab realm.
+keycloak_lab_admin_groups: []
+# e.g.:
+#   - k8s-admins
+
+# Additional LDAP groups to ensure are present in the lab realm (optional).
+keycloak_lab_extra_groups: []
+
+# ---- KUBERNETES CLIENT ----
+keycloak_k8s_client_id:       "kubernetes"
+keycloak_k8s_client_name:     "Kubernetes"
+keycloak_k8s_public_client:   true          # true = no client secret (recommended for kubectl)
+keycloak_k8s_redirect_uris:
+  - "http://localhost:*"
+keycloak_k8s_web_origins:
+  - "+"
