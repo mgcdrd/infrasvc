@@ -1,0 +1,8 @@
+#!/bin/sh
+
+errorExit() {
+    echo "*** " 1>&2
+    exit 1
+}
+
+curl -sfk --max-time 2 https://localhost:{{ keycloak_mgmt_port }}/health/ready -o /dev/null || errorExit "Error GET https://localhost:{{ keycloak_mgmt_port }}/health/ready"
