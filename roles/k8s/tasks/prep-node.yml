@@ -80,6 +80,40 @@
 
 
 # ===============
+# Firewalld — open required k8s ports (RedHat only)
+- name: k8s prep-node - Open firewalld ports (all nodes)
+  ansible.posix.firewalld:
+    port:      "{{ item }}"
+    permanent: true
+    immediate: true
+    state:     enabled
+  loop: "{{ k8s_firewalld_ports_common }}"
+  when: ansible_facts['os_family'] == 'RedHat'
+
+- name: k8s prep-node - Open firewalld ports (masters only)
+  ansible.posix.firewalld:
+    port:      "{{ item }}"
+    permanent: true
+    immediate: true
+    state:     enabled
+  loop: "{{ k8s_firewalld_ports_master }}"
+  when:
+    - ansible_facts['os_family'] == 'RedHat'
+    - inventory_hostname in groups['k8smasters']
+
+- name: k8s prep-node - Open firewalld ports (workers only)
+  ansible.posix.firewalld:
+    port:      "{{ item }}"
+    permanent: true
+    immediate: true
+    state:     enabled
+  loop: "{{ k8s_firewalld_ports_worker }}"
+  when:
+    - ansible_facts['os_family'] == 'RedHat'
+    - inventory_hostname in groups['k8sworkers'] | default([])
+
+
+# ===============
 # Kernel modules
 - name: k8s prep-node - Load required kernel modules
   ansible.builtin.include_role:

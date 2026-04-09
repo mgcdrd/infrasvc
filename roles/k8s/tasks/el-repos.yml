@@ -20,3 +20,8 @@
       - kubectl
     state:            present
     disable_excludes: kubernetes
+
+- name: k8s el-repos - Enable kubelet (RedHat)
+  ansible.builtin.service:
+    name:    kubelet
+    enabled: true
