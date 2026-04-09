@@ -75,13 +75,13 @@
     - name: k8s main - Download helm install script (RedHat)
       ansible.builtin.get_url:
         url:  "https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-{{ k8s_helm_version }}"
-        dest: /tmp/get-helm.sh
+        dest: /run/get-helm.sh
         mode: "0700"
         force: true
 
     - name: k8s main - Run helm install script (RedHat)
       ansible.builtin.command:
-        cmd: /tmp/get-helm.sh
+        cmd: /run/get-helm.sh
         creates: /usr/local/bin/helm
 
     - name: k8s main - Install Python kubernetes library (RedHat)
