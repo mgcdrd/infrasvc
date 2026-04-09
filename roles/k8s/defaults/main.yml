@@ -66,7 +66,7 @@ k8s_cluster_group: ""
 
 # ---- HELM (installed on masters for k8s-platform bootstrap) ----
 # Major version to install: 3 or 4. Script pulled from get.helm.sh.
-k8s_helm_version: 4
+k8s_helm_version: 3
 
 # ---- POD SECURITY ADMISSION ----
 # Cluster-wide defaults applied via AdmissionConfiguration on the API server.
