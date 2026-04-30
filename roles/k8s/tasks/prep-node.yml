@@ -88,7 +88,7 @@
     immediate: true
     state:     enabled
   loop: "{{ k8s_firewalld_ports_common }}"
-  when: ansible_facts['os_family'] == 'RedHat'
+  when: ansible_facts['os_family'] == 'RedHat' and ansible_facts.services['firewalld.service'].state == 'running'
 
 - name: k8s prep-node - Open firewalld ports (masters only)
   ansible.posix.firewalld:
@@ -100,6 +100,7 @@
   when:
     - ansible_facts['os_family'] == 'RedHat'
     - inventory_hostname in groups['k8smasters']
+    - ansible_facts.services['firewalld.service'].state == 'running'
 
 - name: k8s prep-node - Open firewalld ports (workers only)
   ansible.posix.firewalld:
@@ -111,6 +112,7 @@
   when:
     - ansible_facts['os_family'] == 'RedHat'
     - inventory_hostname in groups['k8sworkers'] | default([])
+    - ansible_facts.services['firewalld.service'].state == 'running'
 
 
 # ===============
@@ -120,6 +122,31 @@
     name: mgcdrd.infrabase.kernel_modules
   vars:
     kernel_modules_list: "{{ k8s_modules }}"
+
+
+# ===============
+# PSA admission config — pre-stage on all masters so secondaries have it before join
+- name: k8s prep-node - Ensure /etc/kubernetes directory exists (masters)
+  ansible.builtin.file:
+    path:  /etc/kubernetes
+    state: directory
+    owner: root
+    group: root
+    mode:  "0755"
+  when:
+    - k8s_psa_enabled
+    - inventory_hostname in groups['k8smasters']
+
+- name: k8s prep-node - Deploy Pod Security Admission config (masters)
+  ansible.builtin.template:
+    src:   psa-admission.yml.j2
+    dest:  /etc/kubernetes/psa-admission.yml
+    owner: root
+    group: root
+    mode:  "0600"
+  when:
+    - k8s_psa_enabled
+    - inventory_hostname in groups['k8smasters']
 
 
 # ===============

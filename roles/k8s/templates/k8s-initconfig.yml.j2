@@ -10,7 +10,7 @@ bootstrapTokens:
   - signing
   - authentication
 localAPIEndpoint:
-  advertiseAddress: {{ lookup('community.general.dig', k8s_control_plane_endpoint) }}
+  advertiseAddress: {{ k8s_advertise_address }}
   bindPort: 6443
 nodeRegistration:
   criSocket: unix:///var/run/crio/crio.sock

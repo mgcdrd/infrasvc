@@ -1,5 +1,22 @@
 ---
 
+- name: k8s addnodes - Stop keepalived on non-init masters before join
+  ansible.builtin.systemd_service:
+    name:  keepalived.service
+    state: stopped
+  when:
+    - k8s_keepalived_enabled | bool
+    - inventory_hostname in groups['k8smasters']
+    - inventory_hostname != k8s_init_master
+
+- name: k8s addnodes - Wait for VIP to settle on init master
+  ansible.builtin.pause:
+    seconds: 5
+  run_once: true
+  when:
+    - k8s_keepalived_enabled | bool
+    - groups['k8smasters'] | length > 1
+
 - name: k8s addnodes - Get join command from init master
   ansible.builtin.shell:
     cmd: kubeadm token create --print-join-command
@@ -44,3 +61,12 @@
     {{ _k8s_join_cert_args if 'k8smasters' in group_names else '' }}
     >> /root/k8s_join
   when: not _k8s_kubelet_conf.stat.exists
+
+- name: k8s addnodes - Restart keepalived on non-init masters after join
+  ansible.builtin.systemd_service:
+    name:  keepalived.service
+    state: started
+  when:
+    - k8s_keepalived_enabled | bool
+    - inventory_hostname in groups['k8smasters']
+    - inventory_hostname != k8s_init_master

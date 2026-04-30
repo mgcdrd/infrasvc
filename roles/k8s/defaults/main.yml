@@ -58,6 +58,12 @@ k8s_container_runtime: cri-o
 #   addnodes  - join nodes to an already-initialized cluster
 k8s_run: config
 
+# ---- INIT MASTER ADVERTISE ADDRESS ----
+# IP address this node's API server binds to and advertises in InitConfiguration.
+# Defaults to the node's primary IPv4 address. Override only if the node has
+# multiple interfaces and kubeadm should bind to a specific one.
+k8s_advertise_address: "{{ ansible_default_ipv4.address }}"
+
 # ---- /etc/hosts ----
 # Inventory group whose members get written to /etc/hosts on every node.
 # If left empty the role auto-detects the group from play_hosts.
@@ -101,6 +107,11 @@ k8s_oidc_issuer_url:     ""               # e.g. https://infra-kc.example.com/re
 k8s_oidc_client_id:      "kubernetes"
 k8s_oidc_username_claim: "preferred_username"
 k8s_oidc_groups_claim:   "groups"
+
+# ---- KEEPALIVED INTEGRATION ----
+# Mirror of the deployment-level flag. The k8s role uses this to stop keepalived
+# on non-init masters during addnodes so the VIP stays pinned to the init master.
+k8s_keepalived_enabled: false
 
 # ---- REQUIRED VARIABLES (no defaults) ----
 # These must be set in your play vars or inventory:
