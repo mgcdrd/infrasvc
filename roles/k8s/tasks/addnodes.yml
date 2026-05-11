@@ -62,6 +62,11 @@
     >> /root/k8s_join
   when: not _k8s_kubelet_conf.stat.exists
 
+- name: k8s addnodes - Enable kubelet service
+  ansible.builtin.systemd_service:
+    name:    kubelet.service
+    enabled: true
+
 - name: k8s addnodes - Restart keepalived on non-init masters after join
   ansible.builtin.systemd_service:
     name:  keepalived.service

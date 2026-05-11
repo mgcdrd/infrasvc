@@ -32,6 +32,11 @@
   when: not _k8s_admin_conf.stat.exists
   register: _k8s_initialized
 
+- name: k8s initialize - Enable kubelet service
+  ansible.builtin.systemd_service:
+    name:    kubelet.service
+    enabled: true
+
 - name: k8s initialize - Create .kube directory
   ansible.builtin.file:
     path:  /root/.kube
