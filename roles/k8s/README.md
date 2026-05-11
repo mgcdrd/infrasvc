@@ -69,14 +69,21 @@ printf '%s.%s\n' "$(tr -dc a-z0-9 </dev/urandom | head -c 6)" \
 Phases (`k8s_run`)
 ------------------
 
-| Value      | What runs                                                                                                   | Target    |
-|------------|-------------------------------------------------------------------------------------------------------------|-----------|
-| `config`   | Swap disable, NetworkManager, `/etc/hosts`, kernel modules, sysctl, container runtime, repos, packages, helm + python3-kubernetes on masters | All nodes |
-| `init`     | `kubeadm init` on `k8s_init_master`, Calico CNI deploy, then all nodes join                                | All nodes |
-| `addnodes` | Join nodes to an already-initialized cluster                                                                | New nodes |
+| Value      | What runs                                                                                                                                                                                                      | Target    |
+|------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|
+| `config`   | Swap disable + fstab removal + LV removal + kernel boot arg cleanup (`resume=`, `rd.lvm.lv=`), NetworkManager, `/etc/hosts`, kernel modules, sysctl, container runtime, repos, packages, helm + python3-kubernetes on masters | All nodes |
+| `init`     | `kubeadm init` on `k8s_init_master`, enables `kubelet.service`, Calico CNI deploy, then all nodes join with `kubelet.service` enabled                                                                         | All nodes |
+| `addnodes` | Join nodes to an already-initialized cluster, enables `kubelet.service`                                                                                                                                        | New nodes |
 
 Run phases in order: `config` → `init`. Use `addnodes` later when adding new
 nodes to an existing cluster.
+
+**Swap removal and boot parameters:** the `config` phase removes `lv_swap`
+from the VG, strips `resume=` and `rd.lvm.lv=` from the GRUB kernel command
+line (RedHat: `grubby --update-kernel=ALL`; Debian: removes
+`/etc/initramfs-tools/conf.d/resume` and regenerates the initrd), and removes
+the fstab entry. Skipping any of these steps causes nodes to hang on the next
+reboot while dracut or the initramfs waits for a device that no longer exists.
 
 
 Container Runtimes
