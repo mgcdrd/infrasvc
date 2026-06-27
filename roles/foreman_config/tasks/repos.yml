@@ -1,5 +1,6 @@
 ---
 - name: repos - create products
+  become: false
   theforeman.foreman.product:
     username: "{{ foreman_username }}"
     password: "{{ vault_foreman_admin_password }}"
@@ -12,6 +13,7 @@
   loop: "{{ foreman_repo_products }}"
 
 - name: repos - create RPM repositories
+  become: false
   theforeman.foreman.repository:
     username: "{{ foreman_username }}"
     password: "{{ vault_foreman_admin_password }}"
@@ -28,6 +30,7 @@
   loop: "{{ foreman_repos_rpm | default([]) }}"
 
 - name: repos - create DEB repositories
+  become: false
   theforeman.foreman.repository:
     username: "{{ foreman_username }}"
     password: "{{ vault_foreman_admin_password }}"

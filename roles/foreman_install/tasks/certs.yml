@@ -1,20 +1,24 @@
 ---
 - name: certs - verify cert file exists
+  become: false
   ansible.builtin.stat:
     path: "{{ foreman_cert_path }}"
   register: foreman_cert_stat
 
 - name: certs - verify key file exists
+  become: false
   ansible.builtin.stat:
     path: "{{ foreman_cert_key_path }}"
   register: foreman_cert_key_stat
 
 - name: certs - verify CA bundle exists
+  become: false
   ansible.builtin.stat:
     path: "{{ foreman_cert_ca_path }}"
   register: foreman_cert_ca_stat
 
 - name: certs - fail if any cert file is missing
+  become: false
   ansible.builtin.fail:
     msg: >
       foreman_custom_certs is true but one or more cert files are missing.

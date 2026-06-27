@@ -1,5 +1,6 @@
 ---
 - name: lifecycle - create lifecycle environments
+  become: false
   theforeman.foreman.lifecycle_environment:
     username: "{{ foreman_username }}"
     password: "{{ vault_foreman_admin_password }}"
@@ -14,6 +15,7 @@
   loop: "{{ foreman_lifecycle_envs | default([]) }}"
 
 - name: lifecycle - create content views
+  become: false
   theforeman.foreman.content_view:
     username: "{{ foreman_username }}"
     password: "{{ vault_foreman_admin_password }}"
@@ -30,6 +32,7 @@
   loop: "{{ foreman_content_views | default([]) }}"
 
 - name: lifecycle - initial publish and promote content views
+  become: false
   theforeman.foreman.content_view_version:
     username: "{{ foreman_username }}"
     password: "{{ vault_foreman_admin_password }}"
@@ -43,6 +46,7 @@
   when: item.first_publish | default(false) | bool
 
 - name: lifecycle - create activation keys
+  become: false
   theforeman.foreman.activation_key:
     username: "{{ foreman_username }}"
     password: "{{ vault_foreman_admin_password }}"

@@ -17,6 +17,7 @@
   tags: [foreman_install, ipa]
 
 - name: foreman_install - verify custom certs exist
+  become: false
   import_tasks: certs.yml
   when: foreman_custom_certs | bool
   tags: [foreman_install, certs]

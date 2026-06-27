@@ -4,6 +4,7 @@
 # runs the assigned job template to finish configuration.
 
 - name: awx - set Ansible provider to AWX
+  become: false
   theforeman.foreman.setting:
     username: "{{ foreman_username }}"
     password: "{{ vault_foreman_admin_password }}"
@@ -23,6 +24,7 @@
 # templates rather than set here. Add them as global parameters so templates
 # can reference them.
 - name: awx - set AWX callback global parameters
+  become: false
   theforeman.foreman.global_parameter:
     username: "{{ foreman_username }}"
     password: "{{ vault_foreman_admin_password }}"

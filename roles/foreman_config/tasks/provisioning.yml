@@ -1,6 +1,7 @@
 ---
 # Pass 1: create OSes without template/media associations (they may not exist yet)
 - name: provisioning - create Debian operating systems
+  become: false
   theforeman.foreman.operatingsystem:
     username: "{{ foreman_username }}"
     password: "{{ vault_foreman_admin_password }}"
@@ -15,6 +16,7 @@
   loop: "{{ foreman_operatingsystems_deb | default([]) }}"
 
 - name: provisioning - create RHEL-family operating systems (pass 1 - no templates)
+  become: false
   theforeman.foreman.operatingsystem:
     username: "{{ foreman_username }}"
     password: "{{ vault_foreman_admin_password }}"
@@ -29,6 +31,7 @@
   loop: "{{ foreman_operatingsystems_rh | default([]) }}"
 
 - name: provisioning - create installation media
+  become: false
   theforeman.foreman.installation_medium:
     username: "{{ foreman_username }}"
     password: "{{ vault_foreman_admin_password }}"
@@ -45,6 +48,7 @@
 
 # Pass 2: re-apply RHEL OSes with template and media associations now that they exist
 - name: provisioning - associate templates and media to RHEL-family operating systems
+  become: false
   theforeman.foreman.operatingsystem:
     username: "{{ foreman_username }}"
     password: "{{ vault_foreman_admin_password }}"
@@ -61,6 +65,7 @@
   loop: "{{ foreman_operatingsystems_rh | default([]) }}"
 
 - name: provisioning - associate partition tables to OS families via hammer
+  become: true
   ansible.builtin.shell:
     cmd: >
       hammer partition-table update
@@ -70,6 +75,7 @@
   changed_when: true
 
 - name: provisioning - set global parameters
+  become: false
   theforeman.foreman.global_parameter:
     username: "{{ foreman_username }}"
     password: "{{ vault_foreman_admin_password }}"

@@ -1,5 +1,6 @@
 ---
 - name: hostgroups - create host groups
+  become: false
   theforeman.foreman.hostgroup:
     username: "{{ foreman_username }}"
     password: "{{ vault_foreman_admin_password }}"

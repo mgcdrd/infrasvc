@@ -1,6 +1,7 @@
 ---
 # Generate an SSH key for the foreman user to authenticate to GitLab
 - name: templates - generate SSH key pair for foreman → GitLab
+  become: true
   ansible.builtin.user:
     name: foreman
     generate_ssh_key: true
@@ -9,11 +10,13 @@
   register: foreman_ssh_key
 
 - name: templates - display foreman public key (copy this to GitLab)
+  become: false
   ansible.builtin.debug:
     msg: "Foreman SSH public key: {{ foreman_ssh_key.ssh_public_key }}"
 
 # Scan and trust the GitLab host key
 - name: templates - scan GitLab host keys
+  become: false
   ansible.builtin.shell:
     cmd: >
       ssh-keyscan {{ foreman_template_gitlab_host }}
@@ -22,6 +25,7 @@
   changed_when: false
 
 - name: templates - add GitLab host keys to foreman known_hosts
+  become: true
   ansible.builtin.known_hosts:
     path: /usr/share/foreman/.ssh/known_hosts
     name: "{{ foreman_template_gitlab_host }}"
@@ -30,6 +34,7 @@
 
 # Apply template sync settings
 - name: templates - configure template sync settings
+  become: false
   theforeman.foreman.setting:
     username: "{{ foreman_username }}"
     password: "{{ vault_foreman_admin_password }}"
@@ -41,6 +46,7 @@
 
 # Trigger template import from GitLab
 - name: templates - import templates from GitLab
+  become: false
   theforeman.foreman.templates_import:
     username: "{{ foreman_username }}"
     password: "{{ vault_foreman_admin_password }}"

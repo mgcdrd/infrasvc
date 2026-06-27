@@ -1,5 +1,6 @@
 ---
 - name: syncplans - create or update sync plans
+  become: false
   theforeman.foreman.sync_plan:
     username: "{{ foreman_username }}"
     password: "{{ vault_foreman_admin_password }}"

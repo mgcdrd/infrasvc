@@ -1,15 +1,18 @@
 ---
 - name: foreman_config - sync plans
+  become: false
   import_tasks: syncplans.yml
   when: foreman_sync_plans is defined
   tags: [foreman_config, syncplans]
 
 - name: foreman_config - products and repositories
+  become: false
   import_tasks: repos.yml
   when: foreman_repo_products is defined
   tags: [foreman_config, repos]
 
 - name: foreman_config - lifecycle environments, content views, activation keys
+  become: false
   import_tasks: lifecycle.yml
   when: >
     foreman_lifecycle_envs is defined or
@@ -18,6 +21,7 @@
   tags: [foreman_config, lifecycle]
 
 - name: foreman_config - infrastructure (domains, subnets, compute)
+  become: false
   import_tasks: infra.yml
   when: >
     foreman_domains is defined or
@@ -41,11 +45,13 @@
   tags: [foreman_config, provisioning]
 
 - name: foreman_config - host groups
+  become: false
   import_tasks: hostgroups.yml
   when: foreman_hostgroups is defined
   tags: [foreman_config, hostgroups]
 
 - name: foreman_config - AWX integration settings
+  become: false
   import_tasks: awx.yml
   when: foreman_awx_url is defined
   tags: [foreman_config, awx]

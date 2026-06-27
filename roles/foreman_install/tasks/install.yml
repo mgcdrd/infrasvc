@@ -1,10 +1,12 @@
 ---
 - name: install - check if foreman is already installed
+  become: false
   ansible.builtin.stat:
     path: /etc/foreman/settings.yaml
   register: foreman_settings_stat
 
 - name: install - write installer script
+  become: true
   ansible.builtin.template:
     src: foreman-installer.sh.j2
     dest: /root/foreman-installer.sh
@@ -13,6 +15,7 @@
     mode: "0700"
 
 - name: install - run foreman-installer
+  become: true
   ansible.builtin.shell:
     cmd: /root/foreman-installer.sh
   register: foreman_installer_result
@@ -22,6 +25,7 @@
   poll: 30
 
 - name: install - enable and start foreman services
+  become: true
   ansible.builtin.systemd:
     name: "{{ item }}"
     enabled: true

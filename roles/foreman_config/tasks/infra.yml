@@ -1,5 +1,6 @@
 ---
 - name: infra - create domains
+  become: false
   theforeman.foreman.domain:
     username: "{{ foreman_username }}"
     password: "{{ vault_foreman_admin_password }}"
@@ -13,6 +14,7 @@
   loop: "{{ foreman_domains | default([]) }}"
 
 - name: infra - create subnets
+  become: false
   theforeman.foreman.subnet:
     username: "{{ foreman_username }}"
     password: "{{ vault_foreman_admin_password }}"
@@ -43,6 +45,7 @@
   loop: "{{ foreman_subnets | default([]) }}"
 
 - name: infra - create architectures
+  become: false
   theforeman.foreman.architecture:
     username: "{{ foreman_username }}"
     password: "{{ vault_foreman_admin_password }}"
@@ -53,6 +56,7 @@
   loop: "{{ foreman_architectures | default([]) }}"
 
 - name: infra - create compute resources
+  become: false
   theforeman.foreman.compute_resource:
     username: "{{ foreman_username }}"
     password: "{{ vault_foreman_admin_password }}"
@@ -71,6 +75,7 @@
   loop: "{{ foreman_compute_resources | default([]) }}"
 
 - name: infra - create compute profiles
+  become: false
   theforeman.foreman.compute_profile:
     username: "{{ foreman_username }}"
     password: "{{ vault_foreman_admin_password }}"
