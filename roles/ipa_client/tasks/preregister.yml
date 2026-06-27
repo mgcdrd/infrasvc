@@ -12,6 +12,7 @@
     status_code: 200
   register: _ipa_enroll_session
   no_log: true
+  become: false
 
 - name: ipa_client preregister - Check if host object exists in IPA
   ansible.builtin.uri:
@@ -34,6 +35,7 @@
   failed_when: >-
     _ipa_host_check.json.error is not none and
     _ipa_host_check.json.error.code != 4001
+  become: false
 
 # New host — create the object and generate an OTP in a single call.
 - name: ipa_client preregister - Create host object and generate OTP
@@ -58,6 +60,7 @@
   no_log: true
   when: _ipa_host_check.json.error is not none and _ipa_host_check.json.error.code == 4001
   failed_when: _ipa_host_add.json.error is not none
+  become: false
 
 # Existing host (e.g. from a previous Foreman enrollment that broke) —
 # regenerate the OTP without touching anything else on the host object.
@@ -81,15 +84,18 @@
   no_log: true
   when: _ipa_host_check.json.error is none
   failed_when: _ipa_host_mod.json.error is not none
+  become: false
 
 - name: ipa_client preregister - Set OTP fact from host_add
   ansible.builtin.set_fact:
     _ipa_client_otp: "{{ _ipa_host_add.json.result.result.randompassword }}"
   no_log: true
   when: not _ipa_host_add is skipped
+  become: false
 
 - name: ipa_client preregister - Set OTP fact from host_mod
   ansible.builtin.set_fact:
     _ipa_client_otp: "{{ _ipa_host_mod.json.result.result.randompassword }}"
   no_log: true
   when: not _ipa_host_mod is skipped
+  become: false

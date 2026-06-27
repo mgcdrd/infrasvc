@@ -15,11 +15,13 @@
       - "--no-dns-sshfp"
     _force_join:
       - "--force-join"
+  become: false
 
 - name: ipa_client enroll - Add server arguments
   ansible.builtin.set_fact:
     _ipa_client_cmd: "{{ _ipa_client_cmd + ['--server=' + item] }}"
   loop: "{{ ipa_client_servers }}"
+  become: false
 
 - name: ipa_client enroll - Run ipa-client-install
   ansible.builtin.command:

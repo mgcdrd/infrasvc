@@ -11,12 +11,14 @@
   ansible.builtin.stat:
     path: /etc/ipa/default.conf
   register: _ipa_conf
+  become: false
 
 - name: ipa_client main - Check SSSD domain health
   ansible.builtin.command: "sssctl domain-status {{ ipa_client_domain }}"
   register: _ipa_sssd
   changed_when: false
   failed_when: false
+  become: false
   when: _ipa_conf.stat.exists
 
 # _ipa_enrolled: true  → already enrolled and healthy, skip all enrollment tasks
@@ -28,6 +30,7 @@
     _ipa_force_join: "{{ _ipa_conf.stat.exists | bool and not _ipa_sssd_healthy | bool }}"
   vars:
     _ipa_sssd_healthy: "{{ _ipa_sssd.rc is defined and _ipa_sssd.rc == 0 }}"
+  become: false
 
 - name: ipa_client - Pre-register host in IPA
   import_tasks: preregister.yml
