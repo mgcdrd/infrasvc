@@ -108,9 +108,9 @@ foreman_certs_state: NC
 # ---- Custom web certificates ----
 # Set foreman_custom_certs: true and populate paths to replace the self-signed cert
 foreman_custom_certs: false
-foreman_cert_path: "/root/.acme.sh/{{ foreman_hostname }}/{{ foreman_hostname }}.cer"
-foreman_cert_key_path: "/root/.acme.sh/{{ foreman_hostname }}/{{ foreman_hostname }}.key"
-foreman_cert_ca_path: "/root/.acme.sh/{{ foreman_hostname }}/ca.cer"
+foreman_cert_path: "/etc/ssl/acme/{{ foreman_hostname }}/cert.pem"
+foreman_cert_key_path: "/etc/ssl/acme/{{ foreman_hostname }}/key.pem"
+foreman_cert_ca_path: "/etc/ssl/acme/{{ foreman_hostname }}/ca.pem"
 
 # ---- Telemetry ----
 foreman_telemetry_logger_enabled: false

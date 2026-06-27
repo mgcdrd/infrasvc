@@ -1,18 +1,18 @@
 ---
 - name: certs - verify cert file exists
-  become: false
+  become: true
   ansible.builtin.stat:
     path: "{{ foreman_cert_path }}"
   register: foreman_cert_stat
 
 - name: certs - verify key file exists
-  become: false
+  become: true
   ansible.builtin.stat:
     path: "{{ foreman_cert_key_path }}"
   register: foreman_cert_key_stat
 
 - name: certs - verify CA bundle exists
-  become: false
+  become: true
   ansible.builtin.stat:
     path: "{{ foreman_cert_ca_path }}"
   register: foreman_cert_ca_stat
