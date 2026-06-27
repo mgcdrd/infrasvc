@@ -1,0 +1,47 @@
+---
+- name: repos - create products
+  theforeman.foreman.product:
+    username: "{{ foreman_username }}"
+    password: "{{ vault_foreman_admin_password }}"
+    server_url: "{{ foreman_url }}"
+    validate_certs: "{{ foreman_validate_certs }}"
+    name: "{{ item.name }}"
+    organization: "{{ item.org | default(foreman_org) }}"
+    sync_plan: "{{ item.sync_plan | default(omit) }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ foreman_repo_products }}"
+
+- name: repos - create RPM repositories
+  theforeman.foreman.repository:
+    username: "{{ foreman_username }}"
+    password: "{{ vault_foreman_admin_password }}"
+    server_url: "{{ foreman_url }}"
+    validate_certs: "{{ foreman_validate_certs }}"
+    name: "{{ item.name }}"
+    content_type: yum
+    product: "{{ item.product }}"
+    organization: "{{ item.org | default(foreman_org) }}"
+    url: "{{ item.url }}"
+    mirror_on_sync: "{{ item.mirror_on_sync | default(true) }}"
+    download_policy: "{{ item.download_policy | default('on_demand') }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ foreman_repos_rpm | default([]) }}"
+
+- name: repos - create DEB repositories
+  theforeman.foreman.repository:
+    username: "{{ foreman_username }}"
+    password: "{{ vault_foreman_admin_password }}"
+    server_url: "{{ foreman_url }}"
+    validate_certs: "{{ foreman_validate_certs }}"
+    name: "{{ item.name }}"
+    content_type: deb
+    product: "{{ item.product }}"
+    organization: "{{ item.org | default(foreman_org) }}"
+    url: "{{ item.url }}"
+    deb_releases: "{{ item.deb_releases }}"
+    deb_components: "{{ item.deb_components }}"
+    deb_architectures: "{{ item.deb_architectures | default(omit) }}"
+    mirror_on_sync: "{{ item.mirror_on_sync | default(true) }}"
+    download_policy: "{{ item.download_policy | default('on_demand') }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ foreman_repos_deb | default([]) }}"

@@ -1,0 +1,30 @@
+---
+
+# Build the argument list incrementally so --force-join and per-server --server
+# flags can be added conditionally without string-interpolation risks.
+- name: ipa_client enroll - Build base install arguments
+  ansible.builtin.set_fact:
+    _ipa_client_cmd: "{{ _base + (_force_join if _ipa_force_join | bool else []) }}"
+  vars:
+    _base:
+      - ipa-client-install
+      - "--unattended"
+      - "--domain={{ ipa_client_domain }}"
+      - "--realm={{ ipa_client_realm }}"
+      - "--password={{ _ipa_client_otp }}"
+      - "--no-dns-sshfp"
+    _force_join:
+      - "--force-join"
+
+- name: ipa_client enroll - Add server arguments
+  ansible.builtin.set_fact:
+    _ipa_client_cmd: "{{ _ipa_client_cmd + ['--server=' + item] }}"
+  loop: "{{ ipa_client_servers }}"
+
+- name: ipa_client enroll - Run ipa-client-install
+  ansible.builtin.command:
+    argv: "{{ _ipa_client_cmd }}"
+  register: _ipa_enroll_result
+  no_log: true
+  changed_when: _ipa_enroll_result.rc == 0
+  notify: restart sssd

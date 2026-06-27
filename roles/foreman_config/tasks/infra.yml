@@ -1,0 +1,83 @@
+---
+- name: infra - create domains
+  theforeman.foreman.domain:
+    username: "{{ foreman_username }}"
+    password: "{{ vault_foreman_admin_password }}"
+    server_url: "{{ foreman_url }}"
+    validate_certs: "{{ foreman_validate_certs }}"
+    name: "{{ item.name }}"
+    description: "{{ item.description | default(omit) }}"
+    locations: "{{ item.locations | default(foreman_location) }}"
+    organizations: "{{ item.organizations | default(foreman_org) }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ foreman_domains | default([]) }}"
+
+- name: infra - create subnets
+  theforeman.foreman.subnet:
+    username: "{{ foreman_username }}"
+    password: "{{ vault_foreman_admin_password }}"
+    server_url: "{{ foreman_url }}"
+    validate_certs: "{{ foreman_validate_certs }}"
+    name: "{{ item.name }}"
+    description: "{{ item.description | default(omit) }}"
+    network: "{{ item.network }}"
+    mask: "{{ item.mask }}"
+    gateway: "{{ item.gateway | default(omit) }}"
+    network_type: "{{ item.network_type | default('IPv4') }}"
+    from_ip: "{{ item.from_ip | default(omit) }}"
+    to_ip: "{{ item.to_ip | default(omit) }}"
+    dns_primary: "{{ item.dns_primary | default(omit) }}"
+    dns_secondary: "{{ item.dns_secondary | default(omit) }}"
+    boot_mode: "{{ item.boot_mode | default('DHCP') }}"
+    dhcp_proxy: "{{ item.dhcp_proxy | default(omit) }}"
+    tftp_proxy: "{{ item.tftp_proxy | default(foreman_hostname) }}"
+    dns_proxy: "{{ item.dns_proxy | default(omit) }}"
+    template_proxy: "{{ item.template_proxy | default(foreman_hostname) }}"
+    remote_execution_proxies: "{{ item.remote_execution_proxies | default([foreman_hostname]) }}"
+    vlanid: "{{ item.vlanid | default(omit) }}"
+    mtu: "{{ item.mtu | default(omit) }}"
+    domains: "{{ item.domains | default(omit) }}"
+    organizations: "{{ item.organizations | default([foreman_org]) }}"
+    locations: "{{ item.locations | default([foreman_location]) }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ foreman_subnets | default([]) }}"
+
+- name: infra - create architectures
+  theforeman.foreman.architecture:
+    username: "{{ foreman_username }}"
+    password: "{{ vault_foreman_admin_password }}"
+    server_url: "{{ foreman_url }}"
+    validate_certs: "{{ foreman_validate_certs }}"
+    name: "{{ item.name }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ foreman_architectures | default([]) }}"
+
+- name: infra - create compute resources
+  theforeman.foreman.compute_resource:
+    username: "{{ foreman_username }}"
+    password: "{{ vault_foreman_admin_password }}"
+    server_url: "{{ foreman_url }}"
+    validate_certs: "{{ foreman_validate_certs }}"
+    name: "{{ item.name }}"
+    locations: "{{ item.locations | default(omit) }}"
+    organizations: "{{ item.organizations | default([foreman_org]) }}"
+    provider: "{{ item.provider | default(omit) }}"
+    provider_params:
+      url: "{{ item.url | default(omit) }}"
+      user: "{{ item.user | default(omit) }}"
+      password: "{{ item.password | default(omit) }}"
+      ssl_verify_peer: "{{ item.ssl_verify_peer | default(omit) }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ foreman_compute_resources | default([]) }}"
+
+- name: infra - create compute profiles
+  theforeman.foreman.compute_profile:
+    username: "{{ foreman_username }}"
+    password: "{{ vault_foreman_admin_password }}"
+    server_url: "{{ foreman_url }}"
+    validate_certs: "{{ foreman_validate_certs }}"
+    name: "{{ item.name }}"
+    updated_name: "{{ item.new_name | default(omit) }}"
+    compute_attributes: "{{ item.compute_attributes | default(omit) }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ foreman_compute_profiles | default([]) }}"

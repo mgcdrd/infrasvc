@@ -12,6 +12,18 @@
     group: root
 
 # =====================
+# Galera config — mounted into container, applied on every start
+
+- name: pdns_phpipam config - Template Galera config
+  ansible.builtin.template:
+    src: mariadb/galera.cnf.j2
+    dest: "{{ pdns_phpipam_mariadb_dir }}/galera.cnf"
+    owner: root
+    group: root
+    mode: "0644"
+  when: pdns_phpipam_galera_enabled
+
+# =====================
 # MariaDB init scripts — only read by MariaDB on first container start
 
 - name: pdns_phpipam config - Template MariaDB init scripts
@@ -26,6 +38,7 @@
     - { src: mariadb/init/02-powerdns-schema.sql.j2, dest: 02-powerdns-schema.sql }
     - { src: mariadb/init/03-phpipam-schema.sql.j2, dest: 03-phpipam-schema.sql }
     - { src: mariadb/init/04-customize.sql.j2,       dest: 04-customize.sql }
+  when: not pdns_phpipam_mariadb_only
 
 # =====================
 # PowerDNS Auth
@@ -41,6 +54,7 @@
     - { src: pdns_auth/pdns.conf.j2,       dest: pdns.conf }
     - { src: pdns_auth/pdns.d/_api.conf.j2, dest: pdns.d/_api.conf }
   notify: restart auth
+  when: not pdns_phpipam_mariadb_only
 
 # =====================
 # PowerDNS Recursor
@@ -56,6 +70,7 @@
     - { src: pdns_recu/recursor.yml.j2,          dest: recursor.yml }
     - { src: pdns_recu/recursor.d/_api.yml.j2,   dest: recursor.d/_api.yml }
   notify: restart recursor
+  when: not pdns_phpipam_mariadb_only
 
 # =====================
 # DNSDist
@@ -71,6 +86,7 @@
     - { src: pdns_dist/dnsdist.yml.j2,         dest: dnsdist.yml }
     - { src: pdns_dist/conf.d/_api.conf.j2,    dest: conf.d/_api.conf }
   notify: restart dnsdist
+  when: not pdns_phpipam_mariadb_only
 
 # =====================
 # Apache SSL config (optional — only when pdns_phpipam_ssl_enabled)
@@ -83,7 +99,9 @@
     owner: root
     group: root
   notify: restart nginx
-  when: pdns_phpipam_ssl_enabled
+  when:
+    - not pdns_phpipam_mariadb_only
+    - pdns_phpipam_ssl_enabled
 
 # =====================
 # DNSDist
@@ -96,3 +114,4 @@
     owner: '953'
     group: '953'
   notify: restart dnsdist
+  when: not pdns_phpipam_mariadb_only

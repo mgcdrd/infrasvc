@@ -1,0 +1,118 @@
+---
+foreman_version: "3.19"
+foreman_katello_version: "4.21"
+foreman_puppet_release: "puppet8"
+
+foreman_installer_scenario: katello
+
+foreman_hostname: "{{ ansible_fqdn }}"
+foreman_url: "https://{{ foreman_hostname }}"
+
+# Org and location are required — set in group_vars
+foreman_org: "My Organization"
+foreman_location: "Default Location"
+
+# ---- Installer: enable lists ----
+# hammer CLI subcommands
+foreman_installer_cli_enable:
+  - ansible
+  - discovery
+  - openscap
+  - puppet
+  - tasks
+  - templates
+
+# Foreman plugins
+foreman_installer_plugin_enable:
+  - ansible
+  - bootdisk
+  - discovery
+  - openscap
+  - proxmox
+  - puppet
+  - remote-execution
+  - templates
+  - vault
+
+# Smart Proxy plugins
+foreman_installer_proxy_plugin_enable:
+  - ansible
+  - discovery
+  - openscap
+  - remote-execution-script
+
+# Additional packages (--enable-<item>)
+foreman_installer_further_enable:
+  - puppet
+
+# ---- DHCP ----
+foreman_dhcp_enable: false
+foreman_dhcp_provider: isc
+foreman_dhcp_interface: eth0
+foreman_dhcp_gateway: ""
+foreman_dhcp_range_start: ""
+foreman_dhcp_range_end: ""
+foreman_dhcp_nameservers: []
+
+# ---- DNS (PowerDNS) ----
+foreman_dns_enable: false
+foreman_dns_provider: powerdns
+foreman_pdns_api_url: "http://localhost:8081"
+
+# ---- TFTP ----
+foreman_tftp_enable: true
+foreman_tftp_listen_on: https
+
+# ---- Realm / IPA ----
+foreman_realm_enable: false
+foreman_realm_pam_server: foreman
+foreman_realm_ipa_authentication: "true"
+foreman_realm_ipa_authentication_api: "false"
+foreman_realm_proxy: "true"
+foreman_realm_provider: freeipa
+foreman_realm_principal: ""
+foreman_realm_freeipa_remove_dns: "false"
+foreman_ipa_controller: ""
+
+# ---- Puppet / OpenVox ----
+foreman_puppet_autosign_entries: "[*.example.com]"
+
+# ---- Pulp content types ----
+foreman_proxy_content_enable_ansible: true
+foreman_proxy_content_enable_deb: true
+foreman_proxy_content_enable_docker: false
+foreman_proxy_content_enable_file: true
+foreman_proxy_content_enable_ostree: true
+foreman_proxy_content_enable_python: true
+foreman_proxy_content_enable_yum: true
+foreman_proxy_content_pulpcore_mirror: false
+
+# ---- OpenSCAP proxy ----
+foreman_proxy_openscap_ansible_module: true
+
+# ---- Remote Execution Script ----
+foreman_proxy_rex_script_enabled: true
+foreman_proxy_rex_script_cockpit_integration: false
+
+# ---- Tasks plugin ----
+foreman_plugin_tasks_automatic_cleanup: true
+foreman_plugin_tasks_backup: true
+
+# ---- Internal cert customization ----
+foreman_certs_city: Raleigh
+foreman_certs_country: US
+foreman_certs_org: "My Organization"
+foreman_certs_org_unit: IT
+foreman_certs_state: NC
+
+# ---- Custom web certificates ----
+# Set foreman_custom_certs: true and populate paths to replace the self-signed cert
+foreman_custom_certs: false
+foreman_cert_path: "/root/.acme.sh/{{ foreman_hostname }}/{{ foreman_hostname }}.cer"
+foreman_cert_key_path: "/root/.acme.sh/{{ foreman_hostname }}/{{ foreman_hostname }}.key"
+foreman_cert_ca_path: "/root/.acme.sh/{{ foreman_hostname }}/ca.cer"
+
+# ---- Telemetry ----
+foreman_telemetry_logger_enabled: false
+foreman_telemetry_prometheus_enabled: false
+foreman_telemetry_statsd_enabled: false

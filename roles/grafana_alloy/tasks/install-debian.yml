@@ -1,0 +1,37 @@
+---
+
+- name: grafana_alloy install-debian - Install prerequisites
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - curl
+    state:        present
+    update_cache: true
+
+- name: grafana_alloy install-debian - Create keyrings directory
+  ansible.builtin.file:
+    path:  /etc/apt/keyrings
+    state: directory
+    owner: root
+    group: root
+    mode:  "0755"
+
+- name: grafana_alloy install-debian - Download Grafana GPG key
+  ansible.builtin.get_url:
+    url:   https://apt.grafana.com/gpg.key
+    dest:  /etc/apt/keyrings/grafana.asc
+    mode:  "0644"
+    force: false
+
+- name: grafana_alloy install-debian - Add Grafana apt repository
+  ansible.builtin.apt_repository:
+    repo:     "deb [signed-by=/etc/apt/keyrings/grafana.asc] https://apt.grafana.com stable main"
+    filename: grafana
+    state:    present
+
+- name: grafana_alloy install-debian - Install alloy
+  ansible.builtin.apt:
+    name:         alloy
+    state:        present
+    update_cache: true
+  notify: grafana_alloy restart

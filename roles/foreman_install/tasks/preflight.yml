@@ -1,0 +1,70 @@
+---
+# Run before repo configuration to ensure the host is in a clean state.
+# Handles systems previously enrolled with a Foreman/Katello instance.
+
+- name: preflight - check for katello CA consumer package
+  ansible.builtin.shell:
+    cmd: rpm -q --whatprovides katello-ca-consumer
+  register: foreman_katello_pkg
+  changed_when: false
+  failed_when: false
+
+- name: preflight - remove katello CA consumer package
+  ansible.builtin.dnf:
+    name: "katello-ca-consumer*"
+    state: absent
+  when: foreman_katello_pkg.rc == 0
+
+- name: preflight - check if subscription-manager DNF plugin config exists
+  ansible.builtin.stat:
+    path: /etc/dnf/plugins/subscription-manager.conf
+  register: foreman_subman_plugin_stat
+
+- name: preflight - disable subscription-manager DNF plugin
+  community.general.ini_file:
+    path: /etc/dnf/plugins/subscription-manager.conf
+    section: main
+    option: enabled
+    value: "0"
+    mode: "0644"
+  when: foreman_subman_plugin_stat.stat.exists
+
+- name: preflight - re-enable standard Rocky repos
+  ansible.builtin.shell:
+    cmd: dnf config-manager --enable baseos appstream extras crb
+  changed_when: true
+  when: foreman_katello_pkg.rc == 0
+
+- name: preflight - check /var/lib/pulp available space
+  ansible.builtin.shell:
+    cmd: df -BG --output=avail /var/lib/pulp 2>/dev/null || df -BG --output=avail /var
+  register: foreman_pulp_space
+  changed_when: false
+  failed_when: false
+
+- name: preflight - check /var/lib/containers available space
+  ansible.builtin.shell:
+    cmd: df -BG --output=avail /var/lib/containers 2>/dev/null || df -BG --output=avail /var
+  register: foreman_containers_space
+  changed_when: false
+  failed_when: false
+
+- name: preflight - check /var/lib/pgsql available space
+  ansible.builtin.shell:
+    cmd: df -BG --output=avail /var/lib/pgsql 2>/dev/null || df -BG --output=avail /var
+  register: foreman_pgsql_space
+  changed_when: false
+  failed_when: false
+
+- name: preflight - warn if storage is below recommended minimums
+  ansible.builtin.debug:
+    msg: >
+      WARNING: Storage below recommended minimum.
+      /var/lib/pulp: {{ foreman_pulp_space.stdout_lines[-1] | trim }} available (need 300G).
+      /var/lib/containers: {{ foreman_containers_space.stdout_lines[-1] | trim }} available (need 30G).
+      /var/lib/pgsql: {{ foreman_pgsql_space.stdout_lines[-1] | trim }} available (need 20G).
+      Run 'make storage' before 'make install' if disk expansion is needed.
+  when: >
+    (foreman_pulp_space.stdout_lines[-1] | trim | regex_replace('G','') | int) < 300 or
+    (foreman_containers_space.stdout_lines[-1] | trim | regex_replace('G','') | int) < 30 or
+    (foreman_pgsql_space.stdout_lines[-1] | trim | regex_replace('G','') | int) < 20

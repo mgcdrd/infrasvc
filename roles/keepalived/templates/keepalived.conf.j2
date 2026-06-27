@@ -17,7 +17,7 @@ global_defs {
 vrrp_script {{ item.name }} {
   script {{ item.script }}
   interval {{ item.interval | default(vrrp_script_interval) }}
-  weight {{ -(keepalived_priority_max | int) }}
+  weight {{ item.weight | default(-(keepalived_priority_max | int)) }}
   {% if item.user is defined or item.group is defined -%}
   user {{ item.user | default(vrrp_script_user) }} {{ item.group | default(vrrp_script_group) }}
   {% endif -%}

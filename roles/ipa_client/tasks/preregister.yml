@@ -1,0 +1,95 @@
+---
+
+- name: ipa_client preregister - Authenticate to IPA as enrollment account
+  ansible.builtin.uri:
+    url: "https://{{ ipa_client_servers[0] }}/ipa/session/login_password"
+    method: POST
+    body: "user={{ vault_ipa_enrollment_principal | urlencode }}&password={{ vault_ipa_enrollment_password | urlencode }}"
+    headers:
+      Content-Type: "application/x-www-form-urlencoded"
+      Referer: "https://{{ ipa_client_servers[0] }}/ipa"
+    validate_certs: "{{ ipa_client_validate_certs }}"
+    status_code: 200
+  register: _ipa_enroll_session
+  no_log: true
+
+- name: ipa_client preregister - Check if host object exists in IPA
+  ansible.builtin.uri:
+    url: "https://{{ ipa_client_servers[0] }}/ipa/json"
+    method: POST
+    body_format: json
+    body:
+      method: host_show
+      params:
+        - ["{{ ansible_fqdn }}"]
+        - {}
+      id: 0
+    headers:
+      Cookie: "ipa_session={{ _ipa_enroll_session.cookies.ipa_session }}"
+      Referer: "https://{{ ipa_client_servers[0] }}/ipa"
+    validate_certs: "{{ ipa_client_validate_certs }}"
+    status_code: 200
+  register: _ipa_host_check
+  changed_when: false
+  failed_when: >-
+    _ipa_host_check.json.error is not none and
+    _ipa_host_check.json.error.code != 4001
+
+# New host — create the object and generate an OTP in a single call.
+- name: ipa_client preregister - Create host object and generate OTP
+  ansible.builtin.uri:
+    url: "https://{{ ipa_client_servers[0] }}/ipa/json"
+    method: POST
+    body_format: json
+    body:
+      method: host_add
+      params:
+        - ["{{ ansible_fqdn }}"]
+        - ip_address: "{{ ipa_client_host_ip }}"
+          random: true
+          force: true
+      id: 0
+    headers:
+      Cookie: "ipa_session={{ _ipa_enroll_session.cookies.ipa_session }}"
+      Referer: "https://{{ ipa_client_servers[0] }}/ipa"
+    validate_certs: "{{ ipa_client_validate_certs }}"
+    status_code: 200
+  register: _ipa_host_add
+  no_log: true
+  when: _ipa_host_check.json.error is not none and _ipa_host_check.json.error.code == 4001
+  failed_when: _ipa_host_add.json.error is not none
+
+# Existing host (e.g. from a previous Foreman enrollment that broke) —
+# regenerate the OTP without touching anything else on the host object.
+- name: ipa_client preregister - Regenerate OTP for existing host
+  ansible.builtin.uri:
+    url: "https://{{ ipa_client_servers[0] }}/ipa/json"
+    method: POST
+    body_format: json
+    body:
+      method: host_mod
+      params:
+        - ["{{ ansible_fqdn }}"]
+        - random: true
+      id: 0
+    headers:
+      Cookie: "ipa_session={{ _ipa_enroll_session.cookies.ipa_session }}"
+      Referer: "https://{{ ipa_client_servers[0] }}/ipa"
+    validate_certs: "{{ ipa_client_validate_certs }}"
+    status_code: 200
+  register: _ipa_host_mod
+  no_log: true
+  when: _ipa_host_check.json.error is none
+  failed_when: _ipa_host_mod.json.error is not none
+
+- name: ipa_client preregister - Set OTP fact from host_add
+  ansible.builtin.set_fact:
+    _ipa_client_otp: "{{ _ipa_host_add.json.result.result.randompassword }}"
+  no_log: true
+  when: not _ipa_host_add is skipped
+
+- name: ipa_client preregister - Set OTP fact from host_mod
+  ansible.builtin.set_fact:
+    _ipa_client_otp: "{{ _ipa_host_mod.json.result.result.randompassword }}"
+  no_log: true
+  when: not _ipa_host_mod is skipped

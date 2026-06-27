@@ -1,0 +1,46 @@
+---
+
+# ---- IPA CONNECTION ----
+# FQDN of the primary IPA server. All API calls target this host.
+ipa_baseline_server: ""
+
+# IPA admin username used to bootstrap the service account.
+ipa_baseline_admin_principal: "admin"
+
+# Set to false only in lab environments with self-signed IPA certificates.
+ipa_baseline_validate_certs: true
+
+
+# ---- SERVICE ACCOUNT ----
+# Username of the least-privilege enrollment service account to create/ensure.
+ipa_baseline_enrollment_principal: "svc-ansible-enrollment"
+
+# IPA role that will hold the Host Enrollment privilege.
+# Created by this role if it does not exist.
+ipa_baseline_enrollment_role: "Ansible Host Enrollment"
+
+# Force password rotation even when Vault already has credentials.
+# Use this after a Vault DR restore to regenerate and re-sync the secret.
+ipa_baseline_force_rotate: false
+
+
+# ---- VAULT CONNECTION ----
+# Base URL of the Vault API — no trailing slash.
+ipa_baseline_vault_url: ""
+
+# Vault token used to read and write secrets.
+# Defaults to the VAULT_TOKEN environment variable so AWX/CI can inject it.
+ipa_baseline_vault_token: "{{ lookup('env', 'VAULT_TOKEN') }}"
+
+# KV engine mount point. The collection convention is kv1 (KV v2 mounted as kv1).
+ipa_baseline_vault_kv_mount: "kv1"
+
+# Path within the KV mount where enrollment credentials are stored.
+# Full Vault API path will be: <vault_url>/v1/<kv_mount>/data/<path>
+ipa_baseline_vault_enrollment_path: "ipa/enrollment"
+
+
+# ---- INJECTED SECRETS ----
+# IPA admin password — must be provided at runtime.
+# Store at kv1/ipa/admin and inject before calling this role.
+vault_ipa_admin_password: ""

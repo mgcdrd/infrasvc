@@ -1,0 +1,28 @@
+---
+
+- name: ipa_client preflight - Assert IPA connection variables are set
+  ansible.builtin.assert:
+    that:
+      - ipa_client_servers | length > 0
+      - ipa_client_domain | length > 0
+      - ipa_client_realm | length > 0
+      - vault_ipa_enrollment_principal | length > 0
+      - vault_ipa_enrollment_password | length > 0
+    fail_msg: >-
+      ipa_client_servers, ipa_client_domain, ipa_client_realm,
+      vault_ipa_enrollment_principal, and vault_ipa_enrollment_password
+      must all be set. Enrollment credentials should be fetched from Vault
+      at kv1/ipa/enrollment before calling this role.
+
+- name: ipa_client preflight - Assert DNS variables are set when registration is enabled
+  ansible.builtin.assert:
+    that:
+      - ipa_client_pdns_api_url | length > 0
+      - ipa_client_dns_forward_zone | length > 0
+      - ipa_client_dns_reverse_zone | length > 0
+      - vault_ipa_pdns_api_key | length > 0
+    fail_msg: >-
+      ipa_client_pdns_api_url, ipa_client_dns_forward_zone,
+      ipa_client_dns_reverse_zone, and vault_ipa_pdns_api_key
+      must be set when ipa_client_dns_register is true.
+  when: ipa_client_dns_register | bool

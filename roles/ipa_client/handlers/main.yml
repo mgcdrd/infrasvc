@@ -1,0 +1,6 @@
+---
+
+- name: restart sssd
+  ansible.builtin.service:
+    name: sssd
+    state: restarted

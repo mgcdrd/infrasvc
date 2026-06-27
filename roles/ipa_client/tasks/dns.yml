@@ -1,0 +1,46 @@
+---
+
+# Build record names once for reuse across both tasks.
+- name: ipa_client dns - Compute DNS record names
+  ansible.builtin.set_fact:
+    _ipa_client_fqdn: "{{ ansible_fqdn }}."
+    _ipa_client_ptr_name: "{{ ipa_client_host_ip.split('.') | reverse | join('.') }}.in-addr.arpa."
+
+# REPLACE is idempotent in effect: creates the RRset if missing, updates it if
+# the content differs, and leaves it unchanged if the record already matches.
+# PowerDNS returns 204 regardless, so changed_when is always true here.
+- name: ipa_client dns - Register A record in PowerDNS
+  ansible.builtin.uri:
+    url: "{{ ipa_client_pdns_api_url }}/api/v1/servers/{{ ipa_client_pdns_server_id }}/zones/{{ ipa_client_dns_forward_zone }}."
+    method: PATCH
+    headers:
+      X-API-Key: "{{ vault_ipa_pdns_api_key }}"
+    body_format: json
+    body:
+      rrsets:
+        - name: "{{ _ipa_client_fqdn }}"
+          type: A
+          ttl: "{{ ipa_client_dns_ttl }}"
+          changetype: REPLACE
+          records:
+            - content: "{{ ipa_client_host_ip }}"
+              disabled: false
+    status_code: 204
+
+- name: ipa_client dns - Register PTR record in PowerDNS
+  ansible.builtin.uri:
+    url: "{{ ipa_client_pdns_api_url }}/api/v1/servers/{{ ipa_client_pdns_server_id }}/zones/{{ ipa_client_dns_reverse_zone }}."
+    method: PATCH
+    headers:
+      X-API-Key: "{{ vault_ipa_pdns_api_key }}"
+    body_format: json
+    body:
+      rrsets:
+        - name: "{{ _ipa_client_ptr_name }}"
+          type: PTR
+          ttl: "{{ ipa_client_dns_ttl }}"
+          changetype: REPLACE
+          records:
+            - content: "{{ _ipa_client_fqdn }}"
+              disabled: false
+    status_code: 204

@@ -1,0 +1,42 @@
+---
+# Configure Foreman's Ansible plugin to use AWX as the execution provider.
+# Hosts provisioned by Foreman will register a callback with AWX, which then
+# runs the assigned job template to finish configuration.
+
+- name: awx - set Ansible provider to AWX
+  theforeman.foreman.setting:
+    username: "{{ foreman_username }}"
+    password: "{{ vault_foreman_admin_password }}"
+    server_url: "{{ foreman_url }}"
+    validate_certs: "{{ foreman_validate_certs }}"
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+  loop:
+    - name: ansible_provider
+      value: "{{ foreman_awx_provider | default('awx') }}"
+    - name: ansible_awx_url
+      value: "{{ foreman_awx_url }}"
+    - name: ansible_inventory_enabled
+      value: "{{ foreman_awx_inventory_enabled | default(true) | string }}"
+
+# The AWX callback URL and host_config_key are embedded in kickstart/finish
+# templates rather than set here. Add them as global parameters so templates
+# can reference them.
+- name: awx - set AWX callback global parameters
+  theforeman.foreman.global_parameter:
+    username: "{{ foreman_username }}"
+    password: "{{ vault_foreman_admin_password }}"
+    server_url: "{{ foreman_url }}"
+    validate_certs: "{{ foreman_validate_certs }}"
+    name: "{{ item.name }}"
+    parameter_type: "{{ item.type | default('string') }}"
+    value: "{{ item.value }}"
+    state: present
+  loop:
+    - name: awx_url
+      value: "{{ foreman_awx_url }}"
+    - name: awx_job_template_id
+      value: "{{ foreman_awx_job_template_id | default('') }}"
+    - name: awx_host_config_key
+      type: string
+      value: "{{ vault_awx_host_config_key | default('') }}"

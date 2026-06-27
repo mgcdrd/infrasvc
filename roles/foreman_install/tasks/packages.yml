@@ -1,0 +1,9 @@
+---
+- name: packages - install foreman installer and dependencies
+  ansible.builtin.dnf:
+    name:
+      - foreman-installer-katello
+      - puppetserver
+      - foreman-proxy
+      - scap-security-guide
+    state: present

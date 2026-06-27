@@ -1,0 +1,26 @@
+---
+- name: foreman_install - preflight cleanup
+  import_tasks: preflight.yml
+  tags: [foreman_install, preflight]
+
+- name: foreman_install - configure repositories
+  import_tasks: repos.yml
+  tags: [foreman_install, repos]
+
+- name: foreman_install - install packages
+  import_tasks: packages.yml
+  tags: [foreman_install, packages]
+
+- name: foreman_install - IPA pre-setup
+  import_tasks: ipa.yml
+  when: foreman_realm_enable | bool
+  tags: [foreman_install, ipa]
+
+- name: foreman_install - verify custom certs exist
+  import_tasks: certs.yml
+  when: foreman_custom_certs | bool
+  tags: [foreman_install, certs]
+
+- name: foreman_install - run installer
+  import_tasks: install.yml
+  tags: [foreman_install, install]

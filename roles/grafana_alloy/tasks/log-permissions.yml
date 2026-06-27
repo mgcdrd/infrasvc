@@ -1,0 +1,26 @@
+---
+
+- name: grafana_alloy log-permissions - Set /var/log/nginx owner and group
+  ansible.builtin.file:
+    path:    /var/log/nginx
+    owner:   nginx
+    group:   nginx
+    recurse: true
+
+- name: grafana_alloy log-permissions - Set /var/log/nginx directory mode
+  ansible.builtin.file:
+    path:  /var/log/nginx
+    state: directory
+    mode:  "0750"
+
+- name: grafana_alloy log-permissions - Add alloy to nginx group
+  ansible.builtin.user:
+    name:   alloy
+    groups: nginx
+    append: true
+
+- name: grafana_alloy log-permissions - Update logrotate create ownership
+  ansible.builtin.replace:
+    path:    /etc/logrotate.d/nginx
+    regexp:  '(\bcreate\s+\d+\s+nginx\s+)\S+'
+    replace: '\1nginx'

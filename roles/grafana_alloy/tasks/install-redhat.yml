@@ -1,0 +1,21 @@
+---
+
+- name: grafana_alloy install-redhat - Import Grafana GPG key
+  ansible.builtin.rpm_key:
+    key:   https://rpm.grafana.com/gpg.key
+    state: present
+
+- name: grafana_alloy install-redhat - Add Grafana rpm repository
+  ansible.builtin.yum_repository:
+    name:        grafana
+    description: Grafana OSS packages
+    baseurl:     https://rpm.grafana.com
+    gpgcheck:    true
+    gpgkey:      https://rpm.grafana.com/gpg.key
+    enabled:     true
+
+- name: grafana_alloy install-redhat - Install alloy
+  ansible.builtin.dnf:
+    name:  alloy
+    state: present
+  notify: grafana_alloy restart

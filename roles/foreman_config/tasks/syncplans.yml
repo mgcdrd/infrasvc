@@ -1,0 +1,14 @@
+---
+- name: syncplans - create or update sync plans
+  theforeman.foreman.sync_plan:
+    username: "{{ foreman_username }}"
+    password: "{{ vault_foreman_admin_password }}"
+    server_url: "{{ foreman_url }}"
+    validate_certs: "{{ foreman_validate_certs }}"
+    name: "{{ item.name }}"
+    organization: "{{ item.org | default(foreman_org) }}"
+    interval: "{{ item.interval }}"
+    enabled: "{{ item.enabled | default(true) }}"
+    sync_date: "{{ item.sync_date }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ foreman_sync_plans }}"

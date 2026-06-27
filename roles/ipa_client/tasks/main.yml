@@ -1,0 +1,42 @@
+---
+
+- name: ipa_client - Preflight validation
+  import_tasks: preflight.yml
+
+- name: ipa_client - Register DNS records
+  import_tasks: dns.yml
+  when: ipa_client_dns_register | bool
+
+- name: ipa_client main - Check if host is enrolled
+  ansible.builtin.stat:
+    path: /etc/ipa/default.conf
+  register: _ipa_conf
+
+- name: ipa_client main - Check SSSD domain health
+  ansible.builtin.command: "sssctl domain-status {{ ipa_client_domain }}"
+  register: _ipa_sssd
+  changed_when: false
+  failed_when: false
+  when: _ipa_conf.stat.exists
+
+# _ipa_enrolled: true  → already enrolled and healthy, skip all enrollment tasks
+# _ipa_enrolled: false, _ipa_force_join: false → fresh enrollment
+# _ipa_force_join: true → conf exists but SSSD is broken, re-enroll with --force-join
+- name: ipa_client main - Set enrollment state facts
+  ansible.builtin.set_fact:
+    _ipa_enrolled: "{{ _ipa_conf.stat.exists | bool and _ipa_sssd_healthy | bool }}"
+    _ipa_force_join: "{{ _ipa_conf.stat.exists | bool and not _ipa_sssd_healthy | bool }}"
+  vars:
+    _ipa_sssd_healthy: "{{ _ipa_sssd.rc is defined and _ipa_sssd.rc == 0 }}"
+
+- name: ipa_client - Pre-register host in IPA
+  import_tasks: preregister.yml
+  when: not _ipa_enrolled | bool
+
+- name: ipa_client - Install freeipa-client package
+  import_tasks: install.yml
+  when: not _ipa_enrolled | bool
+
+- name: ipa_client - Enroll host in IPA domain
+  import_tasks: enroll.yml
+  when: not _ipa_enrolled | bool

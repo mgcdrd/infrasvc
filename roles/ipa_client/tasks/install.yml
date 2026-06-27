@@ -1,0 +1,14 @@
+---
+
+- name: ipa_client install - Install freeipa-client (Debian)
+  ansible.builtin.apt:
+    name: freeipa-client
+    state: present
+    update_cache: true
+  when: ansible_facts['os_family'] == 'Debian'
+
+- name: ipa_client install - Install freeipa-client (RedHat)
+  ansible.builtin.dnf:
+    name: freeipa-client
+    state: present
+  when: ansible_facts['os_family'] == 'RedHat'

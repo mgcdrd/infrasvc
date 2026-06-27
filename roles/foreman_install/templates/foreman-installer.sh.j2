@@ -1,0 +1,86 @@
+#!/bin/bash
+set -euo pipefail
+
+foreman-installer \
+  --scenario {{ foreman_installer_scenario }} \
+  --foreman-initial-admin-username "{{ vault_foreman_admin_username }}" \
+  --foreman-initial-admin-password "{{ vault_foreman_admin_password }}" \
+  --foreman-initial-organization "{{ foreman_org }}" \
+  --foreman-initial-location "{{ foreman_location }}" \
+{% for item in foreman_installer_cli_enable %}
+  --enable-foreman-cli-{{ item }} \
+{% endfor %}
+{% for item in foreman_installer_plugin_enable %}
+  --enable-foreman-plugin-{{ item }} \
+{% endfor %}
+{% for item in foreman_installer_proxy_plugin_enable %}
+  --enable-foreman-proxy-plugin-{{ item }} \
+{% endfor %}
+{% for item in foreman_installer_further_enable %}
+  --enable-{{ item }} \
+{% endfor %}
+  --foreman-db-password "{{ vault_foreman_db_password }}" \
+\
+  --certs-city "{{ foreman_certs_city }}" \
+  --certs-country "{{ foreman_certs_country }}" \
+  --certs-org "{{ foreman_certs_org }}" \
+  --certs-org-unit "{{ foreman_certs_org_unit }}" \
+  --certs-state "{{ foreman_certs_state }}" \
+{% if foreman_custom_certs | bool %}
+  --foreman-server-ssl-cert "{{ foreman_cert_path }}" \
+  --foreman-server-ssl-key "{{ foreman_cert_key_path }}" \
+  --foreman-server-ssl-chain "{{ foreman_cert_ca_path }}" \
+{% endif %}
+\
+  --foreman-proxy-puppet true \
+  --puppet-autosign-entries "{{ foreman_puppet_autosign_entries }}" \
+\
+  --foreman-proxy-tftp {{ foreman_tftp_enable | lower }} \
+{% if foreman_tftp_enable | bool %}
+  --foreman-proxy-tftp-listen-on "{{ foreman_tftp_listen_on }}" \
+{% endif %}
+\
+{% if foreman_dhcp_enable | bool %}
+  --foreman-proxy-dhcp true \
+  --foreman-proxy-dhcp-provider "{{ foreman_dhcp_provider }}" \
+  --foreman-proxy-dhcp-interface "{{ foreman_dhcp_interface }}" \
+  --foreman-proxy-dhcp-gateway "{{ foreman_dhcp_gateway }}" \
+  --foreman-proxy-dhcp-range "{{ foreman_dhcp_range_start }} {{ foreman_dhcp_range_end }}" \
+  --foreman-proxy-dhcp-nameservers "{{ foreman_dhcp_nameservers | join(',') }}" \
+{% endif %}
+\
+{% if foreman_dns_enable | bool %}
+  --foreman-proxy-dns true \
+  --foreman-proxy-dns-provider "{{ foreman_dns_provider }}" \
+  --enable-foreman-proxy-plugin-dns-powerdns \
+  --foreman-proxy-plugin-dns-powerdns-rest-api-key "{{ vault_pdns_api_key }}" \
+  --foreman-proxy-plugin-dns-powerdns-rest-url "{{ foreman_pdns_api_url }}" \
+{% endif %}
+\
+{% if foreman_realm_enable | bool %}
+  --foreman-pam-service "{{ foreman_realm_pam_server }}" \
+  --foreman-ipa-authentication={{ foreman_realm_ipa_authentication }} \
+  --foreman-ipa-authentication-api={{ foreman_realm_ipa_authentication_api }} \
+  --foreman-proxy-realm={{ foreman_realm_proxy }} \
+  --foreman-proxy-realm-principal "{{ foreman_realm_principal }}" \
+  --foreman-proxy-realm-provider "{{ foreman_realm_provider }}" \
+  --foreman-proxy-freeipa-remove-dns={{ foreman_realm_freeipa_remove_dns }} \
+{% endif %}
+\
+{% if not foreman_proxy_content_enable_docker | bool %}
+  --foreman-proxy-content-enable-docker=false \
+{% endif %}
+{% if foreman_proxy_content_enable_ostree | bool %}
+  --foreman-proxy-content-enable-ostree=true \
+{% endif %}
+  --foreman-proxy-plugin-openscap-ansible-module={{ foreman_proxy_openscap_ansible_module | lower }} \
+\
+  --foreman-proxy-plugin-remote-execution-script-enabled={{ foreman_proxy_rex_script_enabled | lower }} \
+  --foreman-proxy-plugin-remote-execution-script-cockpit-integration={{ foreman_proxy_rex_script_cockpit_integration | lower }} \
+\
+  --foreman-plugin-tasks-automatic-cleanup={{ foreman_plugin_tasks_automatic_cleanup | lower }} \
+  --foreman-plugin-tasks-backup={{ foreman_plugin_tasks_backup | lower }} \
+{% if foreman_telemetry_logger_enabled | bool %}
+  --foreman-telemetry-logger-enabled=true \
+  --foreman-telemetry-prometheus-enabled={{ foreman_telemetry_prometheus_enabled | lower }} \
+{% endif %}

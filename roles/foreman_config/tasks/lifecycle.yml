@@ -1,0 +1,65 @@
+---
+- name: lifecycle - create lifecycle environments
+  theforeman.foreman.lifecycle_environment:
+    username: "{{ foreman_username }}"
+    password: "{{ vault_foreman_admin_password }}"
+    server_url: "{{ foreman_url }}"
+    validate_certs: "{{ foreman_validate_certs }}"
+    name: "{{ item.name }}"
+    prior: "{{ item.prior | default(omit) }}"
+    label: "{{ item.label | default(omit) }}"
+    organization: "{{ item.org | default(foreman_org) }}"
+    description: "{{ item.description | default(omit) }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ foreman_lifecycle_envs | default([]) }}"
+
+- name: lifecycle - create content views
+  theforeman.foreman.content_view:
+    username: "{{ foreman_username }}"
+    password: "{{ vault_foreman_admin_password }}"
+    server_url: "{{ foreman_url }}"
+    validate_certs: "{{ foreman_validate_certs }}"
+    name: "{{ item.name }}"
+    description: "{{ item.description | default(omit) }}"
+    organization: "{{ item.org | default(foreman_org) }}"
+    auto_publish: "{{ item.auto_publish | default(false) }}"
+    solve_dependencies: "{{ item.solve_dependencies | default(omit) }}"
+    repositories: "{{ item.repos | default(omit) }}"
+    components: "{{ item.components | default(omit) }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ foreman_content_views | default([]) }}"
+
+- name: lifecycle - initial publish and promote content views
+  theforeman.foreman.content_view_version:
+    username: "{{ foreman_username }}"
+    password: "{{ vault_foreman_admin_password }}"
+    server_url: "{{ foreman_url }}"
+    validate_certs: "{{ foreman_validate_certs }}"
+    content_view: "{{ item.name }}"
+    organization: "{{ item.org | default(foreman_org) }}"
+    lifecycle_environments: "{{ item.lifecycle_envs }}"
+    version: "1.0"
+  loop: "{{ foreman_content_views | default([]) }}"
+  when: item.first_publish | default(false) | bool
+
+- name: lifecycle - create activation keys
+  theforeman.foreman.activation_key:
+    username: "{{ foreman_username }}"
+    password: "{{ vault_foreman_admin_password }}"
+    server_url: "{{ foreman_url }}"
+    validate_certs: "{{ foreman_validate_certs }}"
+    name: "{{ item.name }}"
+    new_name: "{{ item.new_name | default(omit) }}"
+    description: "{{ item.description | default(omit) }}"
+    organization: "{{ item.org | default(foreman_org) }}"
+    lifecycle_environment: "{{ item.lifecycle_env | default(omit) }}"
+    content_view: "{{ item.content_view }}"
+    host_collections: "{{ item.host_collections | default(omit) }}"
+    content_overrides: "{{ item.content_overrides | default(omit) }}"
+    auto_attach: "{{ item.auto_attach | default(false) }}"
+    release_version: "{{ item.release_version | default(omit) }}"
+    service_level: "{{ item.service_level | default(omit) }}"
+    max_hosts: "{{ item.max_hosts | default(omit) }}"
+    unlimited_hosts: "{{ item.unlimited_hosts | default(true) }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ foreman_activation_keys | default([]) }}"

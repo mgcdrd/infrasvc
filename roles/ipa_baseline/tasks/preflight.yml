@@ -1,0 +1,27 @@
+---
+
+- name: ipa_baseline preflight - Assert required variables are set
+  ansible.builtin.assert:
+    that:
+      - ipa_baseline_server | length > 0
+      - ipa_baseline_vault_url | length > 0
+      - vault_ipa_admin_password | length > 0
+    fail_msg: >-
+      ipa_baseline_server, ipa_baseline_vault_url, and vault_ipa_admin_password
+      must all be set. vault_ipa_admin_password should be fetched from Vault
+      at kv1/ipa/admin before this role runs.
+
+- name: ipa_baseline preflight - Verify IPA server is reachable
+  ansible.builtin.uri:
+    url: "https://{{ ipa_baseline_server }}/ipa/ui/"
+    method: GET
+    validate_certs: "{{ ipa_baseline_validate_certs }}"
+    status_code: 200
+  changed_when: false
+
+- name: ipa_baseline preflight - Verify Vault is reachable
+  ansible.builtin.uri:
+    url: "{{ ipa_baseline_vault_url }}/v1/sys/health"
+    method: GET
+    status_code: [200, 429, 472, 473]
+  changed_when: false

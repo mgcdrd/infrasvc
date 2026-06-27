@@ -155,6 +155,72 @@ pdns_phpipam_ipam_ldap_bindpw:   "basicpassword"
 pdns_phpipam_ipam_ldap_descr:    "blank"
 ```
 
+### Galera Clustering
+
+Set `pdns_phpipam_galera_enabled: true` to configure the MariaDB container for
+Galera multi-master replication. When enabled, the Galera ports (3306, 4567,
+4568, 4444) are exposed on the host so cluster nodes can reach each other.
+
+```yaml
+pdns_phpipam_galera_enabled: false
+pdns_phpipam_galera_cluster_name: "pdns_galera"
+pdns_phpipam_galera_cluster_address: ""   # see bootstrap note below
+```
+
+Set `pdns_phpipam_galera_cluster_address` per-host in `host_vars`. For a
+three-node cluster across dns1, dns2, dns3:
+
+```yaml
+# host_vars/dns1.lab.example.com.yml
+pdns_phpipam_galera_cluster_address: "gcomm://10.0.0.11,10.0.0.18,10.0.0.3"
+
+# host_vars/dns2.lab.example.com.yml
+pdns_phpipam_galera_cluster_address: "gcomm://10.0.0.11,10.0.0.18,10.0.0.3"
+
+# host_vars/dns3.lab.example.com.yml  (MariaDB-only node)
+pdns_phpipam_galera_cluster_address: "gcomm://10.0.0.11,10.0.0.18,10.0.0.3"
+```
+
+**How Galera is activated**
+
+The `MARIADB_GALERA_*` environment variables only take effect during first
+container initialization (empty data directory). For existing databases, the
+role mounts a `galera.cnf` at
+`/etc/mysql/mariadb.conf.d/61-galera.cnf` inside the container, which
+overrides the commented-out `60-galera.cnf` shipped with the image. This
+approach works regardless of whether the data directory is new or existing.
+
+The config includes `wsrep_provider_options = "ist.recv_bind=0.0.0.0"`, which
+allows the IST receiver to bind to all interfaces inside the container. Without
+this, the IST listener fails to bind to the host IP (which is not reachable
+inside Docker), and Galera aborts the entire state transfer before the SST
+donor script runs.
+
+**Initial cluster bootstrap**
+
+Galera requires one node to initialize the cluster before others can join. The
+`gcomm://` address (empty) tells MariaDB to start as a fresh primary component
+rather than trying to contact peers.
+
+```bash
+# Step 1 — bootstrap the first node only
+ansible-playbook site.yml --limit dns1 \
+  -e "pdns_phpipam_galera_cluster_address=gcomm://"
+
+# Step 2 — bring up the remaining nodes with the full address list
+ansible-playbook site.yml --limit dns2,dns3
+```
+
+After all nodes are up, dns1 keeps running normally. The `gcomm://` override
+only affects startup — a running Galera node ignores the initial address.
+
+**Full cluster recovery**
+
+If all Galera nodes go down simultaneously, the cluster must be bootstrapped
+again. Check `/var/lib/mysql/grastate.dat` on each node — the one with
+`safe_to_bootstrap: 1` (or the highest `seqno`) is the correct node to
+bootstrap from. Run Step 1 on that node, then Step 2 on the rest.
+
 ### Secrets
 
 Leave any secret as `""` (the default) to have the role auto-generate a random

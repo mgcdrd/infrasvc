@@ -1,0 +1,54 @@
+---
+# Generate an SSH key for the foreman user to authenticate to GitLab
+- name: templates - generate SSH key pair for foreman → GitLab
+  ansible.builtin.user:
+    name: foreman
+    generate_ssh_key: true
+    ssh_key_type: ed25519
+    ssh_key_file: .ssh/id_ed25519
+  register: foreman_ssh_key
+
+- name: templates - display foreman public key (copy this to GitLab)
+  ansible.builtin.debug:
+    msg: "Foreman SSH public key: {{ foreman_ssh_key.ssh_public_key }}"
+
+# Scan and trust the GitLab host key
+- name: templates - scan GitLab host keys
+  ansible.builtin.shell:
+    cmd: >
+      ssh-keyscan {{ foreman_template_gitlab_host }}
+      | grep -v '^#'
+  register: foreman_gitlab_host_keys
+  changed_when: false
+
+- name: templates - add GitLab host keys to foreman known_hosts
+  ansible.builtin.known_hosts:
+    path: /usr/share/foreman/.ssh/known_hosts
+    name: "{{ foreman_template_gitlab_host }}"
+    key: "{{ item }}"
+  loop: "{{ foreman_gitlab_host_keys.stdout_lines }}"
+
+# Apply template sync settings
+- name: templates - configure template sync settings
+  theforeman.foreman.setting:
+    username: "{{ foreman_username }}"
+    password: "{{ vault_foreman_admin_password }}"
+    server_url: "{{ foreman_url }}"
+    validate_certs: "{{ foreman_validate_certs }}"
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+  loop: "{{ foreman_template_settings | default([]) }}"
+
+# Trigger template import from GitLab
+- name: templates - import templates from GitLab
+  theforeman.foreman.templates_import:
+    username: "{{ foreman_username }}"
+    password: "{{ vault_foreman_admin_password }}"
+    server_url: "{{ foreman_url }}"
+    validate_certs: "{{ foreman_validate_certs }}"
+    associate: "{{ foreman_template_import_associate | default('always') }}"
+    branch: "{{ foreman_template_import_branch | default('main') }}"
+    dirname: "{{ foreman_template_import_dirname | default('/') }}"
+    filter: "{{ foreman_template_import_filter | default(omit) }}"
+    force: "{{ foreman_template_import_force | default(false) }}"
+    repo: "{{ foreman_template_repo }}"

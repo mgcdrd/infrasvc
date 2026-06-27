@@ -104,6 +104,26 @@ pdns_phpipam_ipam_ldap_descr: "blank"
 
 
 
+# ---- GALERA CLUSTERING ----
+# When enabled, the MariaDB container is configured for Galera multi-master
+# replication. Set pdns_phpipam_galera_cluster_address per-host in host_vars.
+#
+# Bootstrap the first node with:
+#   pdns_phpipam_galera_cluster_address: "gcomm://"
+# All subsequent nodes (and steady-state) use the full member list:
+#   pdns_phpipam_galera_cluster_address: "gcomm://10.0.0.11,10.0.0.18,10.0.0.3"
+
+pdns_phpipam_galera_enabled: false
+pdns_phpipam_galera_cluster_name: "pdns_galera"
+pdns_phpipam_galera_cluster_address: ""
+pdns_phpipam_galera_sst_user: "sst_user"
+pdns_phpipam_galera_sst_password: ""
+
+# When true, only the MariaDB container is deployed — no pdns-auth, recursor,
+# dnsdist, or phpIPAM. Use for Galera-only quorum nodes that provide
+# replication redundancy without serving DNS or IPAM traffic.
+pdns_phpipam_mariadb_only: false
+
 # ---- SECRETS ----
 # Leave as "" to have the role auto-generate and persist to pdns_phpipam_secrets_dir.
 # Set explicitly (preferably via Ansible Vault) to supply your own values.

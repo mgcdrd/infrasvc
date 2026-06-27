@@ -1,16 +1,31 @@
 services:
   mariadb:
     image: mariadb:12-noble
+{% if pdns_phpipam_galera_enabled %}
+    entrypoint: ["/bin/bash", "-c", "rm -f /var/lib/mysql/wsrep_sst.pid && exec /usr/local/bin/docker-entrypoint.sh mariadbd"]
+{% endif %}
     environment:
       MYSQL_ROOT_PASSWORD: {{ _pdns_mariadb_root_passwd }}
     volumes:
       - {{ pdns_phpipam_mariadb_dir }}/data:/var/lib/mysql
       - {{ pdns_phpipam_mariadb_dir }}/init:/docker-entrypoint-initdb.d
+{% if pdns_phpipam_galera_enabled %}
+      - {{ pdns_phpipam_mariadb_dir }}/galera.cnf:/etc/mysql/mariadb.conf.d/61-galera.cnf:ro
+{% endif %}
+{% if pdns_phpipam_galera_enabled %}
+    ports:
+      - "3306:3306"
+      - "4567:4567"
+      - "4567:4567/udp"
+      - "4568:4568"
+      - "4444:4444"
+{% endif %}
     networks:
       {{ pdns_phpipam_docker_network_name }}:
         ipv4_address: {{ pdns_phpipam_docker_network_mariadb }}
     restart: unless-stopped
 
+{% if not pdns_phpipam_mariadb_only %}
   auth:
     image: powerdns/pdns-auth-50:latest
     environment:
@@ -113,6 +128,7 @@ services:
     depends_on:
       - phpipam-web
     restart: unless-stopped
+{% endif %}
 {% endif %}
 
 networks:

@@ -1,0 +1,16 @@
+---
+galaxy_info:
+  author: mgcdrd
+  description: Configures Foreman via the theforeman.foreman collection
+  role_name: foreman_config
+
+  license: GPL-3.0-or-later
+  min_ansible_version: '2.14'
+
+  galaxy_tags:
+    - mgcdrd
+
+collections:
+  - theforeman.foreman
+  - community.general
+  - community.hashi_vault

@@ -1,0 +1,188 @@
+// Managed by Ansible -- do not edit manually
+
+logging {
+  level = "info"
+}
+
+{% if grafana_alloy_loki_enabled %}
+// =============================================================================
+// LOGS → Loki
+// =============================================================================
+
+// --- log sources ---
+
+loki.source.file "nginx_access" {
+  targets = [
+    { __path__  = "{{ grafana_alloy_nginx_access_log_path }}",
+      "job"     = "nginx_access",
+    },
+  ]
+
+  file_match {
+    enabled     = true
+    sync_period = "{{ grafana_alloy_log_sync_period }}"
+  }
+
+  forward_to = [loki.process.nginx_access.receiver]
+}
+
+loki.source.file "nginx_error" {
+  targets = [
+    { __path__  = "{{ grafana_alloy_nginx_error_log_path }}",
+      "job"     = "nginx_error",
+    },
+  ]
+
+  file_match {
+    enabled     = true
+    sync_period = "{{ grafana_alloy_log_sync_period }}"
+  }
+
+  forward_to = [loki.process.nginx_error.receiver]
+}
+
+
+// --- access log processing ---
+
+loki.process "nginx_access" {
+
+  stage.regex {
+    expression = "^(?P<remote_addr>[^ ]+) - (?P<remote_user>[^ ]+) \\[(?P<time_local>[^\\]]+)\\] \"(?P<request>[^\"]+)\" (?P<status>[^ ]+) (?P<body_bytes_sent>[^ ]+) \"(?P<http_referer>[^\"]*)\" \"(?P<http_user_agent>[^\"]*)\" host=\"(?P<host_header>[^ ]*)\" server=\"(?P<host_accepted>[^ ]*)\" xff=\"(?P<http_x_forwarded_for>[^ ]*)\" upstream=\"(?P<upstream_addr>[^ ]+)\" request_time=(?P<request_time>[^ ]+) upstream_response_time=(?P<upstream_response_time>[^\"]+)$"
+  }
+
+  stage.timestamp {
+    source = "time_local"
+    format = "02/Jan/2006:15:04:05 -0700"
+  }
+
+  stage.labels {
+    values = {
+      host        = "host",
+      server_name = "server_name",
+      status      = "status",
+      upstream    = "upstream",
+    }
+  }
+
+  stage.structured_metadata {
+    values = {
+      request    = "request",
+      user_agent = "http_user_agent",
+    }
+  }
+
+  forward_to = [loki.write.grafana_loki.receiver]
+}
+
+
+// --- error log processing ---
+
+loki.process "nginx_error" {
+
+  stage.regex {
+    expression = "^(?P<time_local>[^\\[]+) \\[(?P<level>[^\\]]+)\\] (?P<pid>[^#]+)#(?P<tid>[^:]+): (?:\\*(?P<conn_id>\\d+) )?(?P<message>.+)"
+  }
+
+  stage.regex {
+    source     = "message"
+    expression = "(?:client: (?P<client>[^,]+))?(?:, server: (?P<server>[^,]+))?(?:, request: \"(?P<request>[^\"]+)\")?(?:, upstream: \"(?P<upstream>[^\"]+)\")?(?:, host: \"(?P<host>[^\"]+)\")?(?:, referrer: \"(?P<referrer>[^\"]+)\")?"
+  }
+
+  stage.labels {
+    values = {
+      level  = "level",
+      server = "server",
+    }
+  }
+
+  stage.structured_metadata {
+    values = {
+      client   = "client",
+      upstream = "upstream",
+      host     = "host",
+      cid      = "cid",
+      request  = "request",
+    }
+  }
+
+  stage.timestamp {
+    source = "time_local"
+    format = "2006/01/02 15:04:05"
+  }
+
+  forward_to = [loki.write.grafana_loki.receiver]
+}
+
+
+// --- Loki output ---
+
+loki.write "grafana_loki" {
+  endpoint {
+    url = "{{ grafana_alloy_loki_url }}"
+{% if grafana_alloy_loki_user %}
+
+    basic_auth {
+      username = "{{ grafana_alloy_loki_user }}"
+      password = "{{ grafana_alloy_loki_password }}"
+    }
+{% endif %}
+  }
+}
+
+{% endif %}
+{% if grafana_alloy_prometheus_enabled %}
+// =============================================================================
+// METRICS → Prometheus
+// =============================================================================
+
+// --- extra labels (passthrough when grafana_alloy_extra_labels is empty) ---
+prometheus.relabel "extra_labels" {
+  forward_to = [prometheus.remote_write.default.receiver]
+{% for key, value in grafana_alloy_extra_labels.items() %}
+
+  rule {
+    target_label = "{{ key }}"
+    replacement  = "{{ value }}"
+  }
+{% endfor %}
+}
+
+// --- nginx stub_status (requires ngx_http_stub_status_module) ---
+prometheus.exporter.nginx "local" {
+  scrape_uri = "{{ grafana_alloy_nginx_stub_status_uri }}"
+}
+
+prometheus.scrape "nginx" {
+  targets         = prometheus.exporter.nginx.local.targets
+  job_name        = "nginx"
+  scrape_interval = "{{ grafana_alloy_nginx_scrape_interval }}"
+  forward_to      = [prometheus.relabel.extra_labels.receiver]
+}
+
+{% if grafana_alloy_node_metrics_enabled %}
+// --- node / system metrics ---
+prometheus.exporter.unix "node" {}
+
+prometheus.scrape "node" {
+  targets         = prometheus.exporter.unix.node.targets
+  job_name        = "node"
+  scrape_interval = "{{ grafana_alloy_node_scrape_interval }}"
+  forward_to      = [prometheus.relabel.extra_labels.receiver]
+}
+
+{% endif %}
+// --- remote write ---
+prometheus.remote_write "default" {
+  endpoint {
+    url = "{{ grafana_alloy_remote_write_url }}"
+{% if grafana_alloy_remote_write_user %}
+
+    basic_auth {
+      username = "{{ grafana_alloy_remote_write_user }}"
+      password = "{{ grafana_alloy_remote_write_password }}"
+    }
+{% endif %}
+  }
+}
+
+{% endif %}

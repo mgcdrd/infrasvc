@@ -1,0 +1,46 @@
+---
+
+# Path to the deployed Alloy River config
+grafana_alloy_config_path: /etc/alloy/config.alloy
+
+# ---------------------------------------------------------------------------
+# Loki log forwarding
+# ---------------------------------------------------------------------------
+
+grafana_alloy_loki_enabled: true
+
+grafana_alloy_loki_url: ""
+grafana_alloy_loki_user: ""
+grafana_alloy_loki_password: ""  # use {{ vault_grafana_alloy_loki_password }}
+
+# Glob paths for nginx log files
+grafana_alloy_nginx_access_log_path: "/var/log/**/*.access.log"
+grafana_alloy_nginx_error_log_path:  "/var/log/**/*.error.log"
+
+# file_match sync period for log tailing
+grafana_alloy_log_sync_period: "10s"
+
+# ---------------------------------------------------------------------------
+# Prometheus metrics
+# ---------------------------------------------------------------------------
+
+grafana_alloy_prometheus_enabled: true
+
+grafana_alloy_remote_write_url: ""
+grafana_alloy_remote_write_user: ""
+grafana_alloy_remote_write_password: ""  # use {{ vault_grafana_alloy_remote_write_password }}
+
+# nginx stub_status endpoint (requires ngx_http_stub_status_module)
+grafana_alloy_nginx_stub_status_uri: "http://127.0.0.1/nginx_status"
+grafana_alloy_nginx_scrape_interval: "15s"
+
+# Host/system metrics via prometheus.exporter.unix
+grafana_alloy_node_metrics_enabled: true
+grafana_alloy_node_scrape_interval: "30s"
+
+# Extra labels attached to all Prometheus metrics
+grafana_alloy_extra_labels: {}
+# Example:
+# grafana_alloy_extra_labels:
+#   env: production
+#   host_role: proxy

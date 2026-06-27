@@ -1,0 +1,51 @@
+---
+- name: foreman_config - sync plans
+  import_tasks: syncplans.yml
+  when: foreman_sync_plans is defined
+  tags: [foreman_config, syncplans]
+
+- name: foreman_config - products and repositories
+  import_tasks: repos.yml
+  when: foreman_repo_products is defined
+  tags: [foreman_config, repos]
+
+- name: foreman_config - lifecycle environments, content views, activation keys
+  import_tasks: lifecycle.yml
+  when: >
+    foreman_lifecycle_envs is defined or
+    foreman_content_views is defined or
+    foreman_activation_keys is defined
+  tags: [foreman_config, lifecycle]
+
+- name: foreman_config - infrastructure (domains, subnets, compute)
+  import_tasks: infra.yml
+  when: >
+    foreman_domains is defined or
+    foreman_subnets is defined or
+    foreman_architectures is defined or
+    foreman_compute_resources is defined or
+    foreman_compute_profiles is defined
+  tags: [foreman_config, infra]
+
+- name: foreman_config - templates and settings
+  import_tasks: templates.yml
+  when: foreman_template_settings is defined
+  tags: [foreman_config, templates]
+
+- name: foreman_config - operating systems and provisioning
+  import_tasks: provisioning.yml
+  when: >
+    foreman_operatingsystems is defined or
+    foreman_installation_media is defined or
+    foreman_global_parameters is defined
+  tags: [foreman_config, provisioning]
+
+- name: foreman_config - host groups
+  import_tasks: hostgroups.yml
+  when: foreman_hostgroups is defined
+  tags: [foreman_config, hostgroups]
+
+- name: foreman_config - AWX integration settings
+  import_tasks: awx.yml
+  when: foreman_awx_url is defined
+  tags: [foreman_config, awx]

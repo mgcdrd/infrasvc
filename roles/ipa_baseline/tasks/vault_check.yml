@@ -1,0 +1,16 @@
+---
+
+- name: ipa_baseline vault_check - Check for existing enrollment secret
+  ansible.builtin.uri:
+    url: "{{ ipa_baseline_vault_url }}/v1/{{ ipa_baseline_vault_kv_mount }}/data/{{ ipa_baseline_vault_enrollment_path }}"
+    method: GET
+    headers:
+      X-Vault-Token: "{{ ipa_baseline_vault_token }}"
+    status_code: [200, 404]
+  register: _ipa_baseline_vault_check
+  no_log: true
+  changed_when: false
+
+- name: ipa_baseline vault_check - Set secret existence fact
+  ansible.builtin.set_fact:
+    _ipa_baseline_secret_exists: "{{ _ipa_baseline_vault_check.status == 200 }}"

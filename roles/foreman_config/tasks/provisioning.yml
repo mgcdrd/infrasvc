@@ -1,0 +1,82 @@
+---
+# Pass 1: create OSes without template/media associations (they may not exist yet)
+- name: provisioning - create Debian operating systems
+  theforeman.foreman.operatingsystem:
+    username: "{{ foreman_username }}"
+    password: "{{ vault_foreman_admin_password }}"
+    server_url: "{{ foreman_url }}"
+    validate_certs: "{{ foreman_validate_certs }}"
+    name: "{{ item.name }}"
+    release_name: "{{ item.release_name }}"
+    family: Debian
+    major: "{{ item.major }}"
+    architectures: "{{ item.architectures | default(foreman_architectures | map(attribute='name') | list) }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ foreman_operatingsystems_deb | default([]) }}"
+
+- name: provisioning - create RHEL-family operating systems (pass 1 - no templates)
+  theforeman.foreman.operatingsystem:
+    username: "{{ foreman_username }}"
+    password: "{{ vault_foreman_admin_password }}"
+    server_url: "{{ foreman_url }}"
+    validate_certs: "{{ foreman_validate_certs }}"
+    name: "{{ item.name }}"
+    family: Redhat
+    major: "{{ item.major }}"
+    architectures: "{{ item.architectures | default(foreman_architectures | map(attribute='name') | list) }}"
+    ptables: "{{ item.partition_tables | default(omit) }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ foreman_operatingsystems_rh | default([]) }}"
+
+- name: provisioning - create installation media
+  theforeman.foreman.installation_medium:
+    username: "{{ foreman_username }}"
+    password: "{{ vault_foreman_admin_password }}"
+    server_url: "{{ foreman_url }}"
+    validate_certs: "{{ foreman_validate_certs }}"
+    name: "{{ item.name }}"
+    os_family: "{{ item.os_family | default('Redhat') }}"
+    operatingsystems: "{{ item.operatingsystems | default(omit) }}"
+    path: "{{ item.path }}"
+    locations: "{{ item.locations | default([foreman_location]) }}"
+    organizations: "{{ item.organizations | default([foreman_org]) }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ foreman_installation_media | default([]) }}"
+
+# Pass 2: re-apply RHEL OSes with template and media associations now that they exist
+- name: provisioning - associate templates and media to RHEL-family operating systems
+  theforeman.foreman.operatingsystem:
+    username: "{{ foreman_username }}"
+    password: "{{ vault_foreman_admin_password }}"
+    server_url: "{{ foreman_url }}"
+    validate_certs: "{{ foreman_validate_certs }}"
+    name: "{{ item.name }}"
+    family: Redhat
+    major: "{{ item.major }}"
+    architectures: "{{ item.architectures | default(foreman_architectures | map(attribute='name') | list) }}"
+    ptables: "{{ item.partition_tables | default(omit) }}"
+    media: "{{ item.install_media | default(omit) }}"
+    provisioning_templates: "{{ item.provisioning_templates | default(omit) }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ foreman_operatingsystems_rh | default([]) }}"
+
+- name: provisioning - associate partition tables to OS families via hammer
+  ansible.builtin.shell:
+    cmd: >
+      hammer partition-table update
+      --name "{{ item.name }}"
+      --os-family "{{ item.family }}"
+  loop: "{{ foreman_partition_table_os_families | default([]) }}"
+  changed_when: true
+
+- name: provisioning - set global parameters
+  theforeman.foreman.global_parameter:
+    username: "{{ foreman_username }}"
+    password: "{{ vault_foreman_admin_password }}"
+    server_url: "{{ foreman_url }}"
+    validate_certs: "{{ foreman_validate_certs }}"
+    name: "{{ item.name }}"
+    parameter_type: "{{ item.type | default('string') }}"
+    value: "{{ item.value }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ foreman_global_parameters | default([]) }}"

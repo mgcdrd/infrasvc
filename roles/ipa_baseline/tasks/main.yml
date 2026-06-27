@@ -1,0 +1,15 @@
+---
+
+- name: ipa_baseline - Preflight validation
+  import_tasks: preflight.yml
+
+- name: ipa_baseline - Check for existing enrollment secret in Vault
+  import_tasks: vault_check.yml
+
+- name: ipa_baseline - Ensure IPA service account and role
+  import_tasks: ipa_setup.yml
+  when: not _ipa_baseline_secret_exists | bool or ipa_baseline_force_rotate | bool
+
+- name: ipa_baseline - Write enrollment credentials to Vault
+  import_tasks: vault_write.yml
+  when: not _ipa_baseline_secret_exists | bool or ipa_baseline_force_rotate | bool

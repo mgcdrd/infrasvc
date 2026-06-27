@@ -1,0 +1,7 @@
+---
+foreman_hostname: "{{ ansible_fqdn }}"
+foreman_url: "https://{{ foreman_hostname }}"
+foreman_org: "My Organization"
+foreman_location: "Default Location"
+
+foreman_validate_certs: true

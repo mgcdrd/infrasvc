@@ -1,0 +1,50 @@
+---
+- name: ipa - check for existing keytab
+  ansible.builtin.stat:
+    path: /etc/foreman-proxy/freeipa.keytab
+  register: foreman_keytab_stat
+
+- name: ipa - create HTTP service principal in IPA
+  community.general.ipa_service:
+    name: "HTTP/{{ foreman_hostname }}"
+    hosts:
+      - "{{ foreman_hostname }}"
+    state: present
+    ipa_host: "{{ foreman_ipa_controller }}"
+    ipa_user: "{{ vault_ipa_admin_user }}"
+    ipa_pass: "{{ vault_ipa_admin_password }}"
+  when: not foreman_keytab_stat.stat.exists
+
+- name: ipa - ensure /etc/foreman-proxy directory exists
+  ansible.builtin.file:
+    path: /etc/foreman-proxy
+    state: directory
+    mode: "0755"
+  when: not foreman_keytab_stat.stat.exists
+
+- name: ipa - obtain admin Kerberos ticket
+  ansible.builtin.shell:
+    cmd: "echo '{{ vault_ipa_admin_password }}' | kinit {{ vault_ipa_admin_user }}"
+  no_log: true
+  when: not foreman_keytab_stat.stat.exists
+
+- name: ipa - retrieve keytab for foreman-proxy
+  ansible.builtin.shell:
+    cmd: >
+      ipa-getkeytab
+      -s {{ foreman_ipa_controller }}
+      -p HTTP/{{ foreman_hostname }}
+      -k /etc/foreman-proxy/freeipa.keytab
+  when: not foreman_keytab_stat.stat.exists
+
+- name: ipa - destroy Kerberos ticket cache
+  ansible.builtin.shell:
+    cmd: kdestroy -A
+  when: not foreman_keytab_stat.stat.exists
+
+- name: ipa - set keytab ownership
+  ansible.builtin.file:
+    path: /etc/foreman-proxy/freeipa.keytab
+    owner: foreman-proxy
+    group: foreman-proxy
+    mode: "0640"

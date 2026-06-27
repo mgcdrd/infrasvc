@@ -1,0 +1,18 @@
+---
+
+- name: grafana_alloy main - Install (Debian)
+  import_tasks: install-debian.yml
+  when: ansible_os_family == 'Debian'
+
+- name: grafana_alloy main - Install (RedHat)
+  import_tasks: install-redhat.yml
+  when: ansible_os_family == 'RedHat'
+
+- name: grafana_alloy main - Fix nginx log permissions (RedHat)
+  import_tasks: log-permissions.yml
+  when:
+    - ansible_os_family == 'RedHat'
+    - grafana_alloy_loki_enabled | bool
+
+- name: grafana_alloy main - Configure
+  import_tasks: configure.yml

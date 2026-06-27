@@ -1,0 +1,17 @@
+---
+
+- name: grafana_alloy configure - Deploy River config
+  ansible.builtin.template:
+    src:   config.alloy.j2
+    dest:  "{{ grafana_alloy_config_path }}"
+    owner: root
+    group: alloy
+    mode:  "0640"
+  notify: grafana_alloy restart
+
+- name: grafana_alloy configure - Enable and start alloy service
+  ansible.builtin.systemd_service:
+    name:          alloy.service
+    state:         started
+    enabled:       true
+    daemon_reload: true

@@ -1,0 +1,54 @@
+---
+
+# ---- IPA DOMAIN ----
+# List of IPA server FQDNs. The first server is used for pre-registration API
+# calls. All servers are passed as --server flags to ipa-client-install.
+ipa_client_servers: []
+
+# IPA domain name (lowercase), e.g. lab.example.com
+ipa_client_domain: ""
+
+# Kerberos realm (uppercase), e.g. LAB.EXAMPLE.COM
+ipa_client_realm: ""
+
+# Set to false for lab environments with self-signed IPA certificates.
+ipa_client_validate_certs: true
+
+
+# ---- HOST IP ----
+# IP address to register in PowerDNS and record on the IPA host object.
+# Defaults to the primary IPv4 address detected by Ansible facts.
+# Override when the host is still on a DHCP address from Foreman provisioning
+# and needs to be registered at its intended static IP.
+ipa_client_host_ip: "{{ ansible_default_ipv4.address }}"
+
+
+# ---- DNS REGISTRATION ----
+# PowerDNS authoritative API endpoint reachable from the target host.
+ipa_client_pdns_api_url: ""
+
+# PowerDNS server ID — almost always "localhost".
+ipa_client_pdns_server_id: "localhost"
+
+# Forward zone to register the A record in, e.g. lab.example.com
+ipa_client_dns_forward_zone: ""
+
+# Reverse zone to register the PTR record in, e.g. 10.0.0.in-addr.arpa
+ipa_client_dns_reverse_zone: ""
+
+# TTL for registered DNS records (seconds).
+ipa_client_dns_ttl: 300
+
+# Set to false to skip DNS registration entirely
+# (e.g. record already managed by Foreman or another process).
+ipa_client_dns_register: true
+
+
+# ---- INJECTED SECRETS ----
+# Enrollment service account credentials written by ipa_baseline.
+# Fetch from Vault at kv1/ipa/enrollment and pass to this role.
+vault_ipa_enrollment_principal: ""
+vault_ipa_enrollment_password: ""
+
+# PowerDNS API key — inject from Vault.
+vault_ipa_pdns_api_key: ""
