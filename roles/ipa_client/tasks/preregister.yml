@@ -109,11 +109,15 @@
   when: not _ipa_host_add is skipped
   become: false
 
-- name: ipa_client preregister - Debug host_mod response keys
+- name: ipa_client preregister - Debug host_mod full response
   ansible.builtin.debug:
     msg:
-      result_keys: "{{ _ipa_host_mod.json.result.result.keys() | list }}"
-      summary: "{{ _ipa_host_mod.json.result.summary | default('') }}"
+      status: "{{ _ipa_host_mod.status | default('?') }}"
+      content_type: "{{ _ipa_host_mod.content_type | default('?') }}"
+      json_defined: "{{ _ipa_host_mod.json is defined }}"
+      json_is_none: "{{ _ipa_host_mod.json is none }}"
+      error: "{{ (_ipa_host_mod.json.error | string) if _ipa_host_mod.json is not none else 'json is null' }}"
+      result_is_none: "{{ (_ipa_host_mod.json.result is none) if _ipa_host_mod.json is not none else 'n/a' }}"
   when: not _ipa_host_mod is skipped
   become: false
 
