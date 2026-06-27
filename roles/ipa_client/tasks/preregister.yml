@@ -109,6 +109,14 @@
   when: not _ipa_host_add is skipped
   become: false
 
+- name: ipa_client preregister - Debug host_mod response keys
+  ansible.builtin.debug:
+    msg:
+      result_keys: "{{ _ipa_host_mod.json.result.result.keys() | list }}"
+      summary: "{{ _ipa_host_mod.json.result.summary | default('') }}"
+  when: not _ipa_host_mod is skipped
+  become: false
+
 - name: ipa_client preregister - Set OTP fact from host_mod
   ansible.builtin.set_fact:
     _ipa_client_otp: "{{ _ipa_host_mod.json.result.result.randompassword }}"
