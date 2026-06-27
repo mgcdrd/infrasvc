@@ -86,6 +86,14 @@
   failed_when: _ipa_host_mod.json.error is not none
   become: false
 
+- name: ipa_client preregister - Debug host_mod failure
+  ansible.builtin.debug:
+    msg: "IPA host_mod error: {{ _ipa_host_mod.json.error }}"
+  when:
+    - not _ipa_host_mod is skipped
+    - _ipa_host_mod.json.error is not none
+  become: false
+
 - name: ipa_client preregister - Set OTP fact from host_add
   ansible.builtin.set_fact:
     _ipa_client_otp: "{{ _ipa_host_add.json.result.result.randompassword }}"
