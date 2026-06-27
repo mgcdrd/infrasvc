@@ -23,6 +23,7 @@
   when: not foreman_settings_stat.stat.exists
   async: 3600
   poll: 30
+  notify: restart sssd
 
 - name: install - enable and start foreman services
   become: true

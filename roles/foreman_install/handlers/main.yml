@@ -1,1 +1,15 @@
 ---
+# foreman-installer with --foreman-ipa-authentication modifies sssd.conf;
+# clear the cache and restart so the domain is queryable immediately.
+- name: restart sssd
+  become: true
+  ansible.builtin.shell:
+    cmd: sss_cache -E
+  listen: restart sssd
+
+- name: restart sssd service
+  become: true
+  ansible.builtin.systemd:
+    name: sssd
+    state: restarted
+  listen: restart sssd
