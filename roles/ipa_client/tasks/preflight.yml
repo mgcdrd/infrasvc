@@ -12,7 +12,7 @@
       ipa_client_servers, ipa_client_domain, ipa_client_realm,
       vault_ipa_enrollment_principal, and vault_ipa_enrollment_password
       must all be set. Enrollment credentials should be fetched from Vault
-      at kv1/ipa/enrollment before calling this role.
+      and passed to this role as vars.
 
 - name: ipa_client preflight - Assert DNS variables are set when registration is enabled
   ansible.builtin.assert:
