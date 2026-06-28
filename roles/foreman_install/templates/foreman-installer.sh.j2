@@ -3,6 +3,12 @@ set -euo pipefail
 
 foreman-installer \
   --scenario {{ foreman_installer_scenario }} \
+{% if foreman_installer_tuning is defined %}
+  --tuning {{ foreman_installer_tuning }} \
+{% endif %}
+{% if foreman_installer_skip_checks | default(false) | bool %}
+  --skip-checks-i-know-better \
+{% endif %}
   --foreman-initial-admin-username "{{ vault_foreman_admin_username }}" \
   --foreman-initial-admin-password "{{ vault_foreman_admin_password }}" \
   --foreman-initial-organization "{{ foreman_org }}" \
