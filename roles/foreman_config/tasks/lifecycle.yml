@@ -24,7 +24,7 @@
     name: "{{ item.name }}"
     description: "{{ item.description | default(omit) }}"
     organization: "{{ item.org | default(foreman_org) }}"
-    auto_publish: "{{ item.auto_publish | default(false) }}"
+    auto_publish: "{{ item.auto_publish if (item.composite | default(false) | bool and item.auto_publish is defined) else omit }}"
     solve_dependencies: "{{ item.solve_dependencies | default(omit) }}"
     repositories: "{{ item.repos | default(omit) }}"
     components: "{{ item.components | default(omit) }}"
