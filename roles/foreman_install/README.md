@@ -48,7 +48,7 @@ foreman_location: LAB
 ```yaml
 foreman_version: "3.19"
 foreman_katello_version: "4.21"
-foreman_puppet_release: "puppet8"    # swap to openvox8 when supported
+foreman_puppet_release: "openvox8"
 ```
 
 ### Installer feature flags
@@ -216,8 +216,13 @@ Notes
   re-installation, remove that file manually first.
 - **Installer duration**: The first run takes 15–30 minutes. The `async` task
   polls every 30 seconds and times out after 1 hour.
-- **OpenVox**: The role currently uses `puppet8-release` packages. When
-  Foreman's installer gains OpenVox support, update `foreman_puppet_release`.
+- **OpenVox**: Puppet server is no longer supported for Foreman integration as
+  of 3.19 — the role installs `openvox8-release` (from `yum.voxpupuli.org`) and
+  `openvox-server`, replacing the old `yum.puppet.com` / `puppetserver` packages.
+  Installer flags are unchanged (`--foreman-proxy-puppet`, `--puppet-server`,
+  `--puppet-autosign-entries`, etc.) since Foreman still uses Puppet-prefixed
+  flag names for OpenVox integration. Client hosts use the `openvox-agent`
+  package on EL; Puppet agent 7 remains a legacy-compatible alternative.
 - **Containerized installer**: The 3.19 `foremanctl` (containerized) path does
   not yet document DHCP, TFTP, DNS, Discovery, OpenSCAP, or Realm support.
   This role uses the traditional `foreman-installer-katello` path intentionally.

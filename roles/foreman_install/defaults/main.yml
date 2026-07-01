@@ -1,7 +1,7 @@
 ---
 foreman_version: "3.19"
 foreman_katello_version: "4.21"
-foreman_puppet_release: "puppet8"
+foreman_puppet_release: "openvox8"
 
 foreman_installer_scenario: katello
 

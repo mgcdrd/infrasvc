@@ -3,7 +3,7 @@
   ansible.builtin.dnf:
     name:
       - foreman-installer-katello
-      - puppetserver
+      - openvox-server
       - foreman-proxy
       - scap-security-guide
     state: present
