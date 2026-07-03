@@ -1,4 +1,17 @@
 ---
+- name: repos - create GPG content credentials
+  become: false
+  theforeman.foreman.content_credential:
+    username: "{{ foreman_username }}"
+    password: "{{ vault_foreman_admin_password }}"
+    server_url: "{{ foreman_url }}"
+    validate_certs: "{{ foreman_validate_certs }}"
+    name: "{{ item.name }}"
+    content_type: gpg_key
+    organization: "{{ item.org | default(foreman_org) }}"
+    content: "{{ lookup('file', item.file) }}"
+  loop: "{{ foreman_gpg_keys | default([]) }}"
+
 - name: repos - create products
   become: false
   theforeman.foreman.product:
@@ -26,6 +39,7 @@
     url: "{{ item.url }}"
     mirror_on_sync: "{{ item.mirror_on_sync | default(true) }}"
     download_policy: "{{ item.download_policy | default('on_demand') }}"
+    gpg_key: "{{ item.gpg_key | default(omit) }}"
     state: "{{ item.state | default('present') }}"
   loop: "{{ foreman_repos_rpm | default([]) }}"
 

@@ -55,6 +55,20 @@ foreman_sync_plans:
     state: present
 ```
 
+### GPG content credentials
+
+```yaml
+foreman_gpg_keys:
+  - name: RPM-GPG-KEY-Rocky-9
+    file: RPM-GPG-KEY-Rocky-9    # looked up from this role's files/
+```
+
+Creates a Katello content credential per entry (`content_type: gpg_key`), read
+from `files/<file>` via `lookup('file', ...)`. Reference it by `name` in a
+`foreman_repos_rpm` entry's `gpg_key` key. Without a `gpg_key`, Katello syncs
+the repo but sets `gpgcheck=0` in the `redhat.repo` it generates for content
+hosts registered against it (CIS `ensure_gpgcheck_never_disabled`).
+
 ### Products and repositories
 
 ```yaml
@@ -70,6 +84,7 @@ foreman_repos_rpm:
     url: https://dl.rockylinux.org/pub/rocky/9/BaseOS/x86_64/os/
     mirror_on_sync: true
     download_policy: on_demand    # or immediate
+    gpg_key: RPM-GPG-KEY-Rocky-9  # optional — must match a foreman_gpg_keys name
     state: present
 
 foreman_repos_deb:
