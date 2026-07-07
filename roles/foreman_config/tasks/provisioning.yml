@@ -46,7 +46,9 @@
     state: "{{ item.state | default('present') }}"
   loop: "{{ foreman_installation_media | default([]) }}"
 
-# Pass 2: re-apply RHEL OSes with template and media associations now that they exist
+# Pass 2: re-apply RHEL OSes with template and media associations now that
+# they exist. provisioning_templates in vars is a kind → template map; the
+# operatingsystem module takes a flat list of template names.
 - name: provisioning - associate templates and media to RHEL-family operating systems
   become: false
   theforeman.foreman.operatingsystem:
@@ -60,9 +62,38 @@
     architectures: "{{ item.architectures | default(foreman_architectures | map(attribute='name') | list) }}"
     ptables: "{{ item.partition_tables | default(omit) }}"
     media: "{{ item.install_media | default(omit) }}"
-    provisioning_templates: "{{ item.provisioning_templates | default(omit) }}"
+    provisioning_templates: "{{ (item.provisioning_templates.values() | list) if item.provisioning_templates is defined else omit }}"
     state: "{{ item.state | default('present') }}"
   loop: "{{ foreman_operatingsystems_rh | default([]) }}"
+
+# Selecting the default template per kind is a separate resource — flatten
+# each OS's kind → template map into (os, kind, template) tuples.
+- name: provisioning - build OS default template list
+  become: false
+  ansible.builtin.set_fact:
+    _foreman_os_default_templates: >-
+      {%- set out = [] -%}
+      {%- for os in foreman_operatingsystems_rh | default([]) if os.provisioning_templates is defined -%}
+      {%- for kind, tpl in os.provisioning_templates.items() -%}
+      {%- set _ = out.append({'os': os.name ~ ' ' ~ os.major, 'kind': kind, 'template': tpl}) -%}
+      {%- endfor -%}
+      {%- endfor -%}
+      {{ out }}
+
+- name: provisioning - set OS default templates
+  become: false
+  theforeman.foreman.os_default_template:
+    username: "{{ foreman_username }}"
+    password: "{{ vault_foreman_admin_password }}"
+    server_url: "{{ foreman_url }}"
+    validate_certs: "{{ foreman_validate_certs }}"
+    operatingsystem: "{{ item.os }}"
+    template_kind: "{{ item.kind }}"
+    provisioning_template: "{{ item.template }}"
+    state: present
+  loop: "{{ _foreman_os_default_templates }}"
+  loop_control:
+    label: "{{ item.os }} / {{ item.kind }}"
 
 # hammer has no stored credentials by default — pass them explicitly.
 - name: provisioning - associate partition tables to OS families via hammer
