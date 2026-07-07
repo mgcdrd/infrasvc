@@ -2,6 +2,25 @@
 # Run before repo configuration to ensure the host is in a clean state.
 # Handles systems previously enrolled with a Foreman/Katello instance.
 
+# A host registered as a content host of another Foreman/Katello carries
+# rhsm CA config and content-view repos that conflict with becoming a
+# Katello server itself. Unregister before anything else.
+- name: preflight - check for existing subscription-manager registration
+  become: true
+  ansible.builtin.shell:
+    cmd: subscription-manager identity
+  register: foreman_subman_identity
+  changed_when: false
+  failed_when: false
+
+# clean runs even if unregister fails (old server unreachable) — it wipes
+# the local rhsm state either way.
+- name: preflight - unregister from previous Katello server
+  become: true
+  ansible.builtin.shell:
+    cmd: subscription-manager unregister; subscription-manager clean
+  when: foreman_subman_identity.rc == 0
+
 - name: preflight - check for katello CA consumer package
   become: false
   ansible.builtin.shell:
@@ -38,7 +57,7 @@
   ansible.builtin.shell:
     cmd: dnf config-manager --enable baseos appstream extras crb
   changed_when: true
-  when: foreman_katello_pkg.rc == 0
+  when: foreman_katello_pkg.rc == 0 or foreman_subman_identity.rc == 0
 
 - name: preflight - check /var/lib/pulp available space
   become: false
@@ -64,16 +83,23 @@
   changed_when: false
   failed_when: false
 
-- name: preflight - warn if storage is below recommended minimums
+# A Katello install onto an undersized /var fails partway through and leaves
+# a half-configured system, so stop here instead. Thresholds sit below the
+# recommended LV sizes to absorb filesystem overhead (defaults/main.yml).
+# Override with foreman_skip_storage_check: true if the sizing is intentional.
+- name: preflight - fail if storage is below recommended minimums
   become: false
-  ansible.builtin.debug:
+  ansible.builtin.fail:
     msg: >
-      WARNING: Storage below recommended minimum.
-      /var/lib/pulp: {{ foreman_pulp_space.stdout_lines[-1] | trim }} available (need 300G).
-      /var/lib/containers: {{ foreman_containers_space.stdout_lines[-1] | trim }} available (need 30G).
-      /var/lib/pgsql: {{ foreman_pgsql_space.stdout_lines[-1] | trim }} available (need 20G).
-      Run 'make storage' before 'make install' if disk expansion is needed.
-  when: >
-    (foreman_pulp_space.stdout_lines[-1] | trim | regex_replace('G','') | int) < 300 or
-    (foreman_containers_space.stdout_lines[-1] | trim | regex_replace('G','') | int) < 30 or
-    (foreman_pgsql_space.stdout_lines[-1] | trim | regex_replace('G','') | int) < 20
+      Storage below recommended minimum.
+      /var/lib/pulp: {{ foreman_pulp_space.stdout_lines[-1] | trim }} available (need {{ foreman_storage_min_pulp_gb }}G).
+      /var/lib/containers: {{ foreman_containers_space.stdout_lines[-1] | trim }} available (need {{ foreman_storage_min_containers_gb }}G).
+      /var/lib/pgsql: {{ foreman_pgsql_space.stdout_lines[-1] | trim }} available (need {{ foreman_storage_min_pgsql_gb }}G).
+      Run 'make storage' before 'make install', or set
+      foreman_skip_storage_check: true to proceed anyway.
+  when:
+    - not foreman_skip_storage_check | bool
+    - >
+      (foreman_pulp_space.stdout_lines[-1] | trim | regex_replace('G','') | int) < foreman_storage_min_pulp_gb or
+      (foreman_containers_space.stdout_lines[-1] | trim | regex_replace('G','') | int) < foreman_storage_min_containers_gb or
+      (foreman_pgsql_space.stdout_lines[-1] | trim | regex_replace('G','') | int) < foreman_storage_min_pgsql_gb

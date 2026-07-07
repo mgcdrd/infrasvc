@@ -11,6 +11,10 @@
   import_tasks: packages.yml
   tags: [foreman_install, packages]
 
+- name: foreman_install - open firewall ports
+  import_tasks: firewall.yml
+  tags: [foreman_install, firewall]
+
 - name: foreman_install - IPA pre-setup
   import_tasks: ipa.yml
   when: foreman_realm_enable | bool

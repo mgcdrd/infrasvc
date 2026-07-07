@@ -1,0 +1,43 @@
+---
+# The hardened baseline leaves firewalld default-deny (ssh only), and
+# foreman-installer does not manage the firewall — open the Katello
+# documented port set. Skipped when firewalld is not running.
+
+- name: firewall - check firewalld state
+  become: true
+  ansible.builtin.command:
+    cmd: firewall-cmd --state
+  register: foreman_firewalld_state
+  changed_when: false
+  failed_when: false
+
+- name: firewall - open Foreman services
+  become: true
+  ansible.builtin.shell:
+    cmd: >
+      firewall-cmd --query-service={{ item }} ||
+      { firewall-cmd --permanent --add-service={{ item }} &&
+      firewall-cmd --add-service={{ item }}; }
+  loop: >-
+    {{ ['http', 'https', 'puppetmaster']
+       + (['dhcp'] if foreman_dhcp_enable | bool else [])
+       + (['tftp'] if foreman_tftp_enable | bool else []) }}
+  register: foreman_firewall_svc
+  changed_when: "'success' in foreman_firewall_svc.stdout"
+  when: foreman_firewalld_state.rc == 0
+
+# 8000/tcp — unattended provisioning templates / iPXE
+# 9090/tcp — smart proxy API
+- name: firewall - open smart proxy and provisioning ports
+  become: true
+  ansible.builtin.shell:
+    cmd: >
+      firewall-cmd --query-port={{ item }} ||
+      { firewall-cmd --permanent --add-port={{ item }} &&
+      firewall-cmd --add-port={{ item }}; }
+  loop:
+    - 8000/tcp
+    - 9090/tcp
+  register: foreman_firewall_port
+  changed_when: "'success' in foreman_firewall_port.stdout"
+  when: foreman_firewalld_state.rc == 0

@@ -1,8 +1,12 @@
 ---
-- name: install - check if foreman is already installed
+# Gate on a marker written only after a fully successful installer run.
+# /etc/foreman/settings.yaml is unsuitable: it appears even when the
+# installer fails partway, which made failed installs unrecoverable
+# (re-runs skipped the installer forever).
+- name: install - check for previous successful installer run
   become: true
   ansible.builtin.stat:
-    path: /etc/foreman/settings.yaml
+    path: /root/.foreman-installer-success
   register: foreman_settings_stat
 
 - name: install - write installer script
@@ -13,6 +17,31 @@
     owner: root
     group: root
     mode: "0700"
+
+# Renewal hook target — acme.sh's reloadcmd calls this after
+# complete-le-chain.sh so renewed certs propagate into Katello.
+- name: install - write cert renewal script
+  become: true
+  ansible.builtin.template:
+    src: foreman-cert-renewal.sh.j2
+    dest: /usr/local/sbin/foreman-cert-renewal.sh
+    owner: root
+    group: root
+    mode: "0700"
+  when: foreman_custom_certs | bool
+
+# Exec-allowed JVM tmpdir — /tmp is noexec on hardened hosts, which
+# crashes puppetserver's JRuby native-lib extraction. The puppet user
+# exists once packages.yml has installed openvox-server.
+- name: install - create puppetserver JVM tmpdir
+  become: true
+  ansible.builtin.file:
+    path: "{{ foreman_puppetserver_tmpdir }}"
+    state: directory
+    owner: puppet
+    group: puppet
+    mode: "0750"
+  when: foreman_puppetserver_tmpdir | length > 0
 
 # The tuning pre_commit hook enforces minimum memory per profile.
 # When foreman_installer_skip_checks is true (undersized lab VMs), zero
@@ -36,19 +65,27 @@
         replace: "'development' => { cpu_cores: 1, memory: 0 }"
       when: foreman_installer_skip_checks | default(false) | bool
 
+    # rc=6 (Puppet resources failed) is a real failure — historically it was
+    # the smart proxy self-registration breaking, not a transient issue.
+    # Failing here leaves the marker absent so a re-run retries the installer.
     - name: install - run foreman-installer
       become: true
       ansible.builtin.shell:
         cmd: /root/foreman-installer.sh
       register: foreman_installer_result
       changed_when: "'Success!' in foreman_installer_result.stdout"
-      # rc=6 means Puppet resources failed — often a transient timing issue on
-      # the self-registration step. Treat success OR rc=6 as non-fatal and let
-      # the caller decide whether to rerun.
-      failed_when: foreman_installer_result.rc not in [0, 6]
-      async: 3600
+      async: 7200
       poll: 30
       notify: restart sssd
+
+    - name: install - record successful installer run
+      become: true
+      ansible.builtin.copy:
+        content: "installed {{ ansible_date_time.iso8601 }}\n"
+        dest: /root/.foreman-installer-success
+        owner: root
+        group: root
+        mode: "0600"
 
   always:
     - name: install - restore tuning hook
@@ -60,16 +97,6 @@
         force: true
       failed_when: false
       when: foreman_installer_skip_checks | default(false) | bool
-
-- name: install - warn if installer had non-fatal errors
-  ansible.builtin.debug:
-    msg: >
-      foreman-installer finished with rc={{ foreman_installer_result.rc }}
-      (non-fatal, re-run 'make install' if services are not healthy)
-  when:
-    - not foreman_settings_stat.stat.exists
-    - foreman_installer_result is defined
-    - foreman_installer_result.rc == 6
 
 - name: install - enable and start foreman services
   become: true

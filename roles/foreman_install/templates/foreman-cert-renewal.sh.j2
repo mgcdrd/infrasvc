@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Pushes a renewed certificate through the Katello certs module.
+# Run after complete-le-chain.sh has rooted {{ foreman_cert_ca_path }}.
+# Managed by ansible (mgcdrd.infrasvc.foreman_install).
+
+set -euo pipefail
+
+/sbin/foreman-installer \
+  --scenario {{ foreman_installer_scenario }} \
+  --certs-server-cert "{{ foreman_cert_path }}" \
+  --certs-server-key "{{ foreman_cert_key_path }}" \
+  --certs-server-ca-cert "{{ foreman_cert_ca_path }}" \
+  --certs-update-server \
+  --certs-update-server-ca \
+  --certs-skip-check

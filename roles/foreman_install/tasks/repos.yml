@@ -19,6 +19,13 @@
     name: "https://yum.theforeman.org/katello/{{ foreman_katello_version }}/katello/el9/x86_64/katello-repos-latest.rpm"
     state: present
 
+# Without this key the dnf module refuses the release RPM outright
+# ("Can not load RPM file") — it enforces GPG checks on URL installs.
+- name: repos - add OpenVox GPG key
+  ansible.builtin.rpm_key:
+    key: "https://yum.voxpupuli.org/GPG-KEY-openvox.pub"
+    state: present
+
 - name: repos - install OpenVox release RPM
   ansible.builtin.dnf:
     name: "https://yum.voxpupuli.org/{{ foreman_puppet_release }}-release-el-9.noarch.rpm"

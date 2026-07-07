@@ -33,14 +33,27 @@ foreman-installer \
   --certs-org-unit "{{ foreman_certs_org_unit }}" \
   --certs-state "{{ foreman_certs_state }}" \
 {% if foreman_custom_certs | bool %}
-  --foreman-server-ssl-cert "{{ foreman_cert_path }}" \
-  --foreman-server-ssl-key "{{ foreman_cert_key_path }}" \
-  --foreman-server-ssl-chain "{{ foreman_cert_ca_path }}" \
+{#
+  Katello scenario: custom server certs MUST go through the certs module
+  (--certs-server-*). Setting --foreman-server-ssl-* directly leaves the
+  smart proxy and Pulp trusting the internal CA while Apache serves the
+  custom cert, breaking proxy self-registration (installer rc=6).
+  To change certs after install, re-run with:
+    --certs-update-server --certs-update-server-ca
+#}
+  --certs-server-cert "{{ foreman_cert_path }}" \
+  --certs-server-key "{{ foreman_cert_key_path }}" \
+  --certs-server-ca-cert "{{ foreman_cert_ca_path }}" \
 {% endif %}
 \
   --foreman-proxy-puppet true \
+  --puppet-server true \
   --puppet-autosign-entries "{{ foreman_puppet_autosign_entries }}" \
+{% if foreman_puppetserver_tmpdir | length > 0 %}
+  --puppet-server-jvm-extra-args "-Djava.io.tmpdir={{ foreman_puppetserver_tmpdir }}" \
+{% endif %}
 \
+  --foreman-proxy-templates true \
   --foreman-proxy-tftp {{ foreman_tftp_enable | lower }} \
 {% if foreman_tftp_enable | bool %}
   --foreman-proxy-tftp-listen-on "{{ foreman_tftp_listen_on }}" \

@@ -64,15 +64,20 @@
     state: "{{ item.state | default('present') }}"
   loop: "{{ foreman_operatingsystems_rh | default([]) }}"
 
+# hammer has no stored credentials by default — pass them explicitly.
 - name: provisioning - associate partition tables to OS families via hammer
   become: true
   ansible.builtin.shell:
     cmd: >
-      hammer partition-table update
+      hammer -u "{{ foreman_username }}" -p "{{ vault_foreman_admin_password }}"
+      partition-table update
       --name "{{ item.name }}"
       --os-family "{{ item.family }}"
   loop: "{{ foreman_partition_table_os_families | default([]) }}"
+  loop_control:
+    label: "{{ item.name }}"
   changed_when: true
+  no_log: true
 
 - name: provisioning - set global parameters
   become: false

@@ -22,11 +22,22 @@ Requirements
 - If `foreman_realm_enable: true`, the host must already be IPA-enrolled
   (`ipa_client` role) before this role runs, and the IPA admin credentials
   must be available via `vault_ipa_admin_user` / `vault_ipa_admin_password`.
+  The account named in `foreman_realm_principal` must already exist in IPA
+  with a role granting host-management privileges (the equivalent of the
+  `realm-proxy` user that `foreman-prepare-realm` creates) — the role fetches
+  its keytab into `/etc/foreman-proxy/freeipa.keytab`.
 - If `foreman_custom_certs: true`, the cert files must exist on the host before
-  the role runs (e.g. provisioned by `acme_sh`).
+  the role runs (e.g. provisioned by `acme_sh` with `complete_chain: true` —
+  `foreman_cert_ca_path` must be a chain that validates to a self-contained
+  root or `katello-certs-check` rejects it). They are passed via the Katello
+  certs module (`--certs-server-*`). The role also deploys
+  `/usr/local/sbin/foreman-cert-renewal.sh`, which re-runs the installer with
+  `--certs-update-server --certs-update-server-ca` — point the acme renewal
+  hook at it so renewed certs propagate into Katello.
 - The installer takes 15–30 minutes on first run. The install task uses
-  `async: 3600 / poll: 30` and is skipped on subsequent runs if
-  `/etc/foreman/settings.yaml` already exists.
+  `async: 7200 / poll: 30` and is skipped on subsequent runs if
+  `/root/.foreman-installer-success` exists (written only after a fully
+  successful installer run).
 - `community.general` and `community.hashi_vault` collections must be installed.
 
 
@@ -161,6 +172,7 @@ Tags
 | `preflight` | Katello cleanup + repo restoration only |
 | `repos` | Repository and GPG key setup only |
 | `packages` | Package installation only |
+| `firewall` | firewalld port openings only |
 | `ipa` | IPA keytab pre-enrollment only |
 | `certs` | Custom cert pre-flight check only |
 | `install` | Installer script render + run only |
@@ -172,11 +184,18 @@ Preflight behaviour
 The role detects and reverses Katello client enrollment artifacts that would
 interfere with a clean install:
 
+- Unregisters from any previous Katello server (`subscription-manager
+  unregister && clean`) if the host has an active registration
 - Removes `katello-ca-consumer*` if present
 - Disables the `subscription-manager` DNF plugin
 - Re-enables `baseos appstream extras crb` via `dnf config-manager`
-- Checks available space on `/var/lib/pulp` (300G), `/var/lib/containers` (30G),
-  and `/var/lib/pgsql` (20G) — warns but does not fail if below minimums
+- Checks available space on `/var/lib/pulp`, `/var/lib/containers`, and
+  `/var/lib/pgsql` — **fails** if below minimums, since a Katello install
+  onto an undersized `/var` dies partway through. Thresholds
+  (`foreman_storage_min_pulp_gb: 290`, `..._containers_gb: 28`,
+  `..._pgsql_gb: 18`) sit below the recommended LV sizes (300/40/30) to
+  absorb filesystem overhead — a fresh 300G xfs reports ~298G available.
+  Set `foreman_skip_storage_check: true` to bypass entirely.
 
 
 Example Playbook
@@ -211,18 +230,37 @@ Notes
 -----
 
 - **Idempotency**: The installer run is gated on the absence of
-  `/etc/foreman/settings.yaml`. Re-running the role after a successful install
-  skips the installer but still applies preflight and repo tasks. To force
-  re-installation, remove that file manually first.
+  `/root/.foreman-installer-success`, which is written only after the
+  installer exits 0. A failed or partial run leaves the marker absent, so
+  re-running the role retries the installer (`foreman-installer` itself is
+  idempotent). To force a re-run after success, remove the marker.
 - **Installer duration**: The first run takes 15–30 minutes. The `async` task
-  polls every 30 seconds and times out after 1 hour.
+  polls every 30 seconds and times out after 2 hours.
+- **Custom certs and Katello**: server certs are passed with
+  `--certs-server-cert/-key/-ca-cert` (the certs module), *not*
+  `--foreman-server-ssl-*`. The latter leaves the smart proxy and Pulp
+  trusting the internal CA while Apache serves the custom cert, which breaks
+  proxy self-registration (installer exit code 6).
 - **OpenVox**: Puppet server is no longer supported for Foreman integration as
   of 3.19 — the role installs `openvox8-release` (from `yum.voxpupuli.org`) and
   `openvox-server`, replacing the old `yum.puppet.com` / `puppetserver` packages.
+  The OpenVox GPG key (`GPG-KEY-openvox.pub`) is imported before the release
+  RPM — the dnf module rejects URL-installed RPMs signed with unknown keys.
   Installer flags are unchanged (`--foreman-proxy-puppet`, `--puppet-server`,
   `--puppet-autosign-entries`, etc.) since Foreman still uses Puppet-prefixed
   flag names for OpenVox integration. Client hosts use the `openvox-agent`
   package on EL; Puppet agent 7 remains a legacy-compatible alternative.
+- **Hardened /tmp**: with `noexec` on `/tmp` (CIS), puppetserver's JRuby
+  cannot extract and exec its native libs and crashes with "Failed to load
+  feature test for posix: can't find user for 0". The role creates an
+  exec-allowed JVM tmpdir (`foreman_puppetserver_tmpdir`, default
+  `/opt/puppetlabs/server/data/puppetserver/tmp`) and passes it via
+  `--puppet-server-jvm-extra-args "-Djava.io.tmpdir=..."`.
+- **Firewall**: `foreman-installer` does not manage firewalld, and hardened
+  hosts default-deny. The role opens the Katello documented set when firewalld
+  is running: `http`, `https`, `puppetmaster` services (plus `dhcp`/`tftp`
+  when enabled) and ports `8000/tcp` (provisioning templates), `9090/tcp`
+  (smart proxy API).
 - **Containerized installer**: The 3.19 `foremanctl` (containerized) path does
   not yet document DHCP, TFTP, DNS, Discovery, OpenSCAP, or Realm support.
   This role uses the traditional `foreman-installer-katello` path intentionally.

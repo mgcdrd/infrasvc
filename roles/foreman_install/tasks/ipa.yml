@@ -5,8 +5,11 @@
     path: /etc/foreman-proxy/freeipa.keytab
   register: foreman_keytab_stat
 
-# Use the host's own keytab for authentication — hosts can manage services for
-# themselves without needing Service Administrator privileges in IPA.
+# Use the host's own keytab for the HTTP service principal — hosts can manage
+# services for themselves without needing Service Administrator privileges.
+# The HTTP/ principal is needed by --foreman-ipa-authentication (web SSO);
+# the installer retrieves its keytab itself, so we must NOT fetch it here
+# (ipa-getkeytab rotates the key, invalidating any other copy).
 - name: ipa - obtain host Kerberos ticket
   become: true
   ansible.builtin.shell:
@@ -23,6 +26,38 @@
   register: _ipa_service_add
   changed_when: "'Added service' in _ipa_service_add.stdout"
 
+# The realm smart proxy authenticates as foreman_realm_principal, so the
+# keytab must belong to that principal. The account must already exist in
+# IPA with a role granting host-management privileges (the equivalent of
+# what foreman-prepare-realm sets up for realm-proxy).
+- name: ipa - obtain IPA admin Kerberos ticket
+  become: true
+  ansible.builtin.shell:
+    cmd: "kinit {{ vault_ipa_admin_user }}"
+    stdin: "{{ vault_ipa_admin_password }}"
+  when: not foreman_keytab_stat.stat.exists
+  no_log: true
+
+- name: ipa - verify realm principal exists
+  become: true
+  ansible.builtin.shell:
+    cmd: "ipa user-show {{ foreman_realm_principal.split('@') | first }}"
+  when: not foreman_keytab_stat.stat.exists
+  register: _ipa_realm_user
+  changed_when: false
+  failed_when: false
+
+- name: ipa - fail if realm principal is missing
+  ansible.builtin.fail:
+    msg: >
+      Realm principal {{ foreman_realm_principal }} does not exist in IPA.
+      Create the account and grant it a role with host-management
+      privileges (equivalent to foreman-prepare-realm's realm-proxy user),
+      then re-run.
+  when:
+    - not foreman_keytab_stat.stat.exists
+    - _ipa_realm_user.rc != 0
+
 - name: ipa - ensure /etc/foreman-proxy directory exists
   become: true
   ansible.builtin.file:
@@ -31,13 +66,16 @@
     mode: "0755"
   when: not foreman_keytab_stat.stat.exists
 
-- name: ipa - retrieve keytab for foreman-proxy
+# Note: this rotates the principal's Kerberos key — safe because the
+# account is dedicated to the realm proxy and this only runs when the
+# keytab is absent.
+- name: ipa - retrieve realm principal keytab for foreman-proxy
   become: true
   ansible.builtin.shell:
     cmd: >
       ipa-getkeytab
       -s {{ foreman_ipa_controller }}
-      -p HTTP/{{ foreman_hostname }}
+      -p {{ foreman_realm_principal }}
       -k /etc/foreman-proxy/freeipa.keytab
   when: not foreman_keytab_stat.stat.exists
 

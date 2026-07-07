@@ -5,6 +5,17 @@ foreman_puppet_release: "openvox8"
 
 foreman_installer_scenario: katello
 
+# Preflight fails when /var/lib/{pulp,containers,pgsql} are undersized;
+# set true to proceed anyway (e.g. intentionally small lab boxes).
+foreman_skip_storage_check: false
+
+# Minimum available GB per mount. Set below the recommended LV sizes
+# (300/40/30) to allow for filesystem overhead — a fresh 300G xfs
+# reports ~298G available.
+foreman_storage_min_pulp_gb: 290
+foreman_storage_min_containers_gb: 28
+foreman_storage_min_pgsql_gb: 18
+
 foreman_hostname: "{{ ansible_fqdn }}"
 foreman_url: "https://{{ foreman_hostname }}"
 
@@ -76,6 +87,11 @@ foreman_ipa_controller: ""
 
 # ---- Puppet / OpenVox ----
 foreman_puppet_autosign_entries: "[*.example.com]"
+
+# JVM tmpdir for puppetserver. On hardened hosts /tmp is noexec, which
+# breaks JRuby's native-lib extraction ("Failed to load feature test for
+# posix: can't find user for 0"). Set "" to skip and use the JVM default.
+foreman_puppetserver_tmpdir: /opt/puppetlabs/server/data/puppetserver/tmp
 
 # ---- Pulp content types ----
 foreman_proxy_content_enable_ansible: true
