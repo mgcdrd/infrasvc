@@ -32,6 +32,16 @@
     key: "{{ item }}"
   loop: "{{ foreman_gitlab_host_keys.stdout_lines }}"
 
+# The known_hosts module writes the file as root — the foreman user (which
+# runs the git fetch for template sync) must be able to read it.
+- name: templates - fix known_hosts ownership
+  become: true
+  ansible.builtin.file:
+    path: /usr/share/foreman/.ssh/known_hosts
+    owner: foreman
+    group: foreman
+    mode: "0644"
+
 # Apply template sync settings
 - name: templates - configure template sync settings
   become: false
