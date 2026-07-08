@@ -25,6 +25,7 @@
   import_tasks: infra.yml
   when: >
     foreman_domains is defined or
+    foreman_realms is defined or
     foreman_subnets is defined or
     foreman_architectures is defined or
     foreman_compute_resources is defined or

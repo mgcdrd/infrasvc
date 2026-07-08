@@ -13,6 +13,21 @@
     state: "{{ item.state | default('present') }}"
   loop: "{{ foreman_domains | default([]) }}"
 
+- name: infra - create realms
+  become: false
+  theforeman.foreman.realm:
+    username: "{{ foreman_username }}"
+    password: "{{ vault_foreman_admin_password }}"
+    server_url: "{{ foreman_url }}"
+    validate_certs: "{{ foreman_validate_certs }}"
+    name: "{{ item.name }}"
+    realm_proxy: "{{ item.proxy | default(foreman_hostname) }}"
+    realm_type: "{{ item.type | default('FreeIPA') }}"
+    locations: "{{ item.locations | default([foreman_location]) }}"
+    organizations: "{{ item.organizations | default([foreman_org]) }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ foreman_realms | default([]) }}"
+
 - name: infra - create subnets
   become: false
   theforeman.foreman.subnet:

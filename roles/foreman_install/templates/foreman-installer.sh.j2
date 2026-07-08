@@ -47,6 +47,7 @@ foreman-installer \
 {% endif %}
 \
   --foreman-proxy-puppet true \
+  --foreman-proxy-puppetca true \
   --puppet-server true \
   --puppet-autosign-entries "{{ foreman_puppet_autosign_entries }}" \
 {% if foreman_puppetserver_tmpdir | length > 0 %}

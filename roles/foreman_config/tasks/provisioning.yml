@@ -96,19 +96,27 @@
     label: "{{ item.os }} / {{ item.kind }}"
 
 # hammer has no stored credentials by default — pass them explicitly.
+# The password rides in the environment: results never include it, so
+# failures stay diagnosable without no_log. Retries cover transient API
+# errors right after heavy template/OS operations.
 - name: provisioning - associate partition tables to OS families via hammer
   become: true
   ansible.builtin.shell:
     cmd: >
-      hammer -u "{{ foreman_username }}" -p "{{ vault_foreman_admin_password }}"
+      hammer -u "{{ foreman_username }}" -p "$HAMMER_PASSWORD"
       partition-table update
       --name "{{ item.name }}"
       --os-family "{{ item.family }}"
+  environment:
+    HAMMER_PASSWORD: "{{ vault_foreman_admin_password }}"
   loop: "{{ foreman_partition_table_os_families | default([]) }}"
   loop_control:
     label: "{{ item.name }}"
+  register: _foreman_ptable_update
+  retries: 3
+  delay: 10
+  until: _foreman_ptable_update.rc == 0
   changed_when: true
-  no_log: true
 
 - name: provisioning - set global parameters
   become: false
