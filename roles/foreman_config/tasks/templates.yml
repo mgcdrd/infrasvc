@@ -1,18 +1,36 @@
 ---
-# Generate an SSH key for the foreman user to authenticate to GitLab
-- name: templates - generate SSH key pair for foreman → GitLab
+# Deploy a persistent SSH keypair for the foreman user to authenticate to
+# GitLab. Stored in Vault (not generated per-host) so the same public key
+# survives host rebuilds — a rebuilt host would otherwise get a fresh
+# keypair every time, requiring the GitLab deploy key to be re-registered
+# after every rebuild.
+- name: templates - ensure foreman .ssh directory exists
   become: true
-  ansible.builtin.user:
-    name: foreman
-    generate_ssh_key: true
-    ssh_key_type: ed25519
-    ssh_key_file: .ssh/id_ed25519
-  register: foreman_ssh_key
+  ansible.builtin.file:
+    path: /usr/share/foreman/.ssh
+    state: directory
+    owner: foreman
+    group: foreman
+    mode: "0700"
 
-- name: templates - display foreman public key (copy this to GitLab)
-  become: false
-  ansible.builtin.debug:
-    msg: "Foreman SSH public key: {{ foreman_ssh_key.ssh_public_key }}"
+- name: templates - deploy persistent SSH private key for foreman → GitLab
+  become: true
+  ansible.builtin.copy:
+    content: "{{ vault_foreman_template_sync_ssh_private_key }}\n"
+    dest: /usr/share/foreman/.ssh/id_ed25519
+    owner: foreman
+    group: foreman
+    mode: "0600"
+  no_log: true
+
+- name: templates - deploy persistent SSH public key for foreman → GitLab
+  become: true
+  ansible.builtin.copy:
+    content: "{{ vault_foreman_template_sync_ssh_public_key }}\n"
+    dest: /usr/share/foreman/.ssh/id_ed25519.pub
+    owner: foreman
+    group: foreman
+    mode: "0644"
 
 # Scan and trust the GitLab host key
 - name: templates - scan GitLab host keys

@@ -22,9 +22,12 @@ Requirements
   Use `foreman_install` to get there.
 - `theforeman.foreman`, `community.general`, and `community.hashi_vault`
   collections must be installed.
-- The `foreman` OS user needs an SSH key generated (handled by `templates.yml`)
-  and added to GitLab before template sync will work.
-- `become: true` is required for the SSH key generation and `hammer` calls.
+- The `foreman` OS user needs an SSH keypair deployed for GitLab access.
+  `templates.yml` deploys a keypair stored in Vault (`vault_foreman_template_sync_ssh_private_key` /
+  `..._public_key`) rather than generating a fresh one per host — this keeps
+  the same public key valid across host rebuilds, so the GitLab deploy key
+  only needs to be registered once instead of after every rebuild.
+- `become: true` is required for deploying the SSH key and `hammer` calls.
   API calls go directly to Foreman and do not require privilege escalation.
 
 
@@ -331,10 +334,13 @@ Tags
 Template sync notes
 -------------------
 
-On first run, the role generates an `ed25519` SSH key for the `foreman` OS user
-and prints the public key. That key must be added to GitLab (as a deploy key or
-user SSH key with at least Developer access to the templates repo) before the
-template import task will succeed.
+The role deploys a persistent `ed25519` keypair for the `foreman` OS user from
+Vault (generate it once with `ssh-keygen -t ed25519 -N '' -f <file>` and store
+both halves at `<env>/foreman`'s `template_sync_ssh_private_key` /
+`template_sync_ssh_public_key` keys). That public key must be registered on
+GitLab (as a deploy key or user SSH key with at least Developer access to the
+templates repo) once — it stays valid across every subsequent host rebuild,
+since the role no longer generates a fresh key per host.
 
 The GitLab host key is scanned automatically and written to
 `/usr/share/foreman/.ssh/known_hosts`.
