@@ -51,6 +51,12 @@
   when: foreman_hostgroups is defined
   tags: [foreman_config, hostgroups]
 
+- name: foreman_config - user groups
+  become: false
+  import_tasks: usergroups.yml
+  when: foreman_usergroups is defined
+  tags: [foreman_config, usergroups]
+
 - name: foreman_config - AWX integration settings
   become: false
   import_tasks: awx.yml

@@ -279,6 +279,29 @@ foreman_hostgroups:
     state: present
 ```
 
+
+### User and group management
+
+```yaml
+foreman_usergroups:
+  - name: ipa_group_name
+    auth_source: External
+    usergroup: foreman_group_name
+    state: present
+    isadmin: true
+    # optional
+    #roles:
+    #  - roles in foreman to assign to the group
+    #users:
+    #  - internal users to assign to the group
+    #usergroups:
+    #  - internal groups to assign to the group
+    #updated_name: "" # only when changing an existing 
+
+```
+
+
+
 ### AWX integration (optional)
 
 ```yaml
@@ -288,7 +311,6 @@ foreman_awx_job_template_id: "42"
 ```
 
 AWX tasks are skipped if `foreman_awx_url` is not defined.
-
 
 Tags
 ----

@@ -1,0 +1,31 @@
+---
+# external_usergroup only maps an external group onto an existing Foreman
+# usergroup — it does not create that usergroup, so it must exist first.
+- name: user_groups - create or update Foreman usergroup
+  become: false
+  theforeman.foreman.usergroup:
+    username: "{{ foreman_username }}"
+    password: "{{ vault_foreman_admin_password }}"
+    server_url: "{{ foreman_url }}"
+    validate_certs: "{{ foreman_validate_certs }}"
+    name: "{{ item.usergroup }}"
+    updated_name: "{{ item.updated_name | default(omit) }}"
+    admin: "{{ item.isadmin | default('false') }}"
+    roles: "{{ item.roles | default([]) | list }}"
+    users: "{{ item.users | default([]) | list }}"
+    usergroups: "{{ item.usergroups | default([]) | list }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ foreman_usergroups }}"
+
+- name: user_groups - create or update external usergroup mapping
+  become: false
+  theforeman.foreman.external_usergroup:
+    username: "{{ foreman_username }}"
+    password: "{{ vault_foreman_admin_password }}"
+    server_url: "{{ foreman_url }}"
+    validate_certs: "{{ foreman_validate_certs }}"
+    name: "{{ item.name }}"
+    auth_source: "{{ item.auth_source | default('External') }}"
+    usergroup: "{{ item.usergroup }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ foreman_usergroups }}"
