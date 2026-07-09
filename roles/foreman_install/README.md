@@ -20,12 +20,16 @@ Requirements
 - The host must be resolvable by its FQDN before the installer runs (Foreman
   registers itself by `ansible_fqdn`).
 - If `foreman_realm_enable: true`, the host must already be IPA-enrolled
-  (`ipa_client` role) before this role runs, and the IPA admin credentials
-  must be available via `vault_ipa_admin_user` / `vault_ipa_admin_password`.
-  The account named in `foreman_realm_principal` must already exist in IPA
-  with a role granting host-management privileges (the equivalent of the
-  `realm-proxy` user that `foreman-prepare-realm` creates) — the role fetches
-  its keytab into `/etc/foreman-proxy/freeipa.keytab`.
+  (`ipa_client` role) before this role runs. The account named in
+  `foreman_realm_principal` must already exist in IPA with a role granting
+  host-management privileges (the equivalent of the `realm-proxy` user that
+  `foreman-prepare-realm` creates) and must have a password set, available
+  via `vault_foreman_realm_agent_password`. The role kinits as that
+  principal itself and self-service-fetches its own keytab into
+  `/etc/foreman-proxy/freeipa.keytab` — IPA allows any account to retrieve
+  its own keytab without elevated privilege, so no admin credentials are
+  needed here. (`vault_ipa_admin_user` / `vault_ipa_admin_password` are used
+  elsewhere for enrollment, not by this role.)
 - If `foreman_custom_certs: true`, the cert files must exist on the host before
   the role runs (e.g. provisioned by `acme_sh` with `complete_chain: true` —
   `foreman_cert_ca_path` must be a chain that validates to a self-contained
@@ -134,7 +138,8 @@ foreman_realm_provider: freeipa
 foreman_realm_principal: "svc-foreman-agent@EXAMPLE.COM"
 foreman_realm_freeipa_remove_dns: "false"
 foreman_ipa_controller: ""
-# vault_ipa_admin_user / vault_ipa_admin_password required when enabled
+# vault_foreman_realm_agent_password required when enabled (password for the
+# foreman_realm_principal account, used for self-service keytab retrieval)
 ```
 
 ### Custom web certificates

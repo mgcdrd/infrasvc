@@ -59,6 +59,26 @@
   changed_when: true
   when: foreman_katello_pkg.rc == 0 or foreman_subman_identity.rc == 0
 
+# Some kickstart profiles install the stock EPEL/Fedora `puppet` package by
+# default (pre-OpenVox convention). It ships /usr/lib/systemd/system/puppet.service,
+# which conflicts with openvox-agent's copy of the same file and aborts the
+# packages.yml transaction. openvox-agent supersedes it entirely — the two
+# must never coexist.
+- name: preflight - check for conflicting EPEL/Fedora puppet package
+  become: false
+  ansible.builtin.shell:
+    cmd: rpm -q puppet
+  register: foreman_stray_puppet_pkg
+  changed_when: false
+  failed_when: false
+
+- name: preflight - remove conflicting EPEL/Fedora puppet package
+  become: true
+  ansible.builtin.dnf:
+    name: puppet
+    state: absent
+  when: foreman_stray_puppet_pkg.rc == 0
+
 - name: preflight - check /var/lib/pulp available space
   become: false
   ansible.builtin.shell:

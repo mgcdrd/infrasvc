@@ -27,36 +27,20 @@
   changed_when: "'Added service' in _ipa_service_add.stdout"
 
 # The realm smart proxy authenticates as foreman_realm_principal, so the
-# keytab must belong to that principal. The account must already exist in
-# IPA with a role granting host-management privileges (the equivalent of
-# what foreman-prepare-realm sets up for realm-proxy).
-- name: ipa - obtain IPA admin Kerberos ticket
+# keytab must belong to that principal. IPA lets any user retrieve their
+# OWN keytab by default (no admin/delegated privilege needed) — kinit as
+# the realm principal itself rather than borrowing an admin account's
+# rights, which the enrollment account (vault_ipa_admin_user) deliberately
+# doesn't have. The account must already exist in IPA with a role granting
+# host-management privileges (equivalent to foreman-prepare-realm's
+# realm-proxy user) and a password set (vault_foreman_realm_agent_password).
+- name: ipa - obtain realm principal Kerberos ticket
   become: true
   ansible.builtin.shell:
-    cmd: "kinit {{ vault_ipa_admin_user }}"
-    stdin: "{{ vault_ipa_admin_password }}"
+    cmd: "kinit {{ foreman_realm_principal.split('@') | first }}"
+    stdin: "{{ vault_foreman_realm_agent_password }}"
   when: not foreman_keytab_stat.stat.exists
   no_log: true
-
-- name: ipa - verify realm principal exists
-  become: true
-  ansible.builtin.shell:
-    cmd: "ipa user-show {{ foreman_realm_principal.split('@') | first }}"
-  when: not foreman_keytab_stat.stat.exists
-  register: _ipa_realm_user
-  changed_when: false
-  failed_when: false
-
-- name: ipa - fail if realm principal is missing
-  ansible.builtin.fail:
-    msg: >
-      Realm principal {{ foreman_realm_principal }} does not exist in IPA.
-      Create the account and grant it a role with host-management
-      privileges (equivalent to foreman-prepare-realm's realm-proxy user),
-      then re-run.
-  when:
-    - not foreman_keytab_stat.stat.exists
-    - _ipa_realm_user.rc != 0
 
 - name: ipa - ensure /etc/foreman-proxy directory exists
   become: true
