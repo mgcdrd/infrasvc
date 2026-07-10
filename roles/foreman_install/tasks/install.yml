@@ -74,9 +74,42 @@
         cmd: /root/foreman-installer.sh
       register: foreman_installer_result
       changed_when: "'Success!' in foreman_installer_result.stdout"
+      failed_when: false
       async: 7200
       poll: 30
       notify: restart sssd
+
+    # A known transient Puppet catalog race: Cert_key_bundle sometimes
+    # evaluates before its own Cert[...] dependency has written the file
+    # it bundles, failing rc=6 even though every other resource in the
+    # ~2200-step catalog converged. foreman-installer is idempotent, so a
+    # single automatic retry resolves it — but rc=6 can also mean a real
+    # failure (e.g. broken proxy self-registration), so only this specific
+    # signature is retried; anything else still fails immediately.
+    - name: install - detect known transient cert_key_bundle race
+      ansible.builtin.set_fact:
+        foreman_installer_transient_race: >-
+          {{ foreman_installer_result.rc == 6 and
+             'Cert_key_bundle' in foreman_installer_result.stdout and
+             'No such file or directory' in foreman_installer_result.stdout }}
+
+    - name: install - retry foreman-installer once after the transient cert_key_bundle race
+      become: true
+      ansible.builtin.shell:
+        cmd: /root/foreman-installer.sh
+      register: foreman_installer_retry_result
+      changed_when: "'Success!' in foreman_installer_retry_result.stdout"
+      async: 7200
+      poll: 30
+      notify: restart sssd
+      when: foreman_installer_transient_race | bool
+
+    - name: install - fail if installer did not succeed
+      ansible.builtin.fail:
+        msg: "{{ foreman_installer_result.stdout }}"
+      when:
+        - foreman_installer_result.rc != 0
+        - not foreman_installer_transient_race | bool
 
     - name: install - record successful installer run
       become: true
@@ -86,6 +119,9 @@
         owner: root
         group: root
         mode: "0600"
+      when: >-
+        foreman_installer_result.rc == 0 or
+        (foreman_installer_transient_race | bool and foreman_installer_retry_result.rc == 0)
 
   always:
     - name: install - restore tuning hook

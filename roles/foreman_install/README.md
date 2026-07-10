@@ -239,6 +239,15 @@ Notes
   installer exits 0. A failed or partial run leaves the marker absent, so
   re-running the role retries the installer (`foreman-installer` itself is
   idempotent). To force a re-run after success, remove the marker.
+- **Automatic retry for a known transient race**: a `Cert_key_bundle`
+  Puppet resource occasionally evaluates before its own `Cert[...]`
+  dependency has written the file it bundles, failing the whole run with
+  rc=6 even though every other resource in the ~2200-step catalog
+  converged. The role detects this specific signature (rc=6 +
+  `Cert_key_bundle` + `No such file or directory`) and retries the
+  installer once automatically. Any other rc=6 (e.g. genuine proxy
+  self-registration failure) still fails immediately — it is not silently
+  retried.
 - **Installer duration**: The first run takes 15–30 minutes. The `async` task
   polls every 30 seconds and times out after 2 hours.
 - **Custom certs and Katello**: server certs are passed with
