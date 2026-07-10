@@ -87,10 +87,19 @@
   when: not foreman_keytab_stat.stat.exists and foreman_realm_vault_rotate | bool
   no_log: true
 
+# An admin-driven reset (unlike self-service change) marks the account
+# "must change password at next login" by setting krbPasswordExpiration to
+# now — a non-interactive kinit can't respond to that forced prompt, so
+# the very next automated kinit would fail even with the right password.
+# Push krbPasswordExpiration out (mirrors ipa_baseline's service-account
+# creation) in the same call so the reset password is usable immediately.
 - name: ipa - reset realm principal password as admin
   become: true
   ansible.builtin.shell:
-    cmd: "ipa passwd {{ foreman_realm_principal.split('@') | first }}"
+    cmd: >
+      ipa user-mod {{ foreman_realm_principal.split('@') | first }}
+      --password
+      --setattr krbPasswordExpiration=20491231235959Z
     stdin: "{{ _foreman_realm_new_password }}\n{{ _foreman_realm_new_password }}\n"
   when: not foreman_keytab_stat.stat.exists and foreman_realm_vault_rotate | bool
   no_log: true
