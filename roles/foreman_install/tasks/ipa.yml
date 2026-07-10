@@ -88,21 +88,30 @@
   no_log: true
 
 # An admin-driven reset (unlike self-service change) marks the account
-# "must change password at next login" by setting krbPasswordExpiration to
-# now — a non-interactive kinit can't respond to that forced prompt, so
-# the very next automated kinit would fail even with the right password.
-# Push krbPasswordExpiration out (mirrors ipa_baseline's service-account
-# creation) in the same call so the reset password is usable immediately.
+# "must change password at next login" by forcing krbPasswordExpiration to
+# now — a non-interactive kinit can't respond to that forced prompt, so the
+# very next automated kinit fails even with the right password. IPA's
+# password-policy plugin reasserts that forced expiration unconditionally
+# on any modify that changes userPassword, even one that sets
+# krbPasswordExpiration in the very same call — so it must be cleared in a
+# separate, subsequent modify (unlike ipa_baseline's user_add case, where
+# setting both in one call works because there's no prior password to
+# trigger the policy).
 - name: ipa - reset realm principal password as admin
+  become: true
+  ansible.builtin.shell:
+    cmd: "ipa user-mod {{ foreman_realm_principal.split('@') | first }} --password"
+    stdin: "{{ _foreman_realm_new_password }}\n{{ _foreman_realm_new_password }}\n"
+  when: not foreman_keytab_stat.stat.exists and foreman_realm_vault_rotate | bool
+  no_log: true
+
+- name: ipa - clear forced password expiration on realm principal
   become: true
   ansible.builtin.shell:
     cmd: >
       ipa user-mod {{ foreman_realm_principal.split('@') | first }}
-      --password
       --setattr krbPasswordExpiration=20491231235959Z
-    stdin: "{{ _foreman_realm_new_password }}\n{{ _foreman_realm_new_password }}\n"
   when: not foreman_keytab_stat.stat.exists and foreman_realm_vault_rotate | bool
-  no_log: true
 
 - name: ipa - read current Foreman secret from Vault
   community.hashi_vault.vault_kv2_get:
