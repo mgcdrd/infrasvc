@@ -52,7 +52,11 @@
 
 # Note: this rotates the principal's Kerberos key — safe because the
 # account is dedicated to the realm proxy and this only runs when the
-# keytab is absent.
+# keytab is absent. It also invalidates vault_foreman_realm_agent_password
+# as a side effect (self-service ipa-getkeytab can only generate a new
+# random key, not retrieve the current one — -r needs elevated privilege
+# this account deliberately doesn't have). See the role README for what
+# that means for rebuilds.
 - name: ipa - retrieve realm principal keytab for foreman-proxy
   become: true
   ansible.builtin.shell:

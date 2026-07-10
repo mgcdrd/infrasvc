@@ -26,10 +26,25 @@ Requirements
   `foreman-prepare-realm` creates) and must have a password set, available
   via `vault_foreman_realm_agent_password`. The role kinits as that
   principal itself and self-service-fetches its own keytab into
-  `/etc/foreman-proxy/freeipa.keytab` — IPA allows any account to retrieve
-  its own keytab without elevated privilege, so no admin credentials are
-  needed here. (`vault_ipa_admin_user` / `vault_ipa_admin_password` are used
+  `/etc/foreman-proxy/freeipa.keytab` — no admin credentials are needed for
+  that. (`vault_ipa_admin_user` / `vault_ipa_admin_password` are used
   elsewhere for enrollment, not by this role.)
+
+  **Important**: self-service `ipa-getkeytab` can only *generate a new
+  random key* for the principal — retrieving the *current* key (`-r`)
+  needs elevated privilege this account deliberately doesn't have. That
+  means every keytab fetch silently invalidates
+  `vault_foreman_realm_agent_password`, since the password no longer
+  matches the freshly-rotated key. On a host that keeps its keytab file
+  (a normal re-run) this never matters — the `when: not
+  foreman_keytab_stat.stat.exists` guard means the fetch, and therefore
+  the rotation, only happens once. But a **full VM rebuild** wipes that
+  local file, so the next run fetches (and rotates) again, and the
+  password stored in Vault from the *previous* fetch will be stale.
+  Before deploying against a freshly rebuilt host, reset the account's
+  password (admin-assisted — self-service password *change* needs the
+  current password, which you no longer have once it's gone stale) and
+  update `vault_foreman_realm_agent_password` accordingly.
 - If `foreman_custom_certs: true`, the cert files must exist on the host before
   the role runs (e.g. provisioned by `acme_sh` with `complete_chain: true` —
   `foreman_cert_ca_path` must be a chain that validates to a self-contained
