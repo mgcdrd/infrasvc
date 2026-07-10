@@ -27,8 +27,7 @@ Requirements
   via `vault_foreman_realm_agent_password`. The role kinits as that
   principal itself and self-service-fetches its own keytab into
   `/etc/foreman-proxy/freeipa.keytab` — no admin credentials are needed for
-  that. (`vault_ipa_admin_user` / `vault_ipa_admin_password` are used
-  elsewhere for enrollment, not by this role.)
+  that fetch.
 
   **Important**: self-service `ipa-getkeytab` can only *generate a new
   random key* for the principal — retrieving the *current* key (`-r`)
@@ -41,10 +40,21 @@ Requirements
   the rotation, only happens once. But a **full VM rebuild** wipes that
   local file, so the next run fetches (and rotates) again, and the
   password stored in Vault from the *previous* fetch will be stale.
-  Before deploying against a freshly rebuilt host, reset the account's
-  password (admin-assisted — self-service password *change* needs the
-  current password, which you no longer have once it's gone stale) and
-  update `vault_foreman_realm_agent_password` accordingly.
+
+  Set `foreman_realm_vault_rotate: true` (plus `foreman_realm_vault_addr`,
+  `foreman_realm_vault_kv_mount`, `foreman_realm_vault_path`, and
+  `foreman_realm_vault_password_key`) to have the role handle this itself:
+  after the keytab fetch it kinits as `vault_ipa_admin_user`, runs `ipa
+  passwd` against `foreman_realm_principal` to set a fresh random password,
+  and writes that password back to Vault at the given path/key. This
+  requires `vault_ipa_admin_user` to hold an IPA role/privilege scoped to
+  changing *only* that one account's password — it should not be a
+  general-purpose admin account. With this left `false` (the default),
+  fall back to the manual process: reset the account's password
+  admin-assisted (self-service password *change* needs the current
+  password, which you no longer have once it's gone stale) and update
+  `vault_foreman_realm_agent_password` accordingly before deploying against
+  a freshly rebuilt host.
 - If `foreman_custom_certs: true`, the cert files must exist on the host before
   the role runs (e.g. provisioned by `acme_sh` with `complete_chain: true` —
   `foreman_cert_ca_path` must be a chain that validates to a self-contained
@@ -155,6 +165,17 @@ foreman_realm_freeipa_remove_dns: "false"
 foreman_ipa_controller: ""
 # vault_foreman_realm_agent_password required when enabled (password for the
 # foreman_realm_principal account, used for self-service keytab retrieval)
+
+# Optional: have the role rotate vault_foreman_realm_agent_password in Vault
+# itself after a rebuild-triggered keytab fetch. See Requirements above.
+foreman_realm_vault_rotate: false
+foreman_realm_vault_addr: ""
+foreman_realm_vault_kv_mount: ""
+foreman_realm_vault_path: ""
+foreman_realm_vault_password_key: "realm_agent_password"
+# vault_ipa_admin_user / vault_ipa_admin_password required when
+# foreman_realm_vault_rotate is true — must be scoped to change only
+# foreman_realm_principal's password
 ```
 
 ### Custom web certificates

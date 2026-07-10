@@ -67,6 +67,56 @@
       -k /etc/foreman-proxy/freeipa.keytab
   when: not foreman_keytab_stat.stat.exists
 
+# Rotate vault_foreman_realm_agent_password to match the key ipa-getkeytab
+# just generated, so the next full rebuild doesn't hit a stale password.
+# Requires vault_ipa_admin_user to hold an IPA role scoped to change only
+# foreman_realm_principal's password (see README) — opt in per-deployment
+# via foreman_realm_vault_rotate, since not every deployment wants the
+# role writing to Vault.
+- name: ipa - generate new realm principal password
+  ansible.builtin.set_fact:
+    _foreman_realm_new_password: "{{ lookup('password', '/dev/null length=32 chars=ascii_lowercase,ascii_uppercase,digits') }}"
+  when: not foreman_keytab_stat.stat.exists and foreman_realm_vault_rotate | bool
+  no_log: true
+
+- name: ipa - obtain admin Kerberos ticket
+  become: true
+  ansible.builtin.shell:
+    cmd: "kinit {{ vault_ipa_admin_user }}"
+    stdin: "{{ vault_ipa_admin_password }}"
+  when: not foreman_keytab_stat.stat.exists and foreman_realm_vault_rotate | bool
+  no_log: true
+
+- name: ipa - reset realm principal password as admin
+  become: true
+  ansible.builtin.shell:
+    cmd: "ipa passwd {{ foreman_realm_principal.split('@') | first }}"
+    stdin: "{{ _foreman_realm_new_password }}\n{{ _foreman_realm_new_password }}\n"
+  when: not foreman_keytab_stat.stat.exists and foreman_realm_vault_rotate | bool
+  no_log: true
+
+- name: ipa - read current Foreman secret from Vault
+  community.hashi_vault.vault_kv2_get:
+    url: "{{ foreman_realm_vault_addr }}"
+    engine_mount_point: "{{ foreman_realm_vault_kv_mount }}"
+    path: "{{ foreman_realm_vault_path }}"
+  register: _foreman_realm_vault_secret
+  delegate_to: localhost
+  become: false
+  when: not foreman_keytab_stat.stat.exists and foreman_realm_vault_rotate | bool
+  no_log: true
+
+- name: ipa - write rotated realm principal password to Vault
+  community.hashi_vault.vault_kv2_write:
+    url: "{{ foreman_realm_vault_addr }}"
+    engine_mount_point: "{{ foreman_realm_vault_kv_mount }}"
+    path: "{{ foreman_realm_vault_path }}"
+    data: "{{ _foreman_realm_vault_secret.secret | combine({foreman_realm_vault_password_key: _foreman_realm_new_password}) }}"
+  delegate_to: localhost
+  become: false
+  when: not foreman_keytab_stat.stat.exists and foreman_realm_vault_rotate | bool
+  no_log: true
+
 - name: ipa - destroy Kerberos ticket cache
   become: true
   ansible.builtin.shell:
