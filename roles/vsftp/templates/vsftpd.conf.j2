@@ -190,7 +190,7 @@ listen_address={{ vsftp_listen_address | default('') }}
 #   format is standard IPv6 address
 #   default: (none)
 {% endif %}
-listen_address6={{ CHANGEME | default('') }}
+listen_address6={{ vsftp_listen_address6 | default('') }}
 
 {% if vsftp_show_comments %}
 # listen_port - INTEGER
@@ -276,7 +276,7 @@ tcp_wrappers={{ vsftp_tcp_wrappers  | default(false) | bool | ternary('YES', 'NO
 #   controls PORT style data connections use port 20 (ftp-data)
 #   default: NO (enabled in default config file)
 {% endif %}
-connect_from_port_20={{ CHANGEME  | default(false) | bool | ternary('YES', 'NO') }}
+connect_from_port_20={{ vsftp_connect_from_port_20 | default(false) | bool | ternary('YES', 'NO') }}
 
 {% if vsftp_show_comments %}
 # ftp_data_port - INTEGER
@@ -407,7 +407,7 @@ validate_cert={{ vsftp_validate_cert  | default(false) | bool | ternary('YES', '
 {% if vsftp_show_comments %}
 # ssl_sslv2 - BOOLEAN
 #   permit SSLv2 (deprecated).  TLSv1 preferred
-#   only if ssl_enable={{ CHANGEME  | default(true) | bool | ternary('YES', 'NO') }}
+#   only if ssl_enable: YES
 #   default: NO
 {% endif %}
 ssl_sslv2={{ vsftp_ssl_sslv2  | default(false) | bool | ternary('YES', 'NO') }}
@@ -703,7 +703,7 @@ anonymous_enable={{ vsftp_anonymous_enable  | default(true) | bool | ternary('YE
 {% if vsftp_show_comments %}
 # allow_anon_ssl - BOOLEAN
 #   allow anon user to use SSL conns
-#   only if ssl_enable={{ CHANGEME  | default(true) | bool | ternary('YES', 'NO') }}
+#   only if ssl_enable: YES
 #   default: NO
 {% endif %}
 allow_anon_ssl={{ vsftp_allow_anon_ssl  | default(false) | bool | ternary('YES', 'NO') }}
@@ -781,7 +781,7 @@ anon_max_rate={{ vsftp_anon_max_rate | default('0') }}
 
 # anon_upload_enable - BOOLEAN
 #   allow anon to UL - required for virt users to UL
-#   only if write_enable={{ CHANGEME | default('YES and ftp user has write perms to parent') }}
+#   only if write_enable: YES and ftp user has write perms to parent
 #   default: NO
 {% endif %}
 anon_upload_enable={{ vsftp_anon_upload_enable  | default(false) | bool | ternary('YES', 'NO') }}
@@ -817,7 +817,7 @@ chown_upload_mode={{ vsftp_chown_upload_mode | default('0600') }}
 {% if vsftp_show_comments %}
 # anon_mkdir_write_enable - BOOLEAN
 #   allow anon to create new dirs
-#   only if write_enable={{ CHANGEME | default('YES and ftp user has write perms to parent') }}
+#   only if write_enable: YES and ftp user has write perms to parent
 #   default: NO
 {% endif %}
 anon_mkdir_write_enable={{ vsftp_anon_mkdir_write_enable  | default(false) | bool | ternary('YES', 'NO') }}
@@ -1038,7 +1038,7 @@ delay_failed_login={{ vsftp_delay_failed_login | default('1') }}
 #   if userlist_enable is activated, every login denial based on the user list will be logged
 #   default: NO
 {% endif %}
-{{ '#' if not vsftp_userlist_enable else '' }}userlist_log={{ vsftp_userlist_log  | default(false) | bool | ternary('YES', 'NO') }}
+{{ '#' if not (vsftp_userlist_enable | default(false) | bool) else '' }}userlist_log={{ vsftp_userlist_log  | default(false) | bool | ternary('YES', 'NO') }}
 
 {% if vsftp_show_comments %}
 # no_log_lock - BOOLEAN

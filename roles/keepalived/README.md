@@ -184,8 +184,13 @@ Notes
   `ansible_default_ipv4.address` from each node's hostvars. All nodes in the
   play must be present in the same inventory run.
 - **`virtual_router_id` auto-derivation**: If omitted, the VRID is calculated
-  as `(third_octet + fourth_octet) % 100` from the first VIP. Must be unique
-  per subnet — set explicitly if auto-generated values collide.
+  as `(third_octet + fourth_octet) % 100` from the first VIP, stripping any
+  `/prefix` suffix first (fixed 2026-07-10 — a CIDR suffix on `virt_ip`, the
+  format every example in this README uses, previously broke the octet split
+  and silently zeroed out the fourth octet, biasing derived VRIDs toward
+  low values and risking collisions between unrelated clusters on the same
+  subnet). Still must be unique per subnet — set explicitly if auto-generated
+  values collide.
 
 
 License

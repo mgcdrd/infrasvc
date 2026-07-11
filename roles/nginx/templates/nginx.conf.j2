@@ -124,7 +124,11 @@ http {
        ssl_certificate_key {{ nginx_http_block.default_443.ssl_key_path  | default('/etc/nginx/ssl/ssl-dummy.key') }};
 
        location / {
+{% if nginx_http_block.default_443.redir_302_uri is defined %}
          return 302 {{ nginx_http_block.default_443.redir_302_uri }};
+{% else %}
+         return 404;
+{% endif %}
        }
     }
 {% endif %}

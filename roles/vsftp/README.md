@@ -11,8 +11,10 @@ Tested on: Debian 12/13, Rocky Linux 9/10
 Requirements
 ------------
 
-`become: true` is required — package installation and config file writes need
-root privileges.
+`become: true` and `gather_facts: true` are required — package installation
+and config file writes need root privileges; OS-family detection drives the
+SELinux tasks. `community.general` and `ansible.posix` collections must be
+installed for the SELinux tasks (both are in `ansible-base-ee`).
 
 
 Role Variables
@@ -77,6 +79,17 @@ vsftp_log_ftp_protocol: "NO"
 See `vars/main.yml` for the complete list of supported parameters with
 descriptions and vsftpd defaults.
 
+### SELinux (RedHat only)
+
+```yaml
+vsftp_selinux_register_pasv_ports: true    # register pasv_min_port..pasv_max_port as ftp_port_t
+vsftp_selinux_ftpd_full_access:    false   # broader access for non-standard local_root paths
+```
+
+Registering the passive port range only happens when `vsftp_pasv_enable` is
+truthy and both port bounds are set — SELinux otherwise blocks vsftpd from
+binding a non-default passive range even though vsftpd.conf permits it.
+
 
 Example Playbook
 ----------------
@@ -114,6 +127,12 @@ Notes
 - `vsftp_write_enable` must be `YES` for anonymous upload settings to take effect.
 - The role uses `state: latest` for package installation to pick up security patches.
   Switch to `state: present` if you need pinned versions.
+- Verified 2026-07-10: the template renders cleanly with zero variable overrides
+  (role defaults only) — a prior bug left `vsftp_listen_address6` and
+  `vsftp_connect_from_port_20` unwired (a leftover `CHANGEME` placeholder meant
+  those two directives silently ignored whatever you set) and `userlist_log`
+  referenced `vsftp_userlist_enable` with no `default()`, crashing the template
+  entirely unless that one variable was set explicitly. All fixed.
 
 
 License

@@ -8,3 +8,31 @@
     group: root
     mode:  "0644"
   notify: vsftp restart
+
+
+# =====================
+# SELinux (RedHat only) — without this, SELinux blocks vsftpd from binding
+# a non-default passive port range even though vsftpd.conf allows it.
+- name: vsftp config - Register passive port range with SELinux
+  community.general.seport:
+    ports:  "{{ vsftp_pasv_min_port }}-{{ vsftp_pasv_max_port }}"
+    proto:  tcp
+    setype: ftp_port_t
+    state:  present
+  when:
+    - ansible_facts['os_family'] == 'RedHat'
+    - ansible_facts['selinux']['status'] | default('disabled') == 'enabled'
+    - vsftp_selinux_register_pasv_ports | bool
+    - vsftp_pasv_enable | default(false) | bool
+    - vsftp_pasv_min_port | default(0) | int > 0
+    - vsftp_pasv_max_port | default(0) | int > 0
+
+- name: vsftp config - Set ftpd_full_access SELinux boolean
+  ansible.posix.seboolean:
+    name:       ftpd_full_access
+    state:      true
+    persistent: true
+  when:
+    - ansible_facts['os_family'] == 'RedHat'
+    - ansible_facts['selinux']['status'] | default('disabled') == 'enabled'
+    - vsftp_selinux_ftpd_full_access | bool

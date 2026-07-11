@@ -35,7 +35,8 @@ vrrp_script {{ item.name }} {
 vrrp_instance {{ item.name }} {
   state {{ 'MASTER' if inventory_hostname == item.master_node else 'BACKUP'  }}
   interface {{ item.interface | default(ansible_default_ipv4.interface) }}
-  {% set def_vrid = ( (item.virt_ip[0].split('.')[-2] | int) + (item.virt_ip[0].split('.')[-1] | int) ) % 100  -%}
+  {% set _vip_addr = item.virt_ip[0].split('/')[0] -%}
+  {% set def_vrid = ( (_vip_addr.split('.')[-2] | int) + (_vip_addr.split('.')[-1] | int) ) % 100  -%}
   virtual_router_id {{ item.virtual_router_id | default(def_vrid) }}
 {% set all_nodes = [item.master_node] + item.backup_nodes %}
   {%- set n = all_nodes | length %}

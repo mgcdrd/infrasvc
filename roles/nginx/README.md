@@ -245,11 +245,20 @@ Notes
   (nginx.conf) before it can be used in server blocks. Set
   `nginx_http_block.block_badagents: true`, then include `useragent.conf` in each
   server block that should enforce it.
-- **`default_443`**: The catch-all 443 block requires `redir_302_uri` — there is
-  no default to avoid accidentally redirecting traffic.
-- **`old_shared/`**: Templates in `templates/old_shared/` are superseded by
-  `templates/shared_configs/*.j2` and can be removed once the new shared configs
-  are confirmed working.
+- **`exclude_proxy_files`**: Must be set explicitly (`true` or `false`) —
+  omitting it entirely behaves like `true` (no proxy include line), since
+  the template checks `is defined` first. Every example in this README sets
+  it explicitly for that reason; leaving it out silently skips the include
+  rather than defaulting to including it, despite the name reading like the
+  opposite should be the default.
+- **`default_443`**: Fixed 2026-07-10 — `redir_302_uri` having no default meant
+  enabling `default_443` without it crashed the whole template render (the
+  role failed outright, not just that one block), which defeated the original
+  intent of avoiding an accidental redirect by breaking the entire nginx
+  config instead. Now falls back to a plain `404` when `redir_302_uri` isn't
+  set — same "don't send traffic somewhere unintended" goal, without taking
+  the whole render down to enforce it. Set `redir_302_uri` explicitly for
+  the original redirect behavior.
 - **keepalived integration**: Pairs with `mgcdrd.infrasvc.keepalived` using the
   `webproxy` preset, which deploys a check script that monitors the nginx process.
 

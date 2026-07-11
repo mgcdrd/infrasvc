@@ -9,6 +9,21 @@
 
 
 # =====================
+# Allow haproxy to connect to backends on any port (RedHat/SELinux only) —
+# without this, SELinux blocks proxying to backend ports with no matching
+# SELinux port type (e.g. a backend listening on a non-standard port).
+- name: haproxy config - Set haproxy_connect_any SELinux boolean
+  ansible.posix.seboolean:
+    name:       haproxy_connect_any
+    state:      true
+    persistent: true
+  when:
+    - ansible_facts['os_family'] == 'RedHat'
+    - ansible_facts['selinux']['status'] | default('disabled') == 'enabled'
+    - haproxy_selinux_connect_any | bool
+
+
+# =====================
 # Validate chroot requires user/group
 - name: haproxy config - Assert chroot has required user/group
   ansible.builtin.assert:

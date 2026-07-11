@@ -100,24 +100,38 @@ haproxy_resolvers:
 
 ### Frontends
 
+FTP needs **two separate** frontend/backend pairs, not one frontend with two
+binds sharing a backend — a single backend with a fixed `:21` on its
+`server` lines would forward passive-mode data connections (which land on
+whatever port in the passive range the client was told to use) to port 21
+regardless, breaking every transfer:
+
 ```yaml
 haproxy_frontends:
-  - block_name: ftp
+  - block_name: ftp_control
     mode: tcp
     options:
       - tcplog
     log: global
     binds:
-      - 10.0.1.10:21           name ftp-control
-      - 10.0.1.10:50000-50010  name ftp-data
-    default_backend: ftp_servers
+      - 10.0.1.10:21
+    default_backend: ftp_control_servers
+
+  - block_name: ftp_data
+    mode: tcp
+    options:
+      - tcplog
+    log: global
+    binds:
+      - 10.0.1.10:50000-50010
+    default_backend: ftp_data_servers
 ```
 
 ### Backends
 
 ```yaml
 haproxy_backends:
-  - block_name: ftp_servers
+  - block_name: ftp_control_servers
     mode: tcp
     balance: leastconn
     servers:
@@ -126,7 +140,30 @@ haproxy_backends:
     additional:
       - stick-table type ip size 100k expire 1h
       - stick on src
+
+  - block_name: ftp_data_servers
+    mode: tcp
+    balance: leastconn
+    servers:
+      # No port on these — with a ranged frontend bind, an unspecified
+      # backend port makes haproxy forward each connection to whatever
+      # port it arrived on. Required for the passive range to work at all.
+      - server1  10.0.1.101 init-addr none
+      - server2  10.0.1.102 init-addr none
 ```
+
+**Stateful sessions with `balance`**: passive FTP opens control and data as
+*separate* connections. If `ftp_control_servers` and `ftp_data_servers` are
+balanced independently (as above, both `leastconn`), a client's control and
+data connections can land on different backend servers and break the
+session. The `stick-table`/`stick on src` in `ftp_control_servers` only
+pins consistency *within that one backend* — making it also apply across
+`ftp_data_servers` needs an explicitly shared/named stick-table between the
+two, which isn't worked out here (verify the exact syntax before relying on
+it). If you don't need real load spreading, active/backup (`backup` flag on
+the secondary `server` line in both backends, no stick-table needed at all)
+sidesteps the whole problem — see `mgcdrd.infrasvc.haproxy` used this way in
+`deployments/haproxy-lb`.
 
 ### Additional files
 
@@ -181,27 +218,42 @@ Example Playbook
         timeout_server:  50000
 
     haproxy_frontends:
-      - block_name: ftp
+      - block_name: ftp_control
         mode: tcp
         options:
           - tcplog
         log: global
         binds:
-          - 10.0.1.10:21           name ftp-control
-          - 10.0.1.10:50000-50010  name ftp-data
-        default_backend: ftp_servers
+          - 10.0.1.10:21
+        default_backend: ftp_control_servers
+
+      - block_name: ftp_data
+        mode: tcp
+        options:
+          - tcplog
+        log: global
+        binds:
+          - 10.0.1.10:50000-50010
+        default_backend: ftp_data_servers
 
     haproxy_backends:
-      - block_name: ftp_servers
+      - block_name: ftp_control_servers
         mode: tcp
-        balance: leastconn
         servers:
-          - ftp1  10.0.1.101:21 init-addr none
-          - ftp2  10.0.1.102:21 init-addr none
-        additional:
-          - stick-table type ip size 100k expire 1h
-          - stick on src
+          - ftp1  10.0.1.101:21 check
+          - ftp2  10.0.1.102:21 check backup
+
+      - block_name: ftp_data_servers
+        mode: tcp
+        servers:
+          # No port — see the Frontends section above for why.
+          - ftp1  10.0.1.101 check
+          - ftp2  10.0.1.102 check backup
 ```
+
+Active/backup here, matching `deployments/haproxy-lb` — see the Frontends
+section above for the `balance`-with-two-backends caveat if you want real
+load spreading instead.
 
 
 Notes
@@ -219,6 +271,9 @@ Notes
 - **keepalived integration**: This role pairs with `mgcdrd.infrasvc.keepalived`
   using the `ftp` preset, which deploys a check script that monitors the
   haproxy process.
+- **SELinux (RedHat only)**: Sets the `haproxy_connect_any` boolean so
+  haproxy can proxy to backends on non-standard ports — SELinux blocks this
+  by default on Rocky/RHEL. Set `haproxy_selinux_connect_any: false` to skip.
 
 
 License

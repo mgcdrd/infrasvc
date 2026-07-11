@@ -8,3 +8,14 @@ vsftp_show_comments: false
 # Set to NO when managed by systemd (the normal case).
 # default: YES
 vsftp_background: "NO"
+
+# ---- SELINUX (RedHat only) ----
+# Registers vsftp_pasv_min_port..vsftp_pasv_max_port as ftp_port_t so SELinux
+# allows vsftpd to bind them — required whenever pasv_enable is YES and the
+# passive port range isn't the policy default. No-op if pasv is disabled.
+vsftp_selinux_register_pasv_ports: true
+
+# Sets the ftpd_full_access SELinux boolean, needed when local users' home
+# directories live outside SELinux's expected FTP paths (e.g. chroot_local_user
+# with non-standard local_root). Off by default — broader than most setups need.
+vsftp_selinux_ftpd_full_access: false

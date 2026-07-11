@@ -28,3 +28,10 @@ haproxy_backends: []
 # ---- ADDITIONAL FILES ----
 # List of extra files to hard-link into place before haproxy starts.
 haproxy_additional: []
+
+# ---- SELINUX (RedHat only) ----
+# Without this, SELinux blocks haproxy from connecting to backend servers on
+# non-standard ports (e.g. proxying to a backend on a port with no matching
+# SELinux port type). No-op on Debian and on RedHat hosts with SELinux
+# disabled.
+haproxy_selinux_connect_any: true
