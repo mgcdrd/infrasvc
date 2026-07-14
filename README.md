@@ -39,6 +39,6 @@ Add to `collections/requirements.yml`:
 ```yaml
 collections:
   - name: mgcdrd.infrasvc
-    source: https://GITLAB_URL/ansible/collections/infrasvc.git
+    source: https://github.com/mgcdrd/infrasvc.git
     type: git
-    version: v0.2.0
+    version: v0.4.0
