@@ -1,0 +1,17 @@
+---
+
+- hosts: all
+  gather_facts: true
+  become: true
+  roles:
+    - mgcdrd.infrasvc.ups_shed
+  vars:
+    ups_shed_ups_host: deluge.example.com
+    ups_shed_k8s_workers:
+      - kube2.example.com
+    ups_shed_tier1_guests:
+      - runner1.example.com
+    ups_shed_tier1_hypervisor: pve3.example.com
+    ups_shed_tier2_guests:
+      - dns2.example.com
+    ups_shed_tier2_hypervisor: pve4.example.com

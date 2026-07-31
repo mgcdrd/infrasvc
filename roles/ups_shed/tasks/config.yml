@@ -1,0 +1,98 @@
+---
+
+- name: ups_shed config - Create directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+  loop:
+    - "{{ ups_shed_ansible_dir }}"
+    - "{{ ups_shed_state_dir }}"
+
+- name: ups_shed config - Deploy Ansible inventory
+  ansible.builtin.template:
+    src:   inventory.ini.j2
+    dest:  "{{ ups_shed_ansible_dir }}/inventory.ini"
+    owner: root
+    group: root
+    mode:  "0640"
+
+- name: ups_shed config - Deploy shed playbook
+  ansible.builtin.copy:
+    src:   shed.yml
+    dest:  "{{ ups_shed_ansible_dir }}/shed.yml"
+    owner: root
+    group: root
+    mode:  "0640"
+
+- name: ups_shed config - Deploy Vault fetch helper
+  ansible.builtin.template:
+    src:   ups-shed-vault-get.sh.j2
+    dest:  /usr/local/bin/ups-shed-vault-get.sh
+    owner: root
+    group: root
+    mode:  "0750"
+
+- name: ups_shed config - Deploy k8s drain helper
+  ansible.builtin.template:
+    src:   ups-shed-k8s-drain.sh.j2
+    dest:  /usr/local/bin/ups-shed-k8s-drain.sh
+    owner: root
+    group: root
+    mode:  "0750"
+
+- name: ups_shed config - Deploy tier dispatcher
+  ansible.builtin.template:
+    src:   ups-shed-run-tier.sh.j2
+    dest:  /usr/local/bin/ups-shed-run-tier.sh
+    owner: root
+    group: root
+    mode:  "0750"
+
+- name: ups_shed config - Deploy threshold-poll check script
+  ansible.builtin.template:
+    src:   ups-shed-check.sh.j2
+    dest:  /usr/local/bin/ups-shed-check.sh
+    owner: root
+    group: root
+    mode:  "0750"
+
+- name: ups_shed config - Deploy NUT notify hook (start/stop the timer)
+  ansible.builtin.template:
+    src:   ups-shed-notify-hook.sh.j2
+    dest:  /usr/local/bin/ups-shed-notify-hook.sh
+    owner: root
+    group: root
+    mode:  "0750"
+
+- name: ups_shed config - Deploy systemd service unit
+  ansible.builtin.template:
+    src:   ups-shed-check.service.j2
+    dest:  /etc/systemd/system/ups-shed-check.service
+    owner: root
+    group: root
+    mode:  "0644"
+  notify: ups_shed reload systemd
+
+- name: ups_shed config - Deploy systemd timer unit
+  ansible.builtin.template:
+    src:   ups-shed-check.timer.j2
+    dest:  /etc/systemd/system/ups-shed-check.timer
+    owner: root
+    group: root
+    mode:  "0644"
+  notify: ups_shed reload systemd
+
+- name: ups_shed config - Flush handlers so the timer unit is known to systemd
+  ansible.builtin.meta: flush_handlers
+
+- name: ups_shed config - Ensure the timer is NOT running
+  # Deliberately not started/enabled here. It's started on ONBATT and
+  # stopped on ONLINE by ups-shed-notify-hook.sh — see that script and
+  # mgcdrd.infrasvc.nut_client's nut_client_notify_hook variable.
+  ansible.builtin.systemd_service:
+    name:    ups-shed-check.timer
+    state:   stopped
+    enabled: false

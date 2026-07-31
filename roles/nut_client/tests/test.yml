@@ -1,0 +1,15 @@
+---
+
+- hosts: all
+  gather_facts: true
+  become: true
+  roles:
+    - mgcdrd.infrasvc.nut_client
+  vars:
+    nut_client_monitors:
+      - ups_name:         apc
+        ups_host:         deluge.example.com
+        power_value:      1
+        monuser:          monuser
+        monuser_password: changeme
+        role:             secondary

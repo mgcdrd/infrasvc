@@ -1,0 +1,24 @@
+#=============DO NOT EDIT - ANSIBLE CONTROLLED===============
+{% for m in nut_client_monitors %}
+MONITOR {{ m.ups_name }}@{{ m.ups_host }} {{ m.power_value }} {{ m.monuser }} {{ m.monuser_password }} {{ m.role | default('secondary') }}
+{% endfor %}
+
+MINSUPPLIES {{ nut_client_minsupplies }}
+DEADTIME {{ nut_client_deadtime }}
+
+{% if nut_client_shutdowncmd %}
+SHUTDOWNCMD "{{ nut_client_shutdowncmd }}"
+{% endif %}
+
+NOTIFYCMD "{{ nut_client_notifycmd }}"
+
+NOTIFYFLAG ONLINE   SYSLOG+EXEC
+NOTIFYFLAG ONBATT   SYSLOG+EXEC
+NOTIFYFLAG LOWBATT  SYSLOG+EXEC
+NOTIFYFLAG FSD      SYSLOG+EXEC
+NOTIFYFLAG COMMOK   SYSLOG
+NOTIFYFLAG COMMBAD  SYSLOG
+NOTIFYFLAG SHUTDOWN SYSLOG
+NOTIFYFLAG REPLBATT SYSLOG
+NOTIFYFLAG NOCOMM   SYSLOG
+NOTIFYFLAG NOPARENT SYSLOG

@@ -1,0 +1,27 @@
+---
+
+# This file is reference documentation only — all variables are commented out.
+# Set values in your play vars or group_vars. Defaults live in defaults/main.yml.
+
+# ups_shed_ups_name: apc
+# ups_shed_ups_host: deluge.lab.provenzawt.dev
+#
+# ups_shed_tier1_threshold: 70
+# ups_shed_tier2_threshold: 40
+# ups_shed_tier3_threshold: 20
+# ups_shed_poll_interval:   20
+# ups_shed_graceful_wait:   30
+#
+# ups_shed_k8s_workers:
+# - kube2.lab.provenzawt.dev
+# - kube3.lab.provenzawt.dev
+#
+# ups_shed_tier1_guests:
+# - runner1.lab.provenzawt.dev
+# - foreman2.lab.provenzawt.dev
+# ups_shed_tier1_hypervisor: pve3.lab.provenzawt.dev
+#
+# ups_shed_tier2_guests:
+# - dns2.lab.provenzawt.dev
+# - ipa3.lab.provenzawt.dev
+# ups_shed_tier2_hypervisor: pve4.lab.provenzawt.dev

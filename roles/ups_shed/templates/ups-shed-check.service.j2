@@ -1,0 +1,9 @@
+#=============DO NOT EDIT - ANSIBLE CONTROLLED===============
+[Unit]
+Description=UPS shed - poll battery.charge and run any newly-crossed tier
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/ups-shed-check.sh

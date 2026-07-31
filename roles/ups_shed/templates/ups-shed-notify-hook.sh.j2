@@ -1,0 +1,19 @@
+#!/bin/sh
+#=============DO NOT EDIT - ANSIBLE CONTROLLED===============
+# Called by mgcdrd.infrasvc.nut_client's NOTIFYCMD script
+# (nut-notify.sh, via nut_client_notify_hook) on every NUT event.
+# Only ONBATT/ONLINE matter here — everything else is a no-op, nut-notify.sh
+# already logs the raw event.
+LOG_TAG="ups-shed"
+
+case "${NOTIFYTYPE:-}" in
+  ONBATT)
+    logger -t "$LOG_TAG" "ONBATT — starting threshold poll timer"
+    systemctl start ups-shed-check.timer
+    ;;
+  ONLINE)
+    logger -t "$LOG_TAG" "ONLINE — stopping threshold poll timer, resetting shed state"
+    systemctl stop ups-shed-check.timer
+    echo 0 > "{{ ups_shed_state_dir }}/state"
+    ;;
+esac

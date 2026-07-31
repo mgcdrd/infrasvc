@@ -1,0 +1,9 @@
+#=============DO NOT EDIT - ANSIBLE CONTROLLED===============
+[{{ nut_server_admin_user }}]
+    password = {{ nut_server_admin_password }}
+    actions = {{ nut_server_admin_actions }}
+    instcmds = {{ nut_server_admin_instcmds }}
+
+[{{ nut_server_monuser_user }}]
+    password = {{ nut_server_monuser_password }}
+    upsmon primary

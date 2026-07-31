@@ -1,0 +1,7 @@
+---
+
+- name: nut_client restart upsmon
+  ansible.builtin.systemd_service:
+    name:    nut-monitor.service
+    state:   restarted
+    enabled: true

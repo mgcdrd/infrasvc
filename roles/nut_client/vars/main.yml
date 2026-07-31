@@ -1,0 +1,22 @@
+---
+
+# This file is reference documentation only — all variables are commented out.
+# Set values in your play vars or group_vars. Defaults live in defaults/main.yml.
+
+# nut_client_mode: netclient
+#
+# nut_client_monitors:
+# - ups_name:         apc
+#   ups_host:         deluge.example.com
+#   power_value:      1
+#   monuser:          monuser
+#   monuser_password: "{{ vault_nut_monuser_password }}"
+#   role:             secondary
+#
+# nut_client_minsupplies: 1
+# nut_client_deadtime:    60
+#
+# nut_client_notifycmd:   /usr/local/bin/nut-notify.sh
+# nut_client_shutdowncmd: ""
+#
+# nut_client_group: nut

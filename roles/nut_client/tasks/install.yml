@@ -1,0 +1,23 @@
+---
+
+- name: nut_client install - Install NUT client (Debian)
+  ansible.builtin.apt:
+    pkg:
+      - nut-client
+    state: latest
+    update_cache: true
+  notify: nut_client restart upsmon
+  when: ansible_facts['os_family'] == 'Debian'
+
+- name: nut_client install - Enable EPEL (RedHat)
+  ansible.builtin.dnf:
+    name:  epel-release
+    state: present
+  when: ansible_facts['os_family'] == 'RedHat'
+
+- name: nut_client install - Install NUT client (RedHat)
+  ansible.builtin.dnf:
+    name:  nut-client
+    state: latest
+  notify: nut_client restart upsmon
+  when: ansible_facts['os_family'] == 'RedHat'

@@ -1,0 +1,34 @@
+#!/bin/bash
+#=============DO NOT EDIT - ANSIBLE CONTROLLED===============
+# Cordon + drain the given k8s nodes before they're powered off.
+# Usage: ups-shed-k8s-drain.sh <node> [<node> ...]
+#
+# Auth is a static token (not a short-lived Vault-issued one — this Vault
+# instance has no Kubernetes secrets engine mounted yet, see the design
+# doc) read fresh from Vault each run, not cached to disk.
+# --insecure-skip-tls-verify avoids needing to distribute the cluster CA
+# bundle here — deliberate simplification, fine for an internal endpoint.
+set -uo pipefail
+
+LOG_TAG="ups-shed"
+K8S_API="{{ ups_shed_k8s_api }}"
+
+if [ "$#" -eq 0 ]; then
+  logger -t "$LOG_TAG" "k8s-drain: no nodes given, nothing to do"
+  exit 0
+fi
+
+TOKEN="$(/usr/local/bin/ups-shed-vault-get.sh k8s_drain_token)"
+if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+  logger -t "$LOG_TAG" "k8s-drain: failed to fetch k8s_drain_token from Vault, skipping drain"
+  exit 1
+fi
+
+KCTL="/usr/local/bin/kubectl --server=${K8S_API} --token=${TOKEN} --insecure-skip-tls-verify=true"
+
+for node in "$@"; do
+  logger -t "$LOG_TAG" "cordoning $node"
+  $KCTL cordon "$node" 2>&1 | logger -t "$LOG_TAG"
+  logger -t "$LOG_TAG" "draining $node"
+  $KCTL drain "$node" --ignore-daemonsets --delete-emptydir-data --force --timeout=120s 2>&1 | logger -t "$LOG_TAG"
+done

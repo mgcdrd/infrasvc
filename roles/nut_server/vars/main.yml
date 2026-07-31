@@ -1,0 +1,32 @@
+---
+
+# This file is reference documentation only — all variables are commented out.
+# Set values in your play vars or group_vars. Defaults live in defaults/main.yml.
+
+# nut_server_ups_name:     apc
+# nut_server_ups_desc:     "APC Back-UPS 1500"
+# nut_server_driver:       usbhid-ups
+# nut_server_port:         auto
+# nut_server_pollinterval: 15
+#
+# nut_server_mode: netserver
+#
+# nut_server_listen_addresses:
+# - address: 0.0.0.0
+#   port:    3493
+#
+# nut_server_admin_user:     admin
+# nut_server_admin_password: "{{ vault_nut_admin_password }}"
+# nut_server_admin_actions:  "SET FSD"
+# nut_server_admin_instcmds: "ALL"
+#
+# nut_server_monuser_user:     monuser
+# nut_server_monuser_password: "{{ vault_nut_monuser_password }}"
+#
+# nut_server_local_monitor:             true
+# nut_server_local_monitor_power_value: 1
+# nut_server_shutdowncmd:               "/sbin/shutdown -h now"
+# nut_server_deadtime:                  15
+# nut_server_minsupplies:               1
+#
+# nut_server_group: nut

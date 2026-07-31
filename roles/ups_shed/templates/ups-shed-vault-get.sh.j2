@@ -1,0 +1,22 @@
+#!/bin/bash
+#=============DO NOT EDIT - ANSIBLE CONTROLLED===============
+# Fetches one field from {{ ups_shed_vault_secret_path }} via the
+# svc-ups-shutdown AppRole. Usage: ups-shed-vault-get.sh <field>
+set -euo pipefail
+
+FIELD="${1:?usage: ups-shed-vault-get.sh <field>}"
+VAULT_ADDR="{{ ups_shed_vault_addr }}"
+ROLE_ID="$(cat {{ ups_shed_vault_role_id_file }})"
+SECRET_ID="$(cat {{ ups_shed_vault_secret_id_file }})"
+
+TOKEN="$(curl -sf --request POST \
+  --data "{\"role_id\":\"${ROLE_ID}\",\"secret_id\":\"${SECRET_ID}\"}" \
+  "${VAULT_ADDR}/v1/auth/approle/login" | jq -r '.auth.client_token')"
+
+if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+  echo "ups-shed-vault-get: AppRole login failed" >&2
+  exit 1
+fi
+
+curl -sf --header "X-Vault-Token: ${TOKEN}" \
+  "${VAULT_ADDR}/v1/{{ ups_shed_vault_secret_path }}" | jq -r ".data.data.${FIELD}"

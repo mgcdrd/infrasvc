@@ -1,0 +1,23 @@
+#=============DO NOT EDIT - ANSIBLE CONTROLLED===============
+# Local monitor — this host watching its own upsd. Remote monitors (e.g. the
+# lab's responder VM, mgcdrd.infrasvc.nut_client) connect to this upsd
+# independently; they are not configured here.
+MONITOR {{ nut_server_ups_name }}@localhost {{ nut_server_local_monitor_power_value }} {{ nut_server_monuser_user }} {{ nut_server_monuser_password }} primary
+
+MINSUPPLIES {{ nut_server_minsupplies }}
+DEADTIME {{ nut_server_deadtime }}
+
+SHUTDOWNCMD "{{ nut_server_shutdowncmd }}"
+
+NOTIFYCMD "/usr/bin/logger -t nut-upsmon"
+
+NOTIFYFLAG ONLINE   SYSLOG
+NOTIFYFLAG ONBATT   SYSLOG
+NOTIFYFLAG LOWBATT  SYSLOG
+NOTIFYFLAG FSD      SYSLOG
+NOTIFYFLAG COMMOK   SYSLOG
+NOTIFYFLAG COMMBAD  SYSLOG
+NOTIFYFLAG SHUTDOWN SYSLOG
+NOTIFYFLAG REPLBATT SYSLOG
+NOTIFYFLAG NOCOMM   SYSLOG
+NOTIFYFLAG NOPARENT SYSLOG

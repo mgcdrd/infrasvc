@@ -1,0 +1,49 @@
+---
+
+# ---- Config directory ----
+# NUT's sysconfdir differs by packaging: Debian uses /etc/nut, EL/EPEL uses
+# /etc/ups (both packages create the directory themselves — nothing else in
+# this role needs to create it).
+nut_client_config_dir: "{{ '/etc/ups' if ansible_facts['os_family'] == 'RedHat' else '/etc/nut' }}"
+
+# ---- nut.conf ----
+nut_client_mode: netclient
+
+# ---- upsmon.conf MONITOR lines ----
+# One entry per remote UPS this host watches. This host is always
+# 'secondary' — it never owns a driver or runs upsd.
+#
+# nut_client_monitors:
+#   - ups_name:        apc
+#     ups_host:        deluge.example.com
+#     power_value:     1
+#     monuser:         monuser
+#     monuser_password: "{{ vault_nut_monuser_password }}"
+#     role:            secondary
+nut_client_monitors: []
+
+nut_client_minsupplies: 1
+
+# Generous DEADTIME — this monitor typically crosses a network/VLAN boundary
+# to reach upsd (the lab's deluge → responder-VM topology). A short DEADTIME
+# risks a transient link blip being read as a real power event.
+nut_client_deadtime: 60
+
+nut_client_notifycmd: /usr/local/bin/nut-notify.sh
+
+# Optional path to an extra script nut-notify.sh calls after logging, with
+# the same NOTIFYTYPE env var and message arg. Empty = no-op. This keeps
+# the role generic — mgcdrd.infrasvc.ups_shed points this at its own
+# start/stop-the-timer hook rather than this role knowing anything about
+# tiered shutdown logic.
+nut_client_notify_hook: ""
+
+# Deliberately unset. This role only wires NUT itself — the tiered
+# shed/shutdown orchestration it's meant to trigger isn't built yet. See the
+# design doc: wiki enterpriseServices/Power/UPS_NUT_Monitoring, "Status /
+# open items". Point this at a real shutdown script once that exists.
+nut_client_shutdowncmd: ""
+
+# ---- File ownership ----
+# Matches nut_server_group — NUT's packaged upsmon runs as this user/group.
+nut_client_group: nut

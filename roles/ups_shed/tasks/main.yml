@@ -1,0 +1,7 @@
+---
+
+- name: ups_shed main - Install
+  import_tasks: install.yml
+
+- name: ups_shed main - Configure
+  import_tasks: config.yml

@@ -1,0 +1,25 @@
+#=============DO NOT EDIT - ANSIBLE CONTROLLED===============
+[tier1_guests]
+{% for h in ups_shed_tier1_guests %}
+{{ h }}
+{% endfor %}
+
+[tier1_hypervisor]
+{% if ups_shed_tier1_hypervisor %}
+{{ ups_shed_tier1_hypervisor }}
+{% endif %}
+
+[tier2_guests]
+{% for h in ups_shed_tier2_guests %}
+{{ h }}
+{% endfor %}
+
+[tier2_hypervisor]
+{% if ups_shed_tier2_hypervisor %}
+{{ ups_shed_tier2_hypervisor }}
+{% endif %}
+
+[all:vars]
+ansible_user={{ ups_shed_ssh_user }}
+ansible_ssh_private_key_file={{ ups_shed_ssh_key }}
+ansible_ssh_common_args='-o StrictHostKeyChecking=accept-new -o ConnectTimeout=10'

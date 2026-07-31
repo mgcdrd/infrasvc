@@ -1,0 +1,4 @@
+#=============DO NOT EDIT - ANSIBLE CONTROLLED===============
+{% for l in nut_server_listen_addresses %}
+LISTEN {{ l.address }} {{ l.port }}
+{% endfor %}

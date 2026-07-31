@@ -1,0 +1,44 @@
+#!/bin/bash
+#=============DO NOT EDIT - ANSIBLE CONTROLLED===============
+# Runs one tier's shed sequence: guests first (graceful in-guest poweroff),
+# then a wait, then the hypervisor hosting them (if any). Called by
+# ups-shed-check.sh — not meant to be run standalone except for testing.
+# Usage: ups-shed-run-tier.sh <tier1|tier2|tier3>
+set -uo pipefail
+
+TIER="${1:?usage: ups-shed-run-tier.sh <tier1|tier2|tier3>}"
+LOG_TAG="ups-shed"
+ANSIBLE_DIR="{{ ups_shed_ansible_dir }}"
+GRACEFUL_WAIT={{ ups_shed_graceful_wait }}
+
+run_playbook() {
+  local group="$1"
+  ansible-playbook -i "$ANSIBLE_DIR/inventory.ini" "$ANSIBLE_DIR/shed.yml" -e "shed_hosts=$group" 2>&1 | logger -t "$LOG_TAG"
+}
+
+logger -t "$LOG_TAG" "=== starting $TIER shed sequence ==="
+
+case "$TIER" in
+  tier1)
+{% if ups_shed_k8s_workers %}
+    /usr/local/bin/ups-shed-k8s-drain.sh {{ ups_shed_k8s_workers | join(' ') }}
+{% endif %}
+    run_playbook tier1_guests
+    sleep "$GRACEFUL_WAIT"
+    run_playbook tier1_hypervisor
+    ;;
+  tier2)
+    run_playbook tier2_guests
+    sleep "$GRACEFUL_WAIT"
+    run_playbook tier2_hypervisor
+    ;;
+  tier3)
+    logger -t "$LOG_TAG" "tier3: alert only, no auto-poweroff (see design doc)"
+    ;;
+  *)
+    logger -t "$LOG_TAG" "unknown tier '$TIER', doing nothing"
+    exit 1
+    ;;
+esac
+
+logger -t "$LOG_TAG" "=== $TIER shed sequence complete ==="

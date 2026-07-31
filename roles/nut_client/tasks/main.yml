@@ -1,0 +1,7 @@
+---
+
+- name: nut_client main - Install
+  import_tasks: install.yml
+
+- name: nut_client main - Configure
+  import_tasks: config.yml

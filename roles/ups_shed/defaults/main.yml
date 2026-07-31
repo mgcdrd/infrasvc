@@ -1,0 +1,69 @@
+---
+
+# ---- UPS being watched ----
+# Same UPS/ups_name mgcdrd.infrasvc.nut_client is already monitoring — this
+# role polls it directly via `upsc` rather than depending on nut_client's
+# own MONITOR config, so it works even if that role's vars change shape.
+ups_shed_ups_name: apc
+ups_shed_ups_host: deluge.example.com
+
+# ---- Thresholds (battery.charge %) ----
+# Checked in ascending order every poll so a fast-draining battery that
+# skips past an intermediate reading still runs every tier it crossed, in
+# order, rather than jumping straight to the deepest one.
+ups_shed_tier1_threshold: 70
+ups_shed_tier2_threshold: 40
+ups_shed_tier3_threshold: 20
+
+# How often the timer polls battery.charge once ONBATT fires.
+ups_shed_poll_interval: 20
+
+# How long to wait after powering off a tier's guest VMs before powering
+# off the hypervisor node itself — gives them time to shut down cleanly
+# rather than being yanked out from under a running guest.
+ups_shed_graceful_wait: 30
+
+# ---- Target hosts ----
+# All empty by default — this deployment's group_vars sets the real lab
+# values. Kept as role variables (not hardcoded) for the same portability
+# reason every other role in this collection does it: same role, different
+# customer environment, no code changes needed.
+#
+# k8s workers get cordon+drain via the k8s API before anything else in
+# tier1 — they're not in ups_shed_tier1_guests, handled separately.
+ups_shed_k8s_workers: []
+
+# Tier1: everything shed at ~70%, in shed order. "guests" = individual
+# hosts/VMs powered off directly via SSH+sudo; "hypervisor" = the PVE node
+# itself, powered off last, after its guests (including any listed here
+# that live on it) are already down.
+ups_shed_tier1_guests: []
+ups_shed_tier1_hypervisor: ""
+
+# Tier2: everything shed at ~40%, same guests-then-hypervisor shape.
+ups_shed_tier2_guests: []
+ups_shed_tier2_hypervisor: ""
+
+# ---- svc-ups-shutdown identity ----
+ups_shed_ssh_user: svc-ups-shutdown
+ups_shed_ssh_key: /root/.ssh/id_ed25519_svc-ups-shutdown
+
+# ---- Vault (AppRole creds pre-positioned by the identity build) ----
+# vault_addr comes from inventory-common's group_vars/all.yml — same as
+# every other role that talks to Vault.
+ups_shed_vault_addr: "{{ vault_addr }}"
+ups_shed_vault_role_id_file: /etc/vault/ups-shutdown-role-id
+ups_shed_vault_secret_id_file: /etc/vault/ups-shutdown-secret-id
+ups_shed_vault_secret_path: "{{ vault_kv_infra_mount }}/data/{{ vault_kv_env }}/ups-shutdown"
+
+# ---- Kubernetes ----
+# Token read from Vault at run time (field k8s_drain_token) — never
+# templated into a file on disk here. --insecure-skip-tls-verify is a
+# deliberate simplification (no CA bundle distribution needed) — this
+# only ever talks to this environment's own internal API endpoint.
+ups_shed_k8s_api: "https://k8s-api.example.com:6443"
+
+# ---- Paths on the responder VM ----
+ups_shed_ansible_dir: /opt/ups-shed
+ups_shed_state_dir: /var/lib/ups-shed
+ups_shed_log_file: /var/log/ups-shed.log

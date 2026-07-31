@@ -1,0 +1,54 @@
+---
+
+# ---- Config directory ----
+# NUT's sysconfdir differs by packaging: Debian uses /etc/nut, EL/EPEL uses
+# /etc/ups (both packages create the directory themselves — nothing else in
+# this role needs to create it).
+nut_server_config_dir: "{{ '/etc/ups' if ansible_facts['os_family'] == 'RedHat' else '/etc/nut' }}"
+
+# ---- UPS / driver (ups.conf) ----
+nut_server_ups_name: apc
+nut_server_ups_desc: "APC Back-UPS 1500"
+nut_server_driver:   usbhid-ups
+nut_server_port:     auto
+nut_server_pollinterval: 15
+
+# ---- nut.conf ----
+nut_server_mode: netserver
+
+# ---- upsd.conf: addresses upsd listens on ----
+nut_server_listen_addresses:
+  - address: 0.0.0.0
+    port: 3493
+
+# ---- upsd.users ----
+# 'admin' can SET variables and issue FSD (forced shutdown) / instant
+# commands. 'monuser' is the account every upsmon client connects as
+# (including this host's own local monitor below) — read-only status plus
+# permission to receive FSD.
+nut_server_admin_user:     admin
+nut_server_admin_password: ""
+nut_server_admin_actions:  "SET FSD"
+nut_server_admin_instcmds: "ALL"
+
+nut_server_monuser_user:     monuser
+nut_server_monuser_password: ""
+
+# ---- Local upsmon ----
+# This host also runs upsmon against its own upsd, in NUT's 'primary' role —
+# the convention for the host that owns the driver. Kept SYSLOG-only here;
+# the shed/shutdown orchestration logic deliberately lives elsewhere
+# (mgcdrd.infrasvc.nut_client, on a host inside the lab network), not on
+# this host. See the design doc: wiki enterpriseServices/Power/UPS_NUT_Monitoring
+nut_server_local_monitor:             true
+nut_server_local_monitor_power_value: 1
+nut_server_shutdowncmd:               "/sbin/shutdown -h now"
+nut_server_deadtime:                  15
+nut_server_minsupplies:               1
+
+# ---- File ownership ----
+# NUT's packaged services drop privileges to this user/group after opening
+# the USB device as root — config files with secrets must stay group-readable
+# by it, not root-only, or upsd/upsmon fail to start. Standard across both
+# Debian and EL NUT packages.
+nut_server_group: nut

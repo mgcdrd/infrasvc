@@ -1,0 +1,23 @@
+---
+# =============================================================
+# UPS tiered shutdown — poweroff playbook.
+#
+# Not run directly. Invoked by ups-shed-run-tier.sh with
+# `-e shed_hosts=<inventory-group>`, once per group, in the order that
+# script decides (guests before the hypervisor they run on).
+#
+# poweroff disconnects the SSH session it was issued over, so the task
+# is fired async/poll:0 and errors are ignored — a connection drop here
+# means the command worked, not that it failed.
+# =============================================================
+
+- name: UPS shed - poweroff
+  hosts: "{{ shed_hosts }}"
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Poweroff
+      ansible.builtin.command: /usr/sbin/poweroff
+      async: 1
+      poll: 0
+      ignore_errors: true

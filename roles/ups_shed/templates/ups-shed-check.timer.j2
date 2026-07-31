@@ -1,0 +1,14 @@
+#=============DO NOT EDIT - ANSIBLE CONTROLLED===============
+# Deliberately NOT enabled at boot — started on ONBATT and stopped on
+# ONLINE by ups-shed-notify-hook.sh. See that script and
+# mgcdrd.infrasvc.nut_client's nut_client_notify_hook variable.
+[Unit]
+Description=UPS shed - periodic battery.charge poll while on battery
+
+[Timer]
+OnActiveSec=1
+OnUnitActiveSec={{ ups_shed_poll_interval }}s
+AccuracySec=1s
+
+[Install]
+WantedBy=timers.target

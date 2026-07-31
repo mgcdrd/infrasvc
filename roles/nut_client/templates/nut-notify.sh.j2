@@ -1,0 +1,12 @@
+#!/bin/sh
+#=============DO NOT EDIT - ANSIBLE CONTROLLED===============
+# NUT NOTIFYCMD hook. Logs every event, then hands off to
+# nut_client_notify_hook if set — see mgcdrd.infrasvc.ups_shed for the
+# tiered shed/shutdown logic that hook drives.
+logger -t nut-notify "${NOTIFYTYPE:-UNKNOWN} ${1:-}"
+
+{% if nut_client_notify_hook %}
+if [ -x "{{ nut_client_notify_hook }}" ]; then
+    "{{ nut_client_notify_hook }}" "$@"
+fi
+{% endif %}

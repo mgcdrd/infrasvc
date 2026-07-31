@@ -1,0 +1,46 @@
+#!/bin/bash
+#=============DO NOT EDIT - ANSIBLE CONTROLLED===============
+# Polls battery.charge and runs whichever tier(s) it has newly crossed.
+# Run periodically by ups-shed-check.timer, which is only active between
+# ONBATT and ONLINE — see ups-shed-notify-hook.sh.
+#
+# State is a single integer in {{ ups_shed_state_dir }}/state:
+#   0 = nothing shed yet, 1/2/3 = deepest tier already run.
+# Checked in ascending order (tier1, then tier2, then tier3) so a battery
+# that drains fast enough to skip a reading between polls still runs
+# every tier it passed through, in order, not just the deepest one.
+set -uo pipefail
+
+LOG_TAG="ups-shed"
+STATE_DIR="{{ ups_shed_state_dir }}"
+STATE_FILE="$STATE_DIR/state"
+
+mkdir -p "$STATE_DIR"
+[ -f "$STATE_FILE" ] || echo 0 > "$STATE_FILE"
+STATE="$(cat "$STATE_FILE")"
+
+CHARGE="$(upsc {{ ups_shed_ups_name }}@{{ ups_shed_ups_host }} battery.charge 2>/dev/null)"
+if [ -z "$CHARGE" ]; then
+  logger -t "$LOG_TAG" "WARNING: could not read battery.charge from {{ ups_shed_ups_name }}@{{ ups_shed_ups_host }}, skipping this check"
+  exit 0
+fi
+
+logger -t "$LOG_TAG" "battery.charge=$CHARGE state=$STATE"
+
+if [ "$CHARGE" -le {{ ups_shed_tier1_threshold }} ] && [ "$STATE" -lt 1 ]; then
+  /usr/local/bin/ups-shed-run-tier.sh tier1
+  STATE=1
+  echo "$STATE" > "$STATE_FILE"
+fi
+
+if [ "$CHARGE" -le {{ ups_shed_tier2_threshold }} ] && [ "$STATE" -lt 2 ]; then
+  /usr/local/bin/ups-shed-run-tier.sh tier2
+  STATE=2
+  echo "$STATE" > "$STATE_FILE"
+fi
+
+if [ "$CHARGE" -le {{ ups_shed_tier3_threshold }} ] && [ "$STATE" -lt 3 ]; then
+  /usr/local/bin/ups-shed-run-tier.sh tier3
+  STATE=3
+  echo "$STATE" > "$STATE_FILE"
+fi

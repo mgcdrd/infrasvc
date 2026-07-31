@@ -1,0 +1,11 @@
+---
+
+- hosts: all
+  gather_facts: true
+  become: true
+  roles:
+    - mgcdrd.infrasvc.nut_server
+  vars:
+    nut_server_ups_name:         apc
+    nut_server_admin_password:   changeme
+    nut_server_monuser_password: changeme

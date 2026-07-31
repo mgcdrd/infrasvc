@@ -1,0 +1,20 @@
+---
+
+- name: nut_server restart driver enumerator
+  ansible.builtin.systemd_service:
+    name:    nut-driver-enumerator.service
+    state:   restarted
+    enabled: true
+
+- name: nut_server restart upsd
+  ansible.builtin.systemd_service:
+    name:    nut-server.service
+    state:   restarted
+    enabled: true
+
+- name: nut_server restart upsmon
+  ansible.builtin.systemd_service:
+    name:    nut-monitor.service
+    state:   restarted
+    enabled: true
+  when: nut_server_local_monitor | bool

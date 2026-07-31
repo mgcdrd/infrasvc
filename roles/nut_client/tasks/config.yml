@@ -1,0 +1,28 @@
+---
+
+- name: nut_client config - Deploy nut.conf
+  ansible.builtin.template:
+    src:   nut.conf.j2
+    dest:  "{{ nut_client_config_dir }}/nut.conf"
+    owner: root
+    group: root
+    mode:  "0644"
+  notify: nut_client restart upsmon
+
+- name: nut_client config - Deploy upsmon.conf
+  ansible.builtin.template:
+    src:   upsmon.conf.j2
+    dest:  "{{ nut_client_config_dir }}/upsmon.conf"
+    owner: root
+    group: "{{ nut_client_group }}"
+    mode:  "0640"
+  notify: nut_client restart upsmon
+
+- name: nut_client config - Deploy NOTIFYCMD script
+  ansible.builtin.template:
+    src:   nut-notify.sh.j2
+    dest:  "{{ nut_client_notifycmd }}"
+    owner: root
+    group: root
+    mode:  "0750"
+  notify: nut_client restart upsmon

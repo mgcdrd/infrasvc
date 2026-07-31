@@ -1,0 +1,60 @@
+---
+
+- name: nut_server config - Deploy nut.conf
+  ansible.builtin.template:
+    src:   nut.conf.j2
+    dest:  "{{ nut_server_config_dir }}/nut.conf"
+    owner: root
+    group: root
+    mode:  "0644"
+  notify: nut_server restart upsd
+
+- name: nut_server config - Deploy ups.conf
+  ansible.builtin.template:
+    src:   ups.conf.j2
+    dest:  "{{ nut_server_config_dir }}/ups.conf"
+    owner: root
+    group: "{{ nut_server_group }}"
+    mode:  "0640"
+  notify: nut_server restart driver enumerator
+
+- name: nut_server config - Deploy upsd.conf
+  ansible.builtin.template:
+    src:   upsd.conf.j2
+    dest:  "{{ nut_server_config_dir }}/upsd.conf"
+    owner: root
+    group: "{{ nut_server_group }}"
+    mode:  "0640"
+  notify: nut_server restart upsd
+
+- name: nut_server config - Deploy upsd.users
+  ansible.builtin.template:
+    src:   upsd.users.j2
+    dest:  "{{ nut_server_config_dir }}/upsd.users"
+    owner: root
+    group: "{{ nut_server_group }}"
+    mode:  "0640"
+  notify: nut_server restart upsd
+
+- name: nut_server config - Deploy upsmon.conf (local monitor)
+  ansible.builtin.template:
+    src:   upsmon.conf.j2
+    dest:  "{{ nut_server_config_dir }}/upsmon.conf"
+    owner: root
+    group: "{{ nut_server_group }}"
+    mode:  "0640"
+  notify: nut_server restart upsmon
+  when: nut_server_local_monitor | bool
+
+- name: nut_server config - Reapply udev rules for the USB UPS
+  # The nut-server package's udev rule (GROUP="nut" on the UPS's USB device
+  # node) only applies on (re)plug. If the UPS was already connected before
+  # this role's first run, the device node stays root:root and the driver
+  # fails with "insufficient permissions on everything" until udev
+  # re-evaluates the already-present device.
+  ansible.builtin.command: "{{ item }}"
+  loop:
+    - udevadm control --reload-rules
+    - udevadm trigger
+  changed_when: false
+  notify: nut_server restart driver enumerator
