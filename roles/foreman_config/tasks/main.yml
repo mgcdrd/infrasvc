@@ -51,6 +51,12 @@
   when: foreman_hostgroups is defined
   tags: [foreman_config, hostgroups]
 
+- name: foreman_config - LDAP authentication sources
+  become: false
+  import_tasks: ldap_auth.yml
+  when: foreman_ldap_auth_sources is defined
+  tags: [foreman_config, ldap_auth]
+
 - name: foreman_config - user groups
   become: false
   import_tasks: usergroups.yml

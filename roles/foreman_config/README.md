@@ -140,6 +140,7 @@ foreman_activation_keys:
 ```yaml
 foreman_domains:
   - name: example.com
+    dns_proxy: "{{ foreman_hostname }}"    # smart proxy for forward A records (e.g. PowerDNS) — omit for none
     organizations: "{{ foreman_org }}"
     locations: LAB
     state: present
@@ -283,6 +284,41 @@ foreman_hostgroups:
 ```
 
 
+### LDAP authentication (optional — IPA fallback)
+
+The IPA-backed `External` auth source comes from `foreman_install`'s
+`--foreman-ipa-authentication` installer flag (Kerberos SSO), not from
+this role. Where FreeIPA isn't available (most customer sites), define a
+plain LDAP auth source here instead, then point `foreman_usergroups`'
+`auth_source` at its `name` instead of `External`.
+
+```yaml
+foreman_ldap_auth_sources:
+  - name: Corporate LDAP
+    host: ldap.example.com
+    port: 636                        # default: 389
+    account: "cn=foreman,ou=svc,dc=example,dc=com"
+    account_password: "{{ vault_foreman_ldap_bind_password }}"
+    base_dn: "dc=example,dc=com"
+    groups_base: "ou=groups,dc=example,dc=com"
+    attr_login: uid
+    attr_firstname: givenName
+    attr_lastname: sn
+    attr_mail: mail
+    onthefly_register: true
+    usergroup_sync: true
+    tls: true
+    server_type: posix               # free_ipa | active_directory | posix
+    ldap_group_membership: rfc4519   # posix | nis_netgroups | rfc4519 (not valid for active_directory)
+    locations: [LAB]
+    organizations: "{{ foreman_org }}"
+    state: present
+```
+
+`account_password` is required when `onthefly_register` is used, and makes
+the task non-idempotent (theforeman.foreman's own module behavior — it
+can't read the password back to compare).
+
 ### User and group management
 
 ```yaml
@@ -328,6 +364,8 @@ Tags
 | `templates` | SSH key gen, GitLab host key, template settings + sync |
 | `provisioning` | Operating systems, install media, partition tables, global params |
 | `hostgroups` | Host groups only |
+| `ldap_auth` | LDAP authentication sources only |
+| `usergroups` | User and group management only |
 | `awx` | AWX integration settings only |
 
 

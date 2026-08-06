@@ -8,6 +8,7 @@
     validate_certs: "{{ foreman_validate_certs }}"
     name: "{{ item.name }}"
     description: "{{ item.description | default(omit) }}"
+    dns_proxy: "{{ item.dns_proxy | default(omit) }}"
     locations: "{{ item.locations | default(foreman_location) }}"
     organizations: "{{ item.organizations | default(foreman_org) }}"
     state: "{{ item.state | default('present') }}"

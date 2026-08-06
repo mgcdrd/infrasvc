@@ -113,11 +113,21 @@
       --setattr krbPasswordExpiration=20491231235959Z
   when: not foreman_keytab_stat.stat.exists and foreman_realm_vault_rotate | bool
 
+# auth_method/role_id/secret_id are passed explicitly because these are
+# community.hashi_vault *modules*, not lookup plugins — only lookup plugins
+# get the declarative ANSIBLE_HASHI_VAULT_* env-var fallback, so without
+# this a module task silently falls back to auth_method=token (VAULT_TOKEN/
+# ~/.vault-token only) and can never authenticate via the ansible AppRole.
+# Mirrors exactly what the lookup plugin does automatically. See
+# VAULT_SETUP.md's "gotchas" section.
 - name: ipa - read current Foreman secret from Vault
   community.hashi_vault.vault_kv2_get:
     url: "{{ foreman_realm_vault_addr }}"
     engine_mount_point: "{{ foreman_realm_vault_kv_mount }}"
     path: "{{ foreman_realm_vault_path }}"
+    auth_method: "{{ lookup('env', 'ANSIBLE_HASHI_VAULT_AUTH_METHOD') or 'token' }}"
+    role_id: "{{ lookup('env', 'ANSIBLE_HASHI_VAULT_ROLE_ID') or omit }}"
+    secret_id: "{{ lookup('env', 'ANSIBLE_HASHI_VAULT_SECRET_ID') or omit }}"
   register: _foreman_realm_vault_secret
   delegate_to: localhost
   become: false
@@ -130,6 +140,9 @@
     engine_mount_point: "{{ foreman_realm_vault_kv_mount }}"
     path: "{{ foreman_realm_vault_path }}"
     data: "{{ _foreman_realm_vault_secret.secret | combine({foreman_realm_vault_password_key: _foreman_realm_new_password}) }}"
+    auth_method: "{{ lookup('env', 'ANSIBLE_HASHI_VAULT_AUTH_METHOD') or 'token' }}"
+    role_id: "{{ lookup('env', 'ANSIBLE_HASHI_VAULT_ROLE_ID') or omit }}"
+    secret_id: "{{ lookup('env', 'ANSIBLE_HASHI_VAULT_SECRET_ID') or omit }}"
   delegate_to: localhost
   become: false
   when: not foreman_keytab_stat.stat.exists and foreman_realm_vault_rotate | bool

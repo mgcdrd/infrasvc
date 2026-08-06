@@ -1,0 +1,36 @@
+---
+# Fallback/alternative to the IPA-backed "External" auth source
+# (--foreman-ipa-authentication, set up by foreman_install's ipa.yml) for
+# environments without FreeIPA. foreman_usergroups' auth_source then
+# points at one of these entries' name instead of 'External'.
+- name: ldap_auth - create or update LDAP authentication sources
+  become: false
+  theforeman.foreman.auth_source_ldap:
+    username: "{{ foreman_username }}"
+    password: "{{ vault_foreman_admin_password }}"
+    server_url: "{{ foreman_url }}"
+    validate_certs: "{{ foreman_validate_certs }}"
+    name: "{{ item.name }}"
+    host: "{{ item.host }}"
+    port: "{{ item.port | default(389) }}"
+    account: "{{ item.account | default(omit) }}"
+    account_password: "{{ item.account_password | default(omit) }}"
+    base_dn: "{{ item.base_dn | default(omit) }}"
+    groups_base: "{{ item.groups_base | default(omit) }}"
+    attr_login: "{{ item.attr_login | default(omit) }}"
+    attr_firstname: "{{ item.attr_firstname | default(omit) }}"
+    attr_lastname: "{{ item.attr_lastname | default(omit) }}"
+    attr_mail: "{{ item.attr_mail | default(omit) }}"
+    attr_photo: "{{ item.attr_photo | default(omit) }}"
+    onthefly_register: "{{ item.onthefly_register | default(omit) }}"
+    usergroup_sync: "{{ item.usergroup_sync | default(omit) }}"
+    tls: "{{ item.tls | default(omit) }}"
+    server_type: "{{ item.server_type | default(omit) }}"
+    ldap_group_membership: "{{ item.ldap_group_membership | default(omit) }}"
+    ldap_filter: "{{ item.ldap_filter | default(omit) }}"
+    locations: "{{ item.locations | default([foreman_location]) }}"
+    organizations: "{{ item.organizations | default([foreman_org]) }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ foreman_ldap_auth_sources }}"
+  loop_control:
+    label: "{{ item.name }}"
