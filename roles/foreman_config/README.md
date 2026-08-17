@@ -7,7 +7,7 @@ collection. Manages the full post-install configuration lifecycle: content
 activation keys), infrastructure (domains, subnets, architectures, compute
 resources, compute profiles), provisioning (operating systems, partition tables,
 installation media, global parameters), template sync from GitLab, host groups,
-and AWX integration.
+AWX integration, and SCAP compliance content/tailoring files/policies.
 
 All configuration is data-driven — add or modify entries in the relevant lists
 in `group_vars` and re-run the appropriate tag.
@@ -351,6 +351,70 @@ foreman_awx_job_template_id: "42"
 
 AWX tasks are skipped if `foreman_awx_url` is not defined.
 
+### SCAP content, tailoring files, and compliance policies
+
+`scap-security-guide` (installed by `foreman_install`) auto-seeds default
+content for every installed datastream on first run — Rocky 9 gets "Red Hat
+rl9 default content" (`ssg-rl9-ds.xml`) automatically, no `foreman_scap_contents`
+entry needed for it. Use `foreman_scap_contents` for anything beyond that
+(custom/tailored datastreams).
+
+```yaml
+foreman_scap_contents:
+  - title: "Custom Rocky 9 datastream"
+    scap_file: /usr/share/xml/scap/ssg/content/ssg-rl9-ds.xml
+    original_filename: ssg-rl9-ds.xml
+    organizations: ["{{ foreman_org }}"]
+    locations: ["{{ foreman_location }}"]
+    state: present
+
+foreman_scap_tailoring_files: []    # same shape, module: scap_tailoring_file
+
+# NOTE: a policy's tailoring_file_name/tailoring_file_profile (below) assume
+# a tailoring file exposes profiles the same embedded way SCAP content does
+# — unconfirmed; no tailoring file existed on the instance this was verified
+# against (see caveat below the example).
+foreman_scap_policies:
+  - name: "CIS Rocky 9 - Level 2"
+    description: "Weekly CIS Level 2 scan, Rocky 9 base hosts"
+    scap_content_title: "Red Hat rl9 default content"                       # match an existing or foreman_scap_contents[].title
+    scap_content_profile: "CIS Red Hat Enterprise Linux 9 Benchmark for Level 2"  # substring match against the content's profile titles
+    # tailoring_file_name / tailoring_file_profile: optional, same lookup pattern
+    deploy_by: ansible                          # ansible | puppet | manual — default: ansible
+    period: weekly                              # weekly | monthly | custom
+    weekday: sunday                              # period: weekly
+    # day_of_month: 1                           # period: monthly
+    # cron_line: "0 3 * * 1"                    # period: custom
+    hostgroups: ["Rocky 9 Base"]                # must match foreman_hostgroups[].name entries
+    state: present
+```
+
+`scap_file` paths (both content and tailoring files) resolve on the Foreman
+host itself, not the Ansible controller — this role runs `hosts: foreman`,
+and `scap-security-guide` (installed by `foreman_install`) drops its
+datastreams under `/usr/share/xml/scap/ssg/content/` there.
+
+`theforeman.foreman` (5.11.0) has no dedicated module for compliance
+policies — only `scap_content` and `scap_tailoring_file` are covered. Policy
+management (`scap_policy.yml`) goes straight at `/api/compliance/policies`
+via `ansible.builtin.uri`, resolving `scap_content_title`/`scap_content_profile`,
+`tailoring_file_name`/`tailoring_file_profile`, and `hostgroups` to IDs first.
+There's also no `scap_content_profiles` apidoc resource — profiles are
+embedded in the content's own record (`scap_content_profiles: [{id, profile_id,
+title}]`), only present when looked up with `resource_info`'s `full_details:
+true`. All of the above (`policies`/`scap_contents`/`tailoring_files` resource
+names, the create/update param list, and the embedded-profiles shape) were
+verified 2026-08-17 against a live 3.19 instance — request/response body
+built by this role for an existing policy reproduced its stored fields
+exactly. One caveat remains: tailoring files are assumed to expose profiles
+the same embedded way as SCAP content (same underlying model) but that
+specific shape wasn't confirmed — no tailoring file existed on the instance
+checked.
+
+Unlike the rest of this role, an existing policy is always `PUT` on every
+run (no before/after diff), so it always reports changed — same tradeoff
+as `ldap_auth.yml`'s `account_password`.
+
 Tags
 ----
 
@@ -367,6 +431,7 @@ Tags
 | `ldap_auth` | LDAP authentication sources only |
 | `usergroups` | User and group management only |
 | `awx` | AWX integration settings only |
+| `scap` | SCAP content, tailoring files, and compliance policies only |
 
 
 Template sync notes

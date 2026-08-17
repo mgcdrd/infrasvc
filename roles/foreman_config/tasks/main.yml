@@ -68,3 +68,12 @@
   import_tasks: awx.yml
   when: foreman_awx_url is defined
   tags: [foreman_config, awx]
+
+- name: foreman_config - SCAP content, tailoring files, and compliance policies
+  become: false
+  import_tasks: scap.yml
+  when: >
+    foreman_scap_contents is defined or
+    foreman_scap_tailoring_files is defined or
+    foreman_scap_policies is defined
+  tags: [foreman_config, scap]

@@ -1,0 +1,55 @@
+---
+# SCAP content/tailoring files are read from a path on the Foreman host
+# itself, not the Ansible controller — foreman_config runs `hosts: foreman`,
+# so theforeman.foreman.scap_content's scap_file argument resolves against
+# that host. scap-security-guide (installed by foreman_install/packages.yml)
+# drops its datastreams under /usr/share/xml/scap/ssg/content/.
+
+- name: scap - create SCAP content
+  become: false
+  theforeman.foreman.scap_content:
+    username: "{{ foreman_username }}"
+    password: "{{ vault_foreman_admin_password }}"
+    server_url: "{{ foreman_url }}"
+    validate_certs: "{{ foreman_validate_certs }}"
+    title: "{{ item.title }}"
+    updated_title: "{{ item.updated_title | default(omit) }}"
+    scap_file: "{{ item.scap_file | default(omit) }}"
+    original_filename: "{{ item.original_filename | default(omit) }}"
+    organizations: "{{ item.organizations | default([foreman_org]) }}"
+    locations: "{{ item.locations | default([foreman_location]) }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ foreman_scap_contents | default([]) }}"
+  loop_control:
+    label: "{{ item.title }}"
+
+- name: scap - create SCAP tailoring files
+  become: false
+  theforeman.foreman.scap_tailoring_file:
+    username: "{{ foreman_username }}"
+    password: "{{ vault_foreman_admin_password }}"
+    server_url: "{{ foreman_url }}"
+    validate_certs: "{{ foreman_validate_certs }}"
+    name: "{{ item.name }}"
+    updated_name: "{{ item.updated_name | default(omit) }}"
+    scap_file: "{{ item.scap_file | default(omit) }}"
+    original_filename: "{{ item.original_filename | default(omit) }}"
+    organizations: "{{ item.organizations | default([foreman_org]) }}"
+    locations: "{{ item.locations | default([foreman_location]) }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ foreman_scap_tailoring_files | default([]) }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+# theforeman.foreman has no scap_policy module, so compliance policies are
+# managed directly against the /api/compliance/policies endpoint. Each
+# policy needs several IDs resolved by name first (content, profile,
+# optional tailoring file, host groups) — that per-policy lookup chain
+# lives in scap_policy.yml, run once per foreman_scap_policies entry.
+- name: scap - manage compliance policies
+  become: false
+  ansible.builtin.include_tasks: scap_policy.yml
+  loop: "{{ foreman_scap_policies | default([]) }}"
+  loop_control:
+    loop_var: policy
+    label: "{{ policy.name }}"

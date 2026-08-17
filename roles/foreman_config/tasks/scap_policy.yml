@@ -1,0 +1,179 @@
+---
+# Included per-item from scap.yml's foreman_scap_policies loop (loop_var:
+# policy). Resolves SCAP content, profile, optional tailoring file, and
+# host group names to the IDs the compliance API expects, then creates,
+# updates, or deletes the policy.
+#
+# There is no scap_content_profiles apidoc resource — profiles are embedded
+# in the SCAP content's own record as a scap_content_profiles: [{id, profile_id,
+# title}] array, only present when the lookup is done with full_details: true
+# (verified against a live 3.19 instance 2026-08-17). Tailoring files are
+# assumed to expose profiles the same way (same underlying model as SCAP
+# content) but that assumption is unverified — none existed on the live
+# instance checked to confirm.
+
+- name: scap policy {{ policy.name }} - look up SCAP content
+  become: false
+  theforeman.foreman.resource_info:
+    username: "{{ foreman_username }}"
+    password: "{{ vault_foreman_admin_password }}"
+    server_url: "{{ foreman_url }}"
+    validate_certs: "{{ foreman_validate_certs }}"
+    resource: scap_contents
+    search: "title=\"{{ policy.scap_content_title }}\""
+    full_details: true
+  register: _scap_policy_content
+
+- name: scap policy {{ policy.name }} - fail if SCAP content not found
+  ansible.builtin.fail:
+    msg: "No SCAP content titled '{{ policy.scap_content_title }}' found for policy '{{ policy.name }}'"
+  when: _scap_policy_content.resources | length == 0
+
+- name: scap policy {{ policy.name }} - resolve SCAP content profile
+  ansible.builtin.set_fact:
+    _scap_policy_profile_matches: >-
+      {{ _scap_policy_content.resources[0].scap_content_profiles
+         | selectattr('title', 'search', policy.scap_content_profile) | list }}
+
+- name: scap policy {{ policy.name }} - fail if profile not found
+  ansible.builtin.fail:
+    msg: "No profile matching '{{ policy.scap_content_profile }}' in SCAP content '{{ policy.scap_content_title }}' for policy '{{ policy.name }}'"
+  when: _scap_policy_profile_matches | length == 0
+
+- name: scap policy {{ policy.name }} - look up tailoring file
+  become: false
+  theforeman.foreman.resource_info:
+    username: "{{ foreman_username }}"
+    password: "{{ vault_foreman_admin_password }}"
+    server_url: "{{ foreman_url }}"
+    validate_certs: "{{ foreman_validate_certs }}"
+    resource: tailoring_files
+    search: "name=\"{{ policy.tailoring_file_name }}\""
+    full_details: true
+  register: _scap_policy_tailoring
+  when: policy.tailoring_file_name is defined
+
+- name: scap policy {{ policy.name }} - fail if tailoring file not found
+  ansible.builtin.fail:
+    msg: "No tailoring file named '{{ policy.tailoring_file_name }}' found for policy '{{ policy.name }}'"
+  when:
+    - policy.tailoring_file_name is defined
+    - _scap_policy_tailoring.resources | length == 0
+
+- name: scap policy {{ policy.name }} - resolve tailoring file profile
+  ansible.builtin.set_fact:
+    _scap_policy_tailoring_profile_matches: >-
+      {{ _scap_policy_tailoring.resources[0].scap_content_profiles
+         | selectattr('title', 'search', policy.tailoring_file_profile) | list }}
+  when: policy.tailoring_file_name is defined
+
+- name: scap policy {{ policy.name }} - fail if tailoring file profile not found
+  ansible.builtin.fail:
+    msg: "No profile matching '{{ policy.tailoring_file_profile }}' in tailoring file '{{ policy.tailoring_file_name }}' for policy '{{ policy.name }}'"
+  when:
+    - policy.tailoring_file_name is defined
+    - _scap_policy_tailoring_profile_matches | length == 0
+
+- name: scap policy {{ policy.name }} - look up host groups
+  become: false
+  theforeman.foreman.hostgroup_info:
+    username: "{{ foreman_username }}"
+    password: "{{ vault_foreman_admin_password }}"
+    server_url: "{{ foreman_url }}"
+    validate_certs: "{{ foreman_validate_certs }}"
+    name: "{{ item }}"
+  loop: "{{ policy.hostgroups | default([]) }}"
+  loop_control:
+    label: "{{ item }}"
+  register: _scap_policy_hostgroup_lookup
+
+- name: scap policy {{ policy.name }} - fail if a host group was not found
+  ansible.builtin.fail:
+    msg: "Host group '{{ item.item }}' not found for policy '{{ policy.name }}'"
+  loop: "{{ _scap_policy_hostgroup_lookup.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item }}"
+  when:
+    - policy.hostgroups is defined
+    - item.hostgroup is none
+
+- name: scap policy {{ policy.name }} - look up existing policy
+  become: false
+  theforeman.foreman.resource_info:
+    username: "{{ foreman_username }}"
+    password: "{{ vault_foreman_admin_password }}"
+    server_url: "{{ foreman_url }}"
+    validate_certs: "{{ foreman_validate_certs }}"
+    resource: policies
+    search: "name=\"{{ policy.name }}\""
+  register: _scap_policy_existing
+
+- name: scap policy {{ policy.name }} - build request body
+  ansible.builtin.set_fact:
+    _scap_policy_body:
+      name: "{{ policy.name }}"
+      description: "{{ policy.description | default(omit) }}"
+      deploy_by: "{{ policy.deploy_by | default('ansible') }}"
+      scap_content_id: "{{ _scap_policy_content.resources[0].id }}"
+      scap_content_profile_id: "{{ _scap_policy_profile_matches[0].id }}"
+      tailoring_file_id: "{{ _scap_policy_tailoring.resources[0].id if policy.tailoring_file_name is defined else omit }}"
+      tailoring_file_profile_id: "{{ _scap_policy_tailoring_profile_matches[0].id if policy.tailoring_file_name is defined else omit }}"
+      period: "{{ policy.period }}"
+      weekday: "{{ policy.weekday | default(omit) }}"
+      day_of_month: "{{ policy.day_of_month | default(omit) }}"
+      cron_line: "{{ policy.cron_line | default(omit) }}"
+      hostgroup_ids: "{{ (_scap_policy_hostgroup_lookup.results | map(attribute='hostgroup') | map(attribute='id') | list) if policy.hostgroups is defined else omit }}"
+      organization_ids: "{{ policy.organization_ids | default(omit) }}"
+      location_ids: "{{ policy.location_ids | default(omit) }}"
+
+- name: scap policy {{ policy.name }} - create
+  become: false
+  ansible.builtin.uri:
+    url: "{{ foreman_url }}/api/compliance/policies"
+    method: POST
+    user: "{{ foreman_username }}"
+    password: "{{ vault_foreman_admin_password }}"
+    force_basic_auth: true
+    validate_certs: "{{ foreman_validate_certs }}"
+    body_format: json
+    body:
+      policy: "{{ _scap_policy_body }}"
+    status_code: [201]
+  when:
+    - policy.state | default('present') == 'present'
+    - _scap_policy_existing.resources | length == 0
+
+# Always PUT when the policy already exists — the compliance API isn't
+# covered by a dedicated module, so there's no cheap before/after diff to
+# gate this on (same non-idempotent-changed tradeoff as ldap_auth.yml's
+# account_password). state: absent below still short-circuits correctly.
+- name: scap policy {{ policy.name }} - update
+  become: false
+  ansible.builtin.uri:
+    url: "{{ foreman_url }}/api/compliance/policies/{{ _scap_policy_existing.resources[0].id }}"
+    method: PUT
+    user: "{{ foreman_username }}"
+    password: "{{ vault_foreman_admin_password }}"
+    force_basic_auth: true
+    validate_certs: "{{ foreman_validate_certs }}"
+    body_format: json
+    body:
+      policy: "{{ _scap_policy_body }}"
+    status_code: [200]
+  when:
+    - policy.state | default('present') == 'present'
+    - _scap_policy_existing.resources | length > 0
+
+- name: scap policy {{ policy.name }} - delete
+  become: false
+  ansible.builtin.uri:
+    url: "{{ foreman_url }}/api/compliance/policies/{{ _scap_policy_existing.resources[0].id }}"
+    method: DELETE
+    user: "{{ foreman_username }}"
+    password: "{{ vault_foreman_admin_password }}"
+    force_basic_auth: true
+    validate_certs: "{{ foreman_validate_certs }}"
+    status_code: [200, 204]
+  when:
+    - policy.state | default('present') == 'absent'
+    - _scap_policy_existing.resources | length > 0
