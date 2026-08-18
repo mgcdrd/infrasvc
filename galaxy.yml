@@ -1,6 +1,6 @@
 namespace: mgcdrd
 name: infrasvc
-version: 0.6.0
+version: 0.6.1
 readme: README.md
 authors:
 - mgcdrd mgcdryad@example.com
@@ -16,7 +16,7 @@ license:
 # L(specifiers,https://python-semanticversion.readthedocs.io/en/latest/#requirement-specification). Multiple version
 # range specifiers can be set and are separated by ','
 dependencies:
-  mgcdrd.infrabase: 0.8.1
+  mgcdrd.infrabase: ">=0.8.1"
 
 repository: https://github.com/mgcdrd/infrasvc
 #documentation: http://docs.example.com
