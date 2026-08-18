@@ -46,8 +46,9 @@
 # policy needs several IDs resolved by name first (content, profile,
 # optional tailoring file, host groups) — that per-policy lookup chain
 # lives in scap_policy.yml, run once per foreman_scap_policies entry.
+# become: false is set on each individual task inside scap_policy.yml
+# rather than here — ansible-core rejects `become` on include_tasks itself.
 - name: scap - manage compliance policies
-  become: false
   ansible.builtin.include_tasks: scap_policy.yml
   loop: "{{ foreman_scap_policies | default([]) }}"
   loop_control:
