@@ -1,0 +1,9 @@
+---
+
+- name: google_publicca_eab - Validate required variables
+  become: false
+  ansible.builtin.import_tasks: preflight.yml
+
+- name: google_publicca_eab - Generate EAB key and store in Vault
+  become: false
+  ansible.builtin.import_tasks: generate.yml

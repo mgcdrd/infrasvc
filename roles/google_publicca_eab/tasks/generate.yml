@@ -1,0 +1,92 @@
+---
+
+# Everything below runs on the control node, never on the target host —
+# this role only calls the GCP API and writes to Vault. The consuming
+# play should still target the real host (rather than hosts: localhost)
+# so google_publicca_eab_account_name defaults to a meaningful
+# inventory_hostname.
+- name: google_publicca_eab generate - Mint EAB key and store in Vault
+  delegate_to: localhost
+  become: false
+  block:
+
+    - name: google_publicca_eab generate - Create a temp file for the GCP service-account key
+      ansible.builtin.tempfile:
+        state: file
+        suffix: .json
+      register: _google_publicca_eab_sa_keyfile
+
+    - name: google_publicca_eab generate - Write the service-account key to the temp file
+      ansible.builtin.copy:
+        content: "{{ google_publicca_eab_gcp_sa_json }}"
+        dest: "{{ _google_publicca_eab_sa_keyfile.path }}"
+        mode: "0600"
+      no_log: true
+
+    - name: google_publicca_eab generate - Create the external account key
+      ansible.builtin.command:
+        argv:
+          - gcloud
+          - publicca
+          - external-account-keys
+          - create
+          - "--project={{ google_publicca_eab_project }}"
+          - "--format=json"
+      environment:
+        GOOGLE_APPLICATION_CREDENTIALS: "{{ _google_publicca_eab_sa_keyfile.path }}"
+      register: _google_publicca_eab_create
+      changed_when: true
+      no_log: true
+
+    - name: google_publicca_eab generate - Parse the created key
+      ansible.builtin.set_fact:
+        _google_publicca_eab_kid: "{{ (_google_publicca_eab_create.stdout | from_json).keyId }}"
+        _google_publicca_eab_hmac_key: "{{ (_google_publicca_eab_create.stdout | from_json).b64MacKey }}"
+      no_log: true
+
+    # auth_method/role_id/secret_id are passed explicitly because this is a
+    # community.hashi_vault *module*, not a lookup plugin — only lookup
+    # plugins get the declarative ANSIBLE_HASHI_VAULT_* env-var fallback,
+    # so without this the module silently falls back to auth_method=token
+    # (VAULT_TOKEN/~/.vault-token only) and can never authenticate via an
+    # AppRole. Mirrors foreman_install's ipa.yml.
+    - name: google_publicca_eab generate - Write the EAB key to Vault
+      community.hashi_vault.vault_kv2_write:
+        url: "{{ google_publicca_eab_vault_addr }}"
+        engine_mount_point: "{{ google_publicca_eab_vault_kv_mount }}"
+        path: "{{ google_publicca_eab_vault_path }}"
+        data:
+          kid: "{{ _google_publicca_eab_kid }}"
+          hmac_key: "{{ _google_publicca_eab_hmac_key }}"
+          account_name: "{{ google_publicca_eab_account_name }}"
+          created_at: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+        auth_method: "{{ lookup('env', 'ANSIBLE_HASHI_VAULT_AUTH_METHOD') or 'token' }}"
+        role_id: "{{ lookup('env', 'ANSIBLE_HASHI_VAULT_ROLE_ID') or omit }}"
+        secret_id: "{{ lookup('env', 'ANSIBLE_HASHI_VAULT_SECRET_ID') or omit }}"
+      no_log: true
+
+    - name: google_publicca_eab generate - Report result
+      ansible.builtin.debug:
+        msg: >-
+          EAB key {{ _google_publicca_eab_kid }} created and stored at
+          {{ google_publicca_eab_vault_kv_mount }}/{{ google_publicca_eab_vault_path }}.
+          It registers exactly one ACME account and is invalidated once
+          used — unused, it expires in 7 days.
+
+  always:
+
+    - name: google_publicca_eab generate - Shred the temp service-account key
+      ansible.builtin.command:
+        argv:
+          - shred
+          - --remove
+          - "{{ _google_publicca_eab_sa_keyfile.path }}"
+      changed_when: true
+      failed_when: false
+      when: _google_publicca_eab_sa_keyfile is defined
+
+    - name: google_publicca_eab generate - Remove the temp file if shred left it behind
+      ansible.builtin.file:
+        path: "{{ _google_publicca_eab_sa_keyfile.path }}"
+        state: absent
+      when: _google_publicca_eab_sa_keyfile is defined

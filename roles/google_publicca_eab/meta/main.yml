@@ -1,0 +1,16 @@
+---
+
+galaxy_info:
+  role_name: google_publicca_eab
+  author: mgcdrd
+  description: Mints a Google Cloud Public CA external account binding (EAB) key on demand and stores it in Vault
+  license: GPL-3.0-or-later
+  min_ansible_version: "2.14"
+
+  galaxy_tags:
+    - mgcdrd
+
+collections:
+  - community.hashi_vault
+
+dependencies: []

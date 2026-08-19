@@ -1,0 +1,36 @@
+---
+
+# ---- GCP ----
+
+# GCP project ID that owns the Public CA external account key. Required.
+google_publicca_eab_project: ""
+
+# Service-account JSON key *content* (not a path) used to authenticate
+# gcloud for this one call. Required. Feed this from Vault at the
+# deployment layer, e.g.:
+#   google_publicca_eab_gcp_sa_json: "{{ vault_google_sa_json }}"
+# The service account needs the Public CA External Account Key Creator
+# role (roles/publicca.externalAccountKeyCreator) on the project.
+google_publicca_eab_gcp_sa_json: ""
+
+# ---- ACCOUNT ----
+
+# Label for the ACME account this key will register. Used only to build a
+# per-account Vault path (see below) — never passed to gcloud.
+#
+# A Google Public CA EAB key is single-use: it registers exactly one ACME
+# account and is invalidated immediately after, and it expires unused
+# after 7 days. Never point two hosts/accounts at the same Vault path —
+# each registration needs its own freshly minted key.
+google_publicca_eab_account_name: "{{ inventory_hostname }}"
+
+# ---- VAULT (write destination) ----
+
+# HashiCorp Vault address, KV mount, and full KV path to write kid/
+# hmac_key to. All three required. The path is not built from
+# account_name automatically — compose it explicitly at the deployment
+# layer so it's obvious what consumes it, e.g.:
+#   google_publicca_eab_vault_path: "{{ vault_kv_env }}/acme/google/{{ google_publicca_eab_account_name }}"
+google_publicca_eab_vault_addr: ""
+google_publicca_eab_vault_kv_mount: ""
+google_publicca_eab_vault_path: ""

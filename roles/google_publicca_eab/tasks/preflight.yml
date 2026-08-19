@@ -1,0 +1,16 @@
+---
+
+- name: google_publicca_eab preflight - Assert required variables
+  become: false
+  ansible.builtin.assert:
+    quiet: true
+    that:
+      - google_publicca_eab_project | length > 0
+      - google_publicca_eab_gcp_sa_json | length > 0
+      - google_publicca_eab_vault_addr | length > 0
+      - google_publicca_eab_vault_kv_mount | length > 0
+      - google_publicca_eab_vault_path | length > 0
+    fail_msg: >-
+      google_publicca_eab_project, google_publicca_eab_gcp_sa_json,
+      google_publicca_eab_vault_addr, google_publicca_eab_vault_kv_mount,
+      and google_publicca_eab_vault_path must all be set.

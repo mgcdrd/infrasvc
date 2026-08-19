@@ -1,6 +1,6 @@
 namespace: mgcdrd
 name: infrasvc
-version: 0.6.2
+version: 0.7.0
 readme: README.md
 authors:
 - mgcdrd mgcdryad@example.com
