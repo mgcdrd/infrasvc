@@ -283,7 +283,13 @@ Notes
   `Cert_key_bundle` + `No such file or directory`) and retries the
   installer once automatically. Any other rc=6 (e.g. genuine proxy
   self-registration failure) still fails immediately — it is not silently
-  retried.
+  retried. The race can leave a mismatched Puppet agent keypair behind (a
+  private key written but never paired with its signed public half), which
+  `puppetserver ca setup` refuses to proceed past on a bare re-run
+  (`Missing public key to match private key`). Before retrying, the role
+  clears `/etc/puppetlabs/puppet/ssl` and `/etc/puppetlabs/puppetserver/ca`
+  — safe pre-success, since no real CA/certs exist yet — so the retry
+  regenerates both clean.
 - **Installer duration**: The first run takes 15–30 minutes. The `async` task
   polls every 30 seconds and times out after 2 hours.
 - **Custom certs and Katello**: server certs are passed with

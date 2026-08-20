@@ -93,6 +93,24 @@
              'Cert_key_bundle' in foreman_installer_result.stdout and
              'No such file or directory' in foreman_installer_result.stdout }}
 
+    # The race can abort mid-catalog after the Cert[...] resource has already
+    # written a private key but before it received its signed public half,
+    # leaving a mismatched keypair under the Puppet ssldir. puppetserver ca
+    # setup is not idempotent against that — it refuses to proceed instead of
+    # regenerating ("Missing public key to match private key"). Since this
+    # only happens before the installer has ever completed successfully (no
+    # /root/.foreman-installer-success yet), no real CA/certs exist to lose,
+    # so it's safe to clear both dirs and let the retry regenerate them clean.
+    - name: install - clear stale Puppet SSL state before retry
+      become: true
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /etc/puppetlabs/puppet/ssl
+        - /etc/puppetlabs/puppetserver/ca
+      when: foreman_installer_transient_race | bool
+
     - name: install - retry foreman-installer once after the transient cert_key_bundle race
       become: true
       ansible.builtin.shell:
