@@ -65,14 +65,21 @@ foreman_dhcp_range_start: ""
 foreman_dhcp_range_end: ""
 foreman_dhcp_nameservers: []
 
-# ---- DNS (PowerDNS) ----
+# ---- DNS ----
 foreman_dns_enable: false
-foreman_dns_provider: powerdns
+foreman_dns_provider: powerdns        # powerdns or nsupdate
+foreman_dns_forwarders: []
 foreman_pdns_api_url: "http://localhost:8081"
+# vault_pdns_api_key required when foreman_dns_provider: powerdns
+foreman_dns_nsupdate_server: ""       # required when foreman_dns_provider: nsupdate
 
 # ---- TFTP ----
 foreman_tftp_enable: true
 foreman_tftp_listen_on: https
+
+# Smart proxy template URL (--foreman-proxy-template-url). Leave "" to use
+# the installer default (the proxy's own hostname/port).
+foreman_proxy_template_url: ""
 
 # ---- Realm / IPA ----
 foreman_realm_enable: false

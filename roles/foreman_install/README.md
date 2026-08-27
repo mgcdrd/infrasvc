@@ -135,13 +135,19 @@ foreman_dhcp_range_end: ""
 foreman_dhcp_nameservers: []
 ```
 
-### DNS (PowerDNS)
+### DNS
 
 ```yaml
-foreman_dns_enable: false            # true to enable smart proxy DNS via PowerDNS
-foreman_dns_provider: powerdns
+foreman_dns_enable: false            # true to enable smart proxy DNS
+foreman_dns_provider: powerdns       # powerdns or nsupdate
+foreman_dns_forwarders: []           # non-managed-zone forwarders, either provider
+
+# powerdns provider
 foreman_pdns_api_url: "http://localhost:8081"
-# vault_pdns_api_key must be set when foreman_dns_enable: true
+# vault_pdns_api_key must be set when foreman_dns_provider: powerdns
+
+# nsupdate provider
+foreman_dns_nsupdate_server: ""      # nameserver to submit updates to, required when foreman_dns_provider: nsupdate
 ```
 
 ### TFTP
@@ -149,6 +155,12 @@ foreman_pdns_api_url: "http://localhost:8081"
 ```yaml
 foreman_tftp_enable: true
 foreman_tftp_listen_on: https
+
+# Smart proxy template URL (--foreman-proxy-template-url). Leave "" to use
+# the installer default (the proxy's own hostname/port) — set this when the
+# proxy should serve provisioning templates from a different URL (e.g. an
+# HA/load-balanced endpoint).
+foreman_proxy_template_url: ""
 ```
 
 ### IPA / Realm

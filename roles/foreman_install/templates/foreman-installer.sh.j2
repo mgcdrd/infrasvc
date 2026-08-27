@@ -55,6 +55,9 @@ foreman-installer \
 {% endif %}
 \
   --foreman-proxy-templates true \
+{% if foreman_proxy_template_url | length > 0 %}
+  --foreman-proxy-template-url "{{ foreman_proxy_template_url }}" \
+{% endif %}
   --foreman-proxy-tftp {{ foreman_tftp_enable | lower }} \
 {% if foreman_tftp_enable | bool %}
   --foreman-proxy-tftp-listen-on "{{ foreman_tftp_listen_on }}" \
@@ -72,9 +75,16 @@ foreman-installer \
 {% if foreman_dns_enable | bool %}
   --foreman-proxy-dns true \
   --foreman-proxy-dns-provider "{{ foreman_dns_provider }}" \
+{% for forwarder in foreman_dns_forwarders %}
+  --foreman-proxy-dns-forwarders "{{ forwarder }}" \
+{% endfor %}
+{% if foreman_dns_provider == 'powerdns' %}
   --enable-foreman-proxy-plugin-dns-powerdns \
   --foreman-proxy-plugin-dns-powerdns-rest-api-key "{{ vault_pdns_api_key }}" \
   --foreman-proxy-plugin-dns-powerdns-rest-url "{{ foreman_pdns_api_url }}" \
+{% elif foreman_dns_provider == 'nsupdate' %}
+  --foreman-proxy-dns-server "{{ foreman_dns_nsupdate_server }}" \
+{% endif %}
 {% endif %}
 \
 {% if foreman_realm_enable | bool %}
