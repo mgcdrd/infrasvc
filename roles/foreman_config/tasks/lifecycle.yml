@@ -31,6 +31,28 @@
     state: "{{ item.state | default('present') }}"
   loop: "{{ foreman_content_views | default([]) }}"
 
+# content_view_version's `version: "1.0"` promote is not idempotent past the
+# first publish: it looks up version 1.0 specifically and force-promotes it
+# into every environment that doesn't currently hold *that exact version* —
+# including ones a later publish already moved forward. Left gated only on
+# `first_publish`, a re-run after subsequent versions exist reverts every
+# environment back to 1.0. So check for an existing version first and skip
+# the publish/promote once the content view has one, regardless of the flag.
+- name: lifecycle - check for existing content view versions
+  become: false
+  theforeman.foreman.content_view_version_info:
+    username: "{{ foreman_username }}"
+    password: "{{ vault_foreman_admin_password }}"
+    server_url: "{{ foreman_url }}"
+    validate_certs: "{{ foreman_validate_certs }}"
+    content_view: "{{ item.name }}"
+    organization: "{{ item.org | default(foreman_org) }}"
+  register: _foreman_cv_versions
+  loop: "{{ foreman_content_views | default([]) }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: item.first_publish | default(false) | bool
+
 - name: lifecycle - initial publish and promote content views
   become: false
   theforeman.foreman.content_view_version:
@@ -38,12 +60,16 @@
     password: "{{ vault_foreman_admin_password }}"
     server_url: "{{ foreman_url }}"
     validate_certs: "{{ foreman_validate_certs }}"
-    content_view: "{{ item.name }}"
-    organization: "{{ item.org | default(foreman_org) }}"
-    lifecycle_environments: "{{ item.lifecycle_envs }}"
+    content_view: "{{ item.item.name }}"
+    organization: "{{ item.item.org | default(foreman_org) }}"
+    lifecycle_environments: "{{ item.item.lifecycle_envs }}"
     version: "1.0"
-  loop: "{{ foreman_content_views | default([]) }}"
-  when: item.first_publish | default(false) | bool
+  loop: "{{ _foreman_cv_versions.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+  when:
+    - item.item.first_publish | default(false) | bool
+    - (item.content_view_versions | default([]) | length) == 0
 
 - name: lifecycle - create activation keys
   become: false

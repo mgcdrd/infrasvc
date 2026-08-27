@@ -113,7 +113,7 @@ foreman_lifecycle_envs:
 foreman_content_views:
   - name: Rocky 9 x86_64
     org: "{{ foreman_org }}"
-    first_publish: true           # publish version 1.0 and promote on first run
+    first_publish: true           # publish version 1.0 and promote once; safe to leave true — skipped once a version exists
     lifecycle_envs:
       - Development
       - Production
