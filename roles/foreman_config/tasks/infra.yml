@@ -89,6 +89,9 @@
       ssl_verify_peer: "{{ item.ssl_verify_peer | default(omit) }}"
     state: "{{ item.state | default('present') }}"
   loop: "{{ foreman_compute_resources | default([]) }}"
+  loop_control:
+    label: "{{ item.name }}"
+  no_log: true
 
 - name: infra - create compute profiles
   become: false
