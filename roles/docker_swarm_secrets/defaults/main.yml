@@ -1,0 +1,29 @@
+---
+
+# List of Docker Swarm secrets to manage. Each item maps onto
+# community.docker.docker_secret — see that module's docs for the full
+# option set. Must run against a swarm manager node.
+#
+#   name    - required. Secret name.
+#   data    - secret value. Source from {{ vault_<name> }} — never hardcode.
+#             Required unless state: absent.
+#   labels  - dict of metadata labels.
+#   force   - true to always remove and recreate, even if unchanged. Default:
+#             false — the module tracks a content hash automatically, so
+#             normal rotation (changing 'data') updates in place without it.
+#   state   - 'present' (default) or 'absent'.
+docker_secrets: []
+# docker_secrets:
+#   - name: keycloak_db_password
+#     data: "{{ vault_keycloak_db_password }}"
+#   - name: old_api_key
+#     state: absent
+
+# List of Docker Swarm configs to manage. Same shape as docker_secrets,
+# maps onto community.docker.docker_config. Use for non-sensitive config
+# content that still needs distributing to service containers — secrets go
+# through docker_secrets instead.
+docker_configs: []
+# docker_configs:
+#   - name: haproxy_cfg
+#     data: "{{ lookup('template', 'haproxy.cfg.j2') }}"

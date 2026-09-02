@@ -1,0 +1,22 @@
+---
+
+- name: docker_swarm nodeconfig - Validate node config entries
+  ansible.builtin.assert:
+    that:
+      - item.hostname is defined
+    fail_msg: "docker_swarm_node_config entry is missing required 'hostname'."
+    quiet: true
+  loop: "{{ docker_swarm_node_config }}"
+  loop_control:
+    label: "{{ item.hostname | default('?') }}"
+
+- name: docker_swarm nodeconfig - Apply node role, availability, and labels
+  community.docker.docker_node:
+    hostname: "{{ item.hostname }}"
+    role: "{{ item.role | default(omit) }}"
+    availability: "{{ item.availability | default(omit) }}"
+    labels: "{{ item.labels | default(omit) }}"
+    labels_state: "{{ item.labels_state | default('merge') }}"
+  loop: "{{ docker_swarm_node_config }}"
+  loop_control:
+    label: "{{ item.hostname }}"

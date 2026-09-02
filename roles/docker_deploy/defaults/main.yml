@@ -1,0 +1,33 @@
+---
+
+# List of Docker deployments to manage. Each item is either a Swarm stack
+# (mode: stack, community.docker.docker_stack) or a standalone Compose
+# project on a single non-swarm node (mode: compose,
+# community.docker.docker_compose_v2). Fields are passed straight through
+# to the underlying module's own option names — see each module's docs for
+# the full option set.
+#
+#   name        - required. Stack/project name.
+#   mode        - 'stack' or 'compose'. Default: 'compose'.
+#   compose     - mode: stack only, required. List of compose file paths on
+#                 the target host, or inline compose dicts.
+#   project_src - mode: compose only, required. Path to a directory
+#                 containing a compose file on the target host.
+#   files       - mode: compose only, optional. Compose file names relative
+#                 to project_src, instead of the default compose.yml.
+#   prune       - mode: stack only. Remove services no longer in the stack
+#                 definition. Default: false.
+#   with_registry_auth - mode: stack only. Send registry auth to swarm
+#                 agents. Default: false.
+#   resolve_image - mode: stack only. 'always', 'changed', or 'never'.
+#   state       - 'present' (default) or 'absent'.
+docker_deploy: []
+# docker_deploy:
+#   - name: monitoring
+#     mode: stack
+#     compose:
+#       - /opt/stacks/monitoring/compose.yml
+#     prune: true
+#   - name: pihole
+#     mode: compose
+#     project_src: /opt/compose/pihole

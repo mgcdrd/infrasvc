@@ -1,0 +1,40 @@
+---
+
+- name: docker_swarm prep-node - Install container runtime (docker)
+  ansible.builtin.include_role:
+    name: mgcdrd.infrabase.docker
+
+- name: docker_swarm prep-node - Install Docker SDK for Python (Debian)
+  ansible.builtin.apt:
+    name: python3-docker
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when: ansible_facts['os_family'] == 'Debian'
+
+- name: docker_swarm prep-node - Enable EPEL (RedHat)
+  ansible.builtin.dnf:
+    name: epel-release
+    state: present
+  when: ansible_facts['os_family'] == 'RedHat'
+
+- name: docker_swarm prep-node - Install Docker SDK for Python (RedHat)
+  ansible.builtin.dnf:
+    name: python3-docker
+    state: present
+  when: ansible_facts['os_family'] == 'RedHat'
+
+- name: docker_swarm prep-node - Gather service facts
+  ansible.builtin.service_facts:
+  when: ansible_facts['os_family'] == 'RedHat'
+
+- name: docker_swarm prep-node - Open firewalld ports
+  ansible.posix.firewalld:
+    port: "{{ item }}"
+    permanent: true
+    immediate: true
+    state: enabled
+  loop: "{{ docker_swarm_firewalld_ports }}"
+  when:
+    - ansible_facts['os_family'] == 'RedHat'
+    - ansible_facts.services['firewalld.service'].state | default('') == 'running'

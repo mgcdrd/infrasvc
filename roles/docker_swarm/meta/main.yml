@@ -1,0 +1,19 @@
+---
+
+galaxy_info:
+  role_name: docker_swarm
+  author: mgcdrd
+  description: Initializes and manages a Docker Swarm cluster — manager/worker join, and node role/availability/label management.
+  license: GPL-3.0-or-later
+  min_ansible_version: "2.14"
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+        - trixie
+    - name: EL
+      versions:
+        - "9"
+        - "10"
+
+dependencies: []

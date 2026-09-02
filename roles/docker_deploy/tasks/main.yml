@@ -1,0 +1,40 @@
+---
+
+- name: docker_deploy - Validate deployment definitions
+  ansible.builtin.assert:
+    that:
+      - item.name is defined
+      - item.mode | default('compose') in ['stack', 'compose']
+      - (item.mode | default('compose') == 'stack' and item.compose is defined) or
+        (item.mode | default('compose') == 'compose' and item.project_src is defined)
+    fail_msg: >-
+      docker_deploy entry '{{ item.name | default("(missing name)") }}' needs
+      'compose' (mode: stack) or 'project_src' (mode: compose).
+    quiet: true
+  loop: "{{ docker_deploy }}"
+  loop_control:
+    label: "{{ item.name | default('?') }}"
+
+- name: docker_deploy - Deploy swarm stacks
+  community.docker.docker_stack:
+    name: "{{ item.name }}"
+    compose: "{{ item.compose }}"
+    prune: "{{ item.prune | default(false) }}"
+    with_registry_auth: "{{ item.with_registry_auth | default(false) }}"
+    resolve_image: "{{ item.resolve_image | default(omit) }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ docker_deploy }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: item.mode | default('compose') == 'stack'
+
+- name: docker_deploy - Deploy standalone compose projects
+  community.docker.docker_compose_v2:
+    project_name: "{{ item.name }}"
+    project_src: "{{ item.project_src }}"
+    files: "{{ item.files | default(omit) }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ docker_deploy }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: item.mode | default('compose') == 'compose'

@@ -1,0 +1,25 @@
+---
+
+# ---- Node preparation (docker_swarm_run: config) ----
+- name: docker_swarm main - Node preparation
+  import_tasks: prep-node.yml
+  when: docker_swarm_run == 'config'
+
+# ---- Swarm initialization (docker_swarm_run: init, first manager only) ----
+- name: docker_swarm main - Initialize swarm
+  import_tasks: initialize.yml
+  when:
+    - docker_swarm_run == 'init'
+    - inventory_hostname == docker_swarm_init_manager
+
+# ---- Node join (docker_swarm_run: init or addnodes) ----
+- name: docker_swarm main - Add nodes to swarm
+  import_tasks: addnodes.yml
+  when: docker_swarm_run in ['init', 'addnodes']
+
+# ---- Node configuration (docker_swarm_run: nodeconfig, run from init manager) ----
+- name: docker_swarm main - Apply node configuration
+  import_tasks: nodeconfig.yml
+  when:
+    - docker_swarm_run == 'nodeconfig'
+    - inventory_hostname == docker_swarm_init_manager

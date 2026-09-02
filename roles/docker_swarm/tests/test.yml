@@ -1,0 +1,23 @@
+---
+
+# Phase 1 — prepare all nodes (container runtime, Docker SDK, firewalld)
+- name: docker_swarm node preparation
+  hosts: docker_swarm
+  gather_facts: true
+  become: true
+  roles:
+    - mgcdrd.infrasvc.docker_swarm
+  vars:
+    docker_swarm_run: config
+
+# Phase 2 — initialize swarm (run once against all nodes; init only fires
+#            on docker_swarm_init_manager)
+- name: docker_swarm cluster initialization and node join
+  hosts: docker_swarm
+  gather_facts: true
+  become: true
+  roles:
+    - mgcdrd.infrasvc.docker_swarm
+  vars:
+    docker_swarm_run:          init
+    docker_swarm_init_manager: swarm-mgr1.example.com

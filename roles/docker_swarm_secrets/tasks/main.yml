@@ -1,0 +1,50 @@
+---
+
+- name: docker_swarm_secrets - Validate secret definitions
+  ansible.builtin.assert:
+    that:
+      - item.name is defined
+      - item.data is defined or item.state | default('present') == 'absent'
+    fail_msg: >-
+      docker_secrets entry '{{ item.name | default("(missing name)") }}' needs
+      'data' unless state is 'absent'.
+    quiet: true
+  loop: "{{ docker_secrets }}"
+  loop_control:
+    label: "{{ item.name | default('?') }}"
+
+- name: docker_swarm_secrets - Manage swarm secrets
+  community.docker.docker_secret:
+    name: "{{ item.name }}"
+    data: "{{ item.data | default(omit) }}"
+    labels: "{{ item.labels | default(omit) }}"
+    force: "{{ item.force | default(false) }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ docker_secrets }}"
+  loop_control:
+    label: "{{ item.name }}"
+  no_log: true
+
+- name: docker_swarm_secrets - Validate config definitions
+  ansible.builtin.assert:
+    that:
+      - item.name is defined
+      - item.data is defined or item.state | default('present') == 'absent'
+    fail_msg: >-
+      docker_configs entry '{{ item.name | default("(missing name)") }}' needs
+      'data' unless state is 'absent'.
+    quiet: true
+  loop: "{{ docker_configs }}"
+  loop_control:
+    label: "{{ item.name | default('?') }}"
+
+- name: docker_swarm_secrets - Manage swarm configs
+  community.docker.docker_config:
+    name: "{{ item.name }}"
+    data: "{{ item.data | default(omit) }}"
+    labels: "{{ item.labels | default(omit) }}"
+    force: "{{ item.force | default(false) }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ docker_configs }}"
+  loop_control:
+    label: "{{ item.name }}"

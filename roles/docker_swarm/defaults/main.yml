@@ -1,0 +1,59 @@
+---
+
+# ---- ROLE PHASE ----
+# Controls which phase the role executes.
+#   config     - node preparation (container runtime, Docker SDK for Python, firewalld ports)
+#   init       - initialize the swarm on docker_swarm_init_manager, then join all nodes
+#   addnodes   - join nodes to an already-initialized swarm
+#   nodeconfig - apply role/availability/label changes to existing nodes
+docker_swarm_run: config
+
+# ---- INIT MANAGER ADVERTISE/LISTEN ADDRESS ----
+# Address this node advertises to other nodes, and the address/port it
+# listens on for inter-manager communication. Defaults to the node's primary
+# IPv4 address.
+docker_swarm_advertise_addr: "{{ ansible_default_ipv4.address }}"
+docker_swarm_listen_addr: "0.0.0.0:2377"
+
+# ---- DEFAULT ADDRESS POOL ----
+# Overlay network address pool, only used at swarm init. Leave empty to use
+# Docker's built-in default (10.0.0.0/8 split into /24s).
+docker_swarm_default_addr_pool: []
+docker_swarm_subnet_size: 24
+
+# ---- FIREWALLD (RedHat only) ----
+# Ports required for swarm cluster communication, opened on every node.
+docker_swarm_firewalld_ports:
+  - 2377/tcp   # cluster management (manager nodes)
+  - 7946/tcp   # container network discovery
+  - 7946/udp   # container network discovery
+  - 4789/udp   # overlay network traffic (VXLAN)
+
+# ---- KEEPALIVED INTEGRATION ----
+# When true, the addnodes phase stops keepalived on non-init managers before
+# joining and restarts it after, so the VIP stays pinned to the init manager
+# during the join. Mirrors the same flag on the k8s role.
+docker_swarm_keepalived_enabled: false
+
+# ---- NODE CONFIG (docker_swarm_run: nodeconfig) ----
+# List of node role/availability/label changes to apply. Each item maps onto
+# community.docker.docker_node — see that module's docs for the full option
+# set. Runs on docker_swarm_init_manager against its local swarm connection.
+#
+#   hostname     - required. Hostname or ID of the node as registered in swarm.
+#   role         - manager | worker. Omit to leave unchanged.
+#   availability - active | pause | drain. Omit to leave unchanged.
+#   labels       - dict of node labels.
+#   labels_state - merge (default) | replace.
+docker_swarm_node_config: []
+# docker_swarm_node_config:
+#   - hostname: worker3.example.com
+#     availability: drain
+#   - hostname: worker1.example.com
+#     labels:
+#       tier: frontend
+
+# ---- REQUIRED VARIABLES (no defaults) ----
+# These must be set in your play vars or inventory:
+#
+#   docker_swarm_init_manager:  # inventory_hostname of the node that runs the initial swarm init

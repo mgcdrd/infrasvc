@@ -1,0 +1,9 @@
+---
+
+- name: docker_swarm initialize - Initialize swarm
+  community.docker.docker_swarm:
+    state: present
+    advertise_addr: "{{ docker_swarm_advertise_addr }}"
+    listen_addr: "{{ docker_swarm_listen_addr }}"
+    default_addr_pool: "{{ docker_swarm_default_addr_pool if docker_swarm_default_addr_pool | length > 0 else omit }}"
+    subnet_size: "{{ docker_swarm_subnet_size }}"

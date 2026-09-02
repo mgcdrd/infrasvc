@@ -1,0 +1,62 @@
+---
+
+- name: docker_swarm addnodes - Stop keepalived on non-init managers before join
+  ansible.builtin.systemd_service:
+    name: keepalived.service
+    state: stopped
+  when:
+    - docker_swarm_keepalived_enabled | bool
+    - inventory_hostname in groups['docker_swarm_managers']
+    - inventory_hostname != docker_swarm_init_manager
+
+- name: docker_swarm addnodes - Wait for VIP to settle on init manager
+  ansible.builtin.pause:
+    seconds: 5
+  run_once: true
+  when:
+    - docker_swarm_keepalived_enabled | bool
+    - groups['docker_swarm_managers'] | length > 1
+
+- name: docker_swarm addnodes - Get swarm join tokens from init manager
+  community.docker.docker_swarm_info:
+  register: _docker_swarm_info
+  run_once: true
+  delegate_to: "{{ docker_swarm_init_manager }}"
+
+- name: docker_swarm addnodes - Set join facts
+  ansible.builtin.set_fact:
+    _docker_swarm_manager_token: "{{ _docker_swarm_info.swarm_facts.JoinTokens.Manager }}"
+    _docker_swarm_worker_token: "{{ _docker_swarm_info.swarm_facts.JoinTokens.Worker }}"
+    _docker_swarm_remote_addr: "{{ hostvars[docker_swarm_init_manager]['docker_swarm_advertise_addr'] | default(hostvars[docker_swarm_init_manager]['ansible_default_ipv4']['address']) }}:2377"
+  run_once: true
+
+- name: docker_swarm addnodes - Join additional managers to swarm
+  community.docker.docker_swarm:
+    state: join
+    advertise_addr: "{{ docker_swarm_advertise_addr }}"
+    listen_addr: "{{ docker_swarm_listen_addr }}"
+    join_token: "{{ _docker_swarm_manager_token }}"
+    remote_addrs:
+      - "{{ _docker_swarm_remote_addr }}"
+  when:
+    - inventory_hostname in groups['docker_swarm_managers']
+    - inventory_hostname != docker_swarm_init_manager
+
+- name: docker_swarm addnodes - Join workers to swarm
+  community.docker.docker_swarm:
+    state: join
+    advertise_addr: "{{ docker_swarm_advertise_addr }}"
+    listen_addr: "{{ docker_swarm_listen_addr }}"
+    join_token: "{{ _docker_swarm_worker_token }}"
+    remote_addrs:
+      - "{{ _docker_swarm_remote_addr }}"
+  when: inventory_hostname in groups['docker_swarm_workers'] | default([])
+
+- name: docker_swarm addnodes - Restart keepalived on non-init managers after join
+  ansible.builtin.systemd_service:
+    name: keepalived.service
+    state: started
+  when:
+    - docker_swarm_keepalived_enabled | bool
+    - inventory_hostname in groups['docker_swarm_managers']
+    - inventory_hostname != docker_swarm_init_manager
