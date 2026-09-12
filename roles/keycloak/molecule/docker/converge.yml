@@ -1,0 +1,22 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    keycloak_install_method: docker
+    keycloak_manage_tls: false
+    keycloak_shared_storage: local
+    keycloak_network_mode: host
+    keycloak_hostname: kc.molecule.test
+    keycloak_version: "26.4"
+    postgres_host: 127.0.0.1
+    postgres_port: 5432
+    postgres_db: keycloak
+    keycloak_db_user: keycloak
+    keycloak_db_password: molecule-not-a-secret
+    keycloak_admin_user: admin
+    keycloak_admin_password: molecule-not-a-secret
+  tasks:
+    - name: Include mgcdrd.infrasvc.keycloak
+      ansible.builtin.include_role:
+        name: mgcdrd.infrasvc.keycloak

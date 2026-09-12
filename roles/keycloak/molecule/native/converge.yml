@@ -1,0 +1,25 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    keycloak_install_method: native
+    keycloak_manage_tls: false
+    keycloak_release: "{{ lookup('env', 'KC_RELEASE') | default('26.4.0', true) }}"
+    keycloak_hostname: kc.molecule.test
+    keycloak_hostname_strict: false
+    # Single-node CI: keep Infinispan simple and DB traffic plaintext.
+    keycloak_cache_stack: jdbc-ping
+    keycloak_cache_embedded_mtls_enabled: false
+    keycloak_db_sslmode: disable
+    postgres_host: 127.0.0.1
+    postgres_port: 5432
+    postgres_db: keycloak
+    keycloak_db_user: keycloak
+    keycloak_db_password: molecule-not-a-secret
+    keycloak_admin_user: admin
+    keycloak_admin_password: molecule-not-a-secret
+  tasks:
+    - name: Include mgcdrd.infrasvc.keycloak
+      ansible.builtin.include_role:
+        name: mgcdrd.infrasvc.keycloak

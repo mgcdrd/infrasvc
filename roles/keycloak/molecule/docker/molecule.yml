@@ -1,0 +1,19 @@
+---
+# Base config comes from ../../../../.config/molecule/config.yml.
+#
+# Regression scenario for the unchanged Docker Compose path after the
+# dispatcher split. Runs dockerd inside a privileged systemd container
+# (docker-in-docker), with a native PostgreSQL on localhost from
+# prepare.yml. keycloak_network_mode stays 'host', so the Keycloak
+# container reaches 127.0.0.1:5432 directly.
+
+platforms:
+  - name: kc-docker-rocky9
+    image: geerlingguy/docker-rockylinux9-ansible:latest
+    command: /usr/lib/systemd/systemd
+    systemd: true
+    privileged: true
+    cgroupns_mode: host
+    pre_build_image: true
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw

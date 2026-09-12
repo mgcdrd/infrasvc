@@ -1,0 +1,51 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: Collect service facts
+      ansible.builtin.service_facts:
+
+    - name: Keycloak service is running
+      ansible.builtin.assert:
+        quiet: true
+        that:
+          - (ansible_facts.services['keycloak.service'].state | default('')) == 'running'
+
+    - name: kc.sh and the version symlink are in place
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - /opt/keycloak/bin/kc.sh
+        - /opt/keycloak/lib/quarkus/quarkus-application.dat
+      register: _kc_paths
+
+    - name: The optimized build ran
+      ansible.builtin.assert:
+        quiet: true
+        that:
+          - _kc_paths.results | map(attribute='stat.exists') | list == [true, true]
+
+    - name: Read the systemd unit
+      ansible.builtin.slurp:
+        src: /etc/systemd/system/keycloak.service
+      register: _unit
+
+    - name: Unit carries the privileged-port capability and sandboxing
+      ansible.builtin.assert:
+        quiet: true
+        that:
+          - "'AmbientCapabilities=CAP_NET_BIND_SERVICE' in (_unit.content | b64decode)"
+          - "'ProtectSystem=strict' in (_unit.content | b64decode)"
+          - "'kc.sh start --optimized' in (_unit.content | b64decode)"
+
+    - name: Health endpoint answers on the management port
+      ansible.builtin.uri:
+        url: https://localhost:9000/health/ready
+        validate_certs: false
+        status_code: 200
+      register: _health
+      retries: 20
+      delay: 6
+      until: _health.status == 200

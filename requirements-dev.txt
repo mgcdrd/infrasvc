@@ -1,0 +1,5 @@
+# Dev/test tooling for this collection. `make setup` installs it into .venv.
+ansible-core>=2.16
+ansible-lint>=24.2
+molecule>=6.0
+molecule-plugins[docker]>=23.5

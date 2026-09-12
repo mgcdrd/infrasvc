@@ -1,0 +1,46 @@
+---
+- name: Prepare
+  hosts: all
+  become: true
+  vars:
+    kc_hostname: kc.molecule.test
+    kc_cert_dir: "/etc/ssl/acme/{{ kc_hostname }}"
+  tasks:
+    - name: Resolve the test hostname locally
+      ansible.builtin.lineinfile:
+        path: /etc/hosts
+        line: "127.0.0.1 {{ kc_hostname }}"
+        state: present
+
+    - name: Stand up a local PostgreSQL for Keycloak
+      ansible.builtin.include_role:
+        name: mgcdrd.infrabase.postgresql
+      vars:
+        postgresql_version: "18"
+        postgresql_ssl: false
+        postgresql_hba_entries:
+          - { type: local, database: all, user: all, method: peer }
+          - { type: host, database: all, user: all, address: "127.0.0.1/32", method: scram-sha-256 }
+        postgresql_roles:
+          - name: keycloak
+            password: molecule-not-a-secret
+            role_attr_flags: LOGIN
+        postgresql_databases:
+          - name: keycloak
+            owner: keycloak
+
+    - name: Create the cert directory
+      ansible.builtin.file:
+        path: "{{ kc_cert_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Generate a self-signed cert for the HTTPS listener
+      ansible.builtin.command:
+        cmd: >-
+          openssl req -x509 -newkey rsa:2048 -nodes -days 3
+          -subj "/CN={{ kc_hostname }}"
+          -addext "subjectAltName=DNS:{{ kc_hostname }},DNS:localhost"
+          -keyout {{ kc_cert_dir }}/key.pem
+          -out {{ kc_cert_dir }}/fullchain.pem
+        creates: "{{ kc_cert_dir }}/fullchain.pem"
