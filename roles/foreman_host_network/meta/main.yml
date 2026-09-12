@@ -1,0 +1,16 @@
+---
+galaxy_info:
+  author: mgcdrd
+  description: Update an existing Foreman host's interface subnet/IP/VLAN tag via the API
+  role_name: foreman_host_network
+
+  license: GPL-3.0-or-later
+
+  min_ansible_version: '2.14'
+
+  galaxy_tags:
+    - mgcdrd
+    - foreman
+
+collections:
+  - theforeman.foreman

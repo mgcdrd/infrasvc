@@ -1,0 +1,30 @@
+---
+# ---- Foreman API connection ----
+foreman_host_network_url: "https://foreman.lab.provenzawt.dev"
+foreman_host_network_username: ""
+foreman_host_network_password: ""
+foreman_host_network_validate_certs: true
+
+# ---- Target ----
+foreman_host_network_host: ""      # Foreman host name (required)
+foreman_host_network_subnet: ""    # Target Foreman subnet name (required)
+foreman_host_network_ip: ""        # New IP for that interface (required)
+
+# Override only if the interface to update isn't the one Foreman flags as
+# primary (e.g. multi-NIC hosts). Matches an interface's `identifier`
+# field (e.g. "ens18"), not its Foreman-assigned name.
+foreman_host_network_interface_identifier: ""
+
+# VLAN tag to set on the interface.
+#
+# IMPORTANT: this only reaches the actual hypervisor NIC if the host is
+# Compute-Resource-linked in Foreman (non-null compute_resource_id + uuid
+# on the host record — set when a host was provisioned through Foreman's
+# own "New Host -> Compute Resource" flow). Confirmed live against this
+# lab's Foreman (2026-09-02): none of its hosts are compute-resource-linked
+# (all show provision_method: build), so setting this here only updates
+# Foreman's own interface record — it does not touch Proxmox. Use
+# mgcdrd.infrabase.proxmox_nic directly for the real VLAN/bridge change on
+# hosts like that (see the vm-migrate deployment). Only rely on this field
+# alone in an environment you've confirmed is actually compute-resource-linked.
+foreman_host_network_vlan_tag: ""

@@ -1,0 +1,55 @@
+---
+# theforeman.foreman.host handles the host/subnet lookups and idempotent
+# interface matching internally -- no need to hand-roll it against the
+# raw API. Already used the same way elsewhere in this collection (see
+# mgcdrd.infrasvc.foreman_config).
+
+- name: foreman_host_network main - fail if required variables are unset
+  ansible.builtin.assert:
+    that:
+      - foreman_host_network_host | length > 0
+      - foreman_host_network_subnet | length > 0
+      - foreman_host_network_ip | length > 0
+    fail_msg: >-
+      foreman_host_network_host, foreman_host_network_subnet, and
+      foreman_host_network_ip are all required.
+    quiet: true
+
+# Matching an existing interface for idempotent update requires identifier,
+# name, or mac (theforeman.foreman.host docs) -- default to matching by
+# name, since a managed primary interface's name equals the host's own
+# FQDN (confirmed against a live host record, 2026-09-02). Multi-NIC hosts
+# should set foreman_host_network_interface_identifier instead.
+- name: foreman_host_network main - update interface (matched by identifier)
+  theforeman.foreman.host:
+    username:        "{{ foreman_host_network_username }}"
+    password:         "{{ foreman_host_network_password }}"
+    server_url:        "{{ foreman_host_network_url }}"
+    validate_certs:     "{{ foreman_host_network_validate_certs }}"
+    name: "{{ foreman_host_network_host }}"
+    interfaces_attributes:
+      - identifier: "{{ foreman_host_network_interface_identifier }}"
+        ip:         "{{ foreman_host_network_ip }}"
+        subnet:     "{{ foreman_host_network_subnet }}"
+        tag:        "{{ foreman_host_network_vlan_tag | default(omit) }}"
+    state: present
+  when: foreman_host_network_interface_identifier | length > 0
+  delegate_to: localhost
+  no_log: true
+
+- name: foreman_host_network main - update interface (matched by name)
+  theforeman.foreman.host:
+    username:        "{{ foreman_host_network_username }}"
+    password:         "{{ foreman_host_network_password }}"
+    server_url:        "{{ foreman_host_network_url }}"
+    validate_certs:     "{{ foreman_host_network_validate_certs }}"
+    name: "{{ foreman_host_network_host }}"
+    interfaces_attributes:
+      - name:     "{{ foreman_host_network_host }}"
+        ip:       "{{ foreman_host_network_ip }}"
+        subnet:   "{{ foreman_host_network_subnet }}"
+        tag:      "{{ foreman_host_network_vlan_tag | default(omit) }}"
+    state: present
+  when: foreman_host_network_interface_identifier | length == 0
+  delegate_to: localhost
+  no_log: true
