@@ -1,0 +1,15 @@
+---
+
+# Deploys the acme.sh -> IPA cert install script. Cert issuance/renewal
+# itself stays on acme.sh's own cron; this just keeps the reload script
+# under version control (and off plaintext-hardcoded credentials) instead
+# of a hand-edited file on each server.
+
+- name: ipa_server acme_cert - Deploy acme.sh renewal script
+  become: true
+  ansible.builtin.template:
+    src: acme.sh.renewal.sh.j2
+    dest: /usr/local/sbin/acme.sh.renewal.sh
+    owner: root
+    group: root
+    mode: "0700"

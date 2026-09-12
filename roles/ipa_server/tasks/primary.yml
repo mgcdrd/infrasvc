@@ -1,0 +1,21 @@
+---
+
+# ipa-server-install via the upstream role. DNS is never set up here
+# (PowerDNS stays authoritative); --no-host-dns skips the installer's own
+# DNS discovery, which the dns_host.yml records above have already satisfied.
+# ipaserver_external_ca stays false → a self-signed IPA CA.
+- name: ipa_server primary - Install FreeIPA primary server
+  ansible.builtin.include_role:
+    name: freeipa.ansible_freeipa.ipaserver
+  vars:
+    ipaserver_domain: "{{ ipa_server_domain }}"
+    ipaserver_realm: "{{ ipa_server_realm }}"
+    ipaserver_hostname: "{{ ipa_server_hostname }}"
+    ipaadmin_password: "{{ vault_ipa_admin_password }}"
+    ipadm_password: "{{ vault_ipa_dirman_password }}"
+    ipaserver_setup_dns: false
+    ipaserver_no_host_dns: true
+    ipaserver_setup_firewalld: false
+    ipaserver_external_ca: false
+    ipaclient_mkhomedir: "{{ ipa_server_mkhomedir }}"
+    ipaclient_no_ntp: false

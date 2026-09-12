@@ -1,0 +1,53 @@
+{#- Managed by Ansible — mgcdrd.infrasvc.ipa_server -#}
+{#- Full realm SRV/TXT record set for a FreeIPA deployment that uses an -#}
+{#- external DNS server (PowerDNS). The complete set is REPLACEd from the -#}
+{#- inventory on every run, so it self-heals as replicas come and go. -#}
+{%- set zone = ipa_server_dns_forward_zone -%}
+{%- set hosts = ipa_server_srv_hosts -%}
+{%- set srv_ports = {
+      '_kerberos._tcp': 88,
+      '_kerberos._udp': 88,
+      '_kerberos-master._tcp': 88,
+      '_kerberos-master._udp': 88,
+      '_kpasswd._tcp': 464,
+      '_kpasswd._udp': 464,
+      '_ldap._tcp': 389,
+      '_ntp._udp': 123,
+    } -%}
+{
+  "rrsets": [
+{% for prefix, port in srv_ports.items() %}
+    {
+      "name": "{{ prefix }}.{{ zone }}.",
+      "type": "SRV",
+      "ttl": {{ ipa_server_dns_ttl }},
+      "changetype": "REPLACE",
+      "records": [
+{% for h in hosts %}
+        {"content": "0 100 {{ port }} {{ h }}.", "disabled": false}{{ "," if not loop.last }}
+{% endfor %}
+      ]
+    },
+{% endfor %}
+    {
+      "name": "_kerberos.{{ zone }}.",
+      "type": "TXT",
+      "ttl": {{ ipa_server_dns_ttl }},
+      "changetype": "REPLACE",
+      "records": [
+        {"content": "\"{{ ipa_server_realm }}\"", "disabled": false}
+      ]
+    },
+    {
+      "name": "ipa-ca.{{ zone }}.",
+      "type": "A",
+      "ttl": {{ ipa_server_dns_ttl }},
+      "changetype": "REPLACE",
+      "records": [
+{% for h in hosts %}
+        {"content": "{{ hostvars[h].get('ansible_host', hostvars[h].get('ansible_default_ipv4', {}).get('address', '')) }}", "disabled": false}{{ "," if not loop.last }}
+{% endfor %}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+---
+
+# A replica is enrolled as a client first, then promoted. Both upstream
+# roles are idempotent on their own, but the main.yml guard already skips
+# this file once the host is a running server.
+- name: ipa_server replica - Enroll host as an IPA client
+  ansible.builtin.include_role:
+    name: freeipa.ansible_freeipa.ipaclient
+  vars:
+    ipaclient_domain: "{{ ipa_server_domain }}"
+    ipaclient_realm: "{{ ipa_server_realm }}"
+    ipaclient_servers:
+      - "{{ ipa_server_primary }}"
+    ipaadmin_password: "{{ vault_ipa_admin_password }}"
+    ipaclient_mkhomedir: "{{ ipa_server_mkhomedir }}"
+    ipaclient_no_ntp: false
+
+- name: ipa_server replica - Promote host to an IPA replica
+  ansible.builtin.include_role:
+    name: freeipa.ansible_freeipa.ipareplica
+  vars:
+    ipareplica_domain: "{{ ipa_server_domain }}"
+    ipareplica_realm: "{{ ipa_server_realm }}"
+    ipareplica_servers:
+      - "{{ ipa_server_primary }}"
+    ipaadmin_password: "{{ vault_ipa_admin_password }}"
+    ipadm_password: "{{ vault_ipa_dirman_password }}"
+    ipareplica_setup_ca: "{{ ipa_server_setup_ca }}"
+    ipareplica_setup_dns: false
+    ipareplica_no_host_dns: true

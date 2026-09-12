@@ -1,0 +1,20 @@
+---
+
+- name: ipa_server enrolled_check - Look for an existing IPA configuration
+  ansible.builtin.stat:
+    path: /etc/ipa/default.conf
+  register: _ipa_server_conf
+
+# ipactl returns rc 0 only when every IPA service is running. A client-only
+# host has default.conf but no ipactl, which fails here and is treated as
+# "not an installed server".
+- name: ipa_server enrolled_check - Check IPA services are running
+  ansible.builtin.command: ipactl status
+  register: _ipa_server_ipactl
+  changed_when: false
+  failed_when: false
+  when: _ipa_server_conf.stat.exists
+
+- name: ipa_server enrolled_check - Set the installed fact
+  ansible.builtin.set_fact:
+    _ipa_server_installed: "{{ _ipa_server_conf.stat.exists and (_ipa_server_ipactl.rc | default(1)) == 0 }}"

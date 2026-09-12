@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+#
+# Roots the acme.sh chain, installs it as a trusted IPA CA cert, and pushes
+# it as this server's httpd/LDAP TLS cert. Defaults to this host's own FQDN;
+# pass a different CERTNAME to install a cert issued under another name
+# (e.g. installing another IPA server's cert from this host's acme.sh store).
+#
+# Managed by mgcdrd.infrasvc.ipa_server (ipa_server_manage_acme_cert) —
+# local edits are overwritten on the next ansible run.
+
+set -euo pipefail
+
+CERTNAME="${1:-{{ ipa_server_acme_cert_name }}}"
+ACME_DIR="/root/.acme.sh/${CERTNAME}"
+
+/usr/local/sbin/complete-le-chain.sh \
+  -d "${ACME_DIR}" \
+  -f "${ACME_DIR}/fullchain.cer" \
+  -l "${ACME_DIR}/${CERTNAME}.cer"
+
+/sbin/ipa-cacert-manage -p '{{ vault_ipa_dirman_password }}' -t C,, install "${ACME_DIR}/ca.cer"
+/sbin/ipa-certupdate
+
+/sbin/ipa-server-certinstall \
+  -w -d \
+  "${ACME_DIR}/fullchain.cer" \
+  "${ACME_DIR}/${CERTNAME}.key" \
+  -p '{{ vault_ipa_dirman_password }}' \
+  -q \
+  --pin=
+
+/sbin/ipactl restart

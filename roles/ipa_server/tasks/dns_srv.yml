@@ -1,0 +1,17 @@
+---
+
+# One PATCH writes the whole realm record set. Run once per play — the body
+# is built from ipa_server_srv_hosts (the full 'ipa' group), so it does not
+# matter which host in the batch makes the call.
+- name: ipa_server dns_srv - Push realm SRV/TXT/CA records to PowerDNS
+  ansible.builtin.uri:
+    url: "{{ ipa_server_pdns_api_url }}/api/v1/servers/{{ ipa_server_pdns_server_id }}/zones/{{ ipa_server_dns_forward_zone }}."
+    method: PATCH
+    headers:
+      X-API-Key: "{{ vault_ipa_pdns_api_key }}"
+    body_format: json
+    body: "{{ lookup('template', 'pdns-srv-rrsets.json.j2') | from_json }}"
+    validate_certs: "{{ ipa_server_validate_certs }}"
+    status_code: 204
+  become: false
+  run_once: true

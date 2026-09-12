@@ -1,0 +1,72 @@
+---
+
+- name: ipa_server preflight - Assert the mode is valid
+  ansible.builtin.assert:
+    quiet: true
+    that:
+      - ipa_server_mode in ['primary', 'replica']
+    fail_msg: "ipa_server_mode must be 'primary' or 'replica'"
+
+- name: ipa_server preflight - Assert the OS is RHEL-family
+  ansible.builtin.assert:
+    quiet: true
+    that:
+      - ansible_facts['os_family'] == 'RedHat'
+    fail_msg: >-
+      ipa_server only supports Rocky Linux 9/10 (RHEL-family). FreeIPA server
+      packaging on Debian is not carried here — enrol Debian hosts as domain
+      members with mgcdrd.infrasvc.ipa_client instead.
+
+- name: ipa_server preflight - Assert domain and realm are set
+  ansible.builtin.assert:
+    quiet: true
+    that:
+      - ipa_server_domain | length > 0
+      - ipa_server_realm | length > 0
+      - vault_ipa_admin_password | length > 0
+      - vault_ipa_dirman_password | length > 0
+    fail_msg: >-
+      ipa_server_domain, ipa_server_realm, vault_ipa_admin_password, and
+      vault_ipa_dirman_password must all be set. Passwords should be fetched
+      from Vault before this role runs.
+
+- name: ipa_server preflight - Assert the primary is set for replica mode
+  ansible.builtin.assert:
+    quiet: true
+    that:
+      - ipa_server_primary | length > 0
+    fail_msg: "ipa_server_primary (an existing IPA server FQDN) is required when ipa_server_mode is 'replica'"
+  when: ipa_server_mode == 'replica'
+
+- name: ipa_server preflight - Assert PowerDNS variables are set
+  ansible.builtin.assert:
+    quiet: true
+    that:
+      - ipa_server_pdns_api_url | length > 0
+      - ipa_server_dns_forward_zone | length > 0
+      - vault_ipa_pdns_api_key | length > 0
+    fail_msg: >-
+      ipa_server_pdns_api_url, ipa_server_dns_forward_zone, and
+      vault_ipa_pdns_api_key must be set when ipa_server_register_dns or
+      ipa_server_manage_srv_records is true.
+  when: ipa_server_register_dns | bool or ipa_server_manage_srv_records | bool
+
+- name: ipa_server preflight - Assert the reverse zone is set
+  ansible.builtin.assert:
+    quiet: true
+    that:
+      - ipa_server_dns_reverse_zone | length > 0
+    fail_msg: "ipa_server_dns_reverse_zone is required when ipa_server_register_dns is true"
+  when: ipa_server_register_dns | bool
+
+- name: ipa_server preflight - Verify the PowerDNS API is reachable
+  ansible.builtin.uri:
+    url: "{{ ipa_server_pdns_api_url }}/api/v1/servers/{{ ipa_server_pdns_server_id }}/zones/{{ ipa_server_dns_forward_zone }}."
+    method: GET
+    headers:
+      X-API-Key: "{{ vault_ipa_pdns_api_key }}"
+    validate_certs: "{{ ipa_server_validate_certs }}"
+    status_code: 200
+  become: false
+  changed_when: false
+  when: ipa_server_register_dns | bool or ipa_server_manage_srv_records | bool

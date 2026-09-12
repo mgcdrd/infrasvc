@@ -1,0 +1,33 @@
+---
+
+- name: ipa_server main - Validate variables
+  ansible.builtin.import_tasks: preflight.yml
+
+- name: ipa_server main - Detect existing installation
+  ansible.builtin.import_tasks: enrolled_check.yml
+
+- name: ipa_server main - Register host DNS records in PowerDNS
+  ansible.builtin.import_tasks: dns_host.yml
+  when:
+    - ipa_server_register_dns | bool
+    - not _ipa_server_installed | bool
+
+- name: ipa_server main - Install primary server
+  ansible.builtin.import_tasks: primary.yml
+  when:
+    - ipa_server_mode == 'primary'
+    - not _ipa_server_installed | bool
+
+- name: ipa_server main - Install replica server
+  ansible.builtin.import_tasks: replica.yml
+  when:
+    - ipa_server_mode == 'replica'
+    - not _ipa_server_installed | bool
+
+- name: ipa_server main - Manage realm DNS records in PowerDNS
+  ansible.builtin.import_tasks: dns_srv.yml
+  when: ipa_server_manage_srv_records | bool
+
+- name: ipa_server main - Deploy acme.sh cert renewal script
+  ansible.builtin.import_tasks: acme_cert.yml
+  when: ipa_server_manage_acme_cert | bool

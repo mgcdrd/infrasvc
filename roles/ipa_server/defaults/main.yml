@@ -1,0 +1,101 @@
+---
+
+# ---- MODE ----
+# 'primary' runs ipa-server-install to create a fresh domain, realm, and CA.
+# 'replica' enrolls the host as a client of ipa_server_primary and promotes
+# it to a CA replica.
+ipa_server_mode: "primary"
+
+
+# ---- IPA DOMAIN ----
+# IPA domain name (lowercase), e.g. lab.example.com
+ipa_server_domain: ""
+
+# Kerberos realm (uppercase), e.g. LAB.EXAMPLE.COM
+ipa_server_realm: ""
+
+# FQDN of an existing IPA server to replicate from. Required when
+# ipa_server_mode is 'replica', ignored for 'primary'.
+ipa_server_primary: ""
+
+# FQDN this server registers itself as. Must resolve (forward and reverse)
+# before ipa-server-install / ipa-replica-install runs.
+ipa_server_hostname: "{{ ansible_fqdn }}"
+
+# Configure a CA on this node. Primary always gets a CA; for a replica this
+# maps to ipareplica_setup_ca (a CA-less replica if false).
+ipa_server_setup_ca: true
+
+# Create home directories on first login (pam_oddjob_mkhomedir).
+ipa_server_mkhomedir: true
+
+# Validate TLS certificates on the PowerDNS API calls. The PowerDNS API is
+# plain HTTP in the lab, so this only matters if the URL is https.
+ipa_server_validate_certs: true
+
+
+# ---- DNS: HOST RECORDS ----
+# Register this server's own A/PTR records in PowerDNS before the install.
+# FreeIPA is installed without integrated DNS (--setup-dns is never passed),
+# so PowerDNS stays authoritative and must resolve this host first.
+ipa_server_register_dns: true
+
+# IP address to register for this host's A/PTR records. Defaults to the
+# fact-detected primary IPv4 (as ipa_client does). Override if the host is
+# still on a provisioning DHCP lease at run time.
+ipa_server_host_ip: "{{ ansible_default_ipv4.address }}"
+
+
+# ---- DNS: REALM RECORDS ----
+# Push the realm SRV/TXT records and the ipa-ca A record into PowerDNS.
+# The full set is written (changetype REPLACE) from ipa_server_srv_hosts on
+# every run, so it is idempotent and self-heals as replicas are added.
+ipa_server_manage_srv_records: true
+
+# FQDNs of every IPA server that should appear in the SRV / ipa-ca records.
+# The deployment passes the whole 'ipa' inventory group here.
+ipa_server_srv_hosts:
+  - "{{ ipa_server_hostname }}"
+
+
+# ---- POWERDNS API ----
+# PowerDNS authoritative API endpoint reachable from the target host.
+ipa_server_pdns_api_url: ""
+
+# PowerDNS server ID — almost always "localhost".
+ipa_server_pdns_server_id: "localhost"
+
+# Forward zone for the A / SRV / TXT records, e.g. lab.example.com
+ipa_server_dns_forward_zone: ""
+
+# Reverse zone for the PTR record, e.g. 10.0.0.in-addr.arpa
+ipa_server_dns_reverse_zone: ""
+
+# TTL for registered DNS records (seconds).
+ipa_server_dns_ttl: 300
+
+
+# ---- ACME CERT INSTALL ----
+# Deploy /usr/local/sbin/acme.sh.renewal.sh, which roots an acme.sh-issued
+# chain and installs it as this server's IPA CA trust + httpd/LDAP TLS cert
+# (ipa-cacert-manage / ipa-certupdate / ipa-server-certinstall). acme.sh
+# itself (issuance, cron, DNS challenge) is set up separately — this only
+# manages the reload script acme.sh calls on renewal.
+ipa_server_manage_acme_cert: false
+
+# acme.sh cert directory name (under /root/.acme.sh/) the script installs by
+# default when run with no argument. Run the deployed script with a
+# different CERTNAME to install a different cert from this host's store.
+ipa_server_acme_cert_name: "{{ ipa_server_hostname }}"
+
+
+# ---- INJECTED SECRETS ----
+# IPA admin (admin@REALM) password. Store in Vault and inject at runtime.
+vault_ipa_admin_password: ""
+
+# Directory Manager (cn=Directory Manager) password. Store in Vault and
+# inject at runtime.
+vault_ipa_dirman_password: ""
+
+# PowerDNS API key. Store in Vault and inject at runtime.
+vault_ipa_pdns_api_key: ""

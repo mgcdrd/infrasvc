@@ -1,0 +1,14 @@
+---
+galaxy_info:
+  author: mgcdrd
+  description: Install a FreeIPA primary server or replica (wraps freeipa.ansible_freeipa)
+  role_name: ipa_server
+
+  license: GPL-3.0-or-later
+
+  min_ansible_version: '2.14'
+
+  galaxy_tags:
+    - mgcdrd
+
+collections: []
