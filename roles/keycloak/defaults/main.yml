@@ -23,7 +23,9 @@ keycloak_network_mode: host
 # When network_mode is host, firewalld rules forward 80→http_port and
 # 443→https_port so external clients still reach standard ports.
 keycloak_http_port:       8080
-keycloak_https_port:      8443
+# 443 for native (systemd binds it directly via CAP_NET_BIND_SERVICE);
+# 8443 for docker (uid 1000 is unprivileged, firewalld forwards 443->8443).
+keycloak_https_port:      "{{ 443 if keycloak_install_method == 'native' else 8443 }}"
 keycloak_mgmt_port:       9000    # health/metrics endpoint
 keycloak_jgroups_port:    7800    # Infinispan JGroups cluster traffic
 keycloak_jgroups_fd_port: 57600   # JGroups failure detection (FD_SOCK)
@@ -72,6 +74,16 @@ postgres_port:    5432
 keycloak_db_user:     "{{ vault_keycloak_db_user }}"
 keycloak_db_password: "{{ vault_keycloak_db_password }}"
 
+# Admin/bootstrap account — creates the database and grants keycloak_db_user
+# scoped access to it. Keycloak itself never authenticates as this account
+# (separation of duties): keycloak_db_user gets USAGE+CREATE on the public
+# schema, not ownership, so it can't drop the database or touch roles.
+# Native mode ignores the password — bootstrap runs as the OS 'postgres'
+# role over local peer auth. Docker mode needs the real password since the
+# container's admin user is reached over the mapped port.
+postgres_admin_user:     postgres
+postgres_admin_password: "{{ vault_postgres_admin_password }}"
+
 # ---- KEYCLOAK ADMIN BOOTSTRAP ----
 # Bootstrap admin is only active on first start — Keycloak removes it once
 # a permanent admin is created. Inject via AWX/Vault.
@@ -85,6 +97,75 @@ keycloak_admin_password: "{{ vault_keycloak_admin_password }}"
 #     KC_LOG_LEVEL: INFO
 #     KC_FEATURES: "token-exchange,admin-fine-grained-authz"
 keycloak_extra_env: {}
+
+
+# ---- INSTALL METHOD ----
+# docker — Docker Compose stack (default; existing behaviour unchanged).
+# native — Quarkus tarball + hardened systemd unit. Use on hosts where
+#          Docker is unwanted, e.g. unprivileged Proxmox LXC containers.
+keycloak_install_method: docker
+
+# Issue the TLS certificate with mgcdrd.infrabase.acme_sh from this role.
+# Set false when TLS terminates upstream or the cert is placed by other means.
+keycloak_manage_tls: true
+
+
+# ---- NATIVE MODE ----
+# Full X.Y.Z Keycloak release — this is the GitHub release tag. Required
+# when keycloak_install_method is 'native'. keycloak_version ("26.4") is a
+# floating container tag and will not resolve to a tarball.
+keycloak_release: ""
+keycloak_download_url: "https://github.com/keycloak/keycloak/releases/download/{{ keycloak_release }}/keycloak-{{ keycloak_release }}.tar.gz"
+keycloak_download_checksum: ""      # e.g. "sha256:https://github.com/.../keycloak-26.4.0.tar.gz.sha256"
+
+keycloak_service_name:  keycloak
+keycloak_service_user:  keycloak
+keycloak_service_group: keycloak
+keycloak_install_dir:   /opt/keycloak                       # symlink to the versioned dir
+keycloak_versioned_dir: "/opt/keycloak-{{ keycloak_release }}"
+keycloak_systemd_hardening: true
+
+# distro   — OS package: java-21-openjdk-headless (RHEL) /
+#            openjdk-21-jre-headless (Debian; from bookworm-backports on Debian 12).
+# adoptium — Eclipse Temurin from packages.adoptium.net.
+keycloak_java_package_method: distro
+keycloak_java_package: "{{ _keycloak_java_package_default }}"
+keycloak_adoptium_package: temurin-21-jdk
+
+# Listener / hostname (keycloak.conf).
+keycloak_http_enabled:    false
+keycloak_https_protocols: "TLSv1.3,TLSv1.2"
+keycloak_hostname_strict: true
+keycloak_metrics_enabled: false
+
+# Clustering. jdbc-ping keeps Infinispan discovery on the database — no
+# multicast, which is what makes cross-node caching work inside LXC. The
+# docker path is unaffected (it runs KC_CACHE=local + keepalived).
+keycloak_cache: ispn
+keycloak_cache_stack: jdbc-ping
+keycloak_cache_embedded_mtls_enabled: true
+keycloak_cache_embedded_network_bind_address: "{{ ansible_default_ipv4.address | default('127.0.0.1') }}"
+
+# Keycloak -> PostgreSQL TLS (native keycloak.conf JDBC URL).
+keycloak_db_sslmode:     verify-full
+keycloak_db_sslrootcert: "{{ keycloak_install_dir }}/conf/truststores/db-ca.pem"
+# Files dropped into {{ keycloak_install_dir }}/conf/truststores/. Each entry:
+# name, and one of content | src. Use for the DB CA and the LDAP CA.
+keycloak_truststore_files: []
+
+# Extra key=value lines appended to keycloak.conf (native only).
+keycloak_extra_conf: {}
+
+
+# ---- ACME SHAPING (both modes) ----
+# challenge: dns_cf (lab default) | dns_pdns (PowerDNS) | standalone | webroot | ...
+keycloak_acme_challenge: dns_cf
+# complete_chain roots the deployed chain with a pinned root (needed for
+# Google Public CA). When true, acme_sh deploys ca.pem and no fullchain.pem.
+keycloak_acme_complete_chain: false
+keycloak_acme_root_cn: ""
+keycloak_acme_root_fingerprint: ""
+keycloak_acme_root_urls: []
 
 # ---- KEEPALIVED PRESET ----
 # Registered here so the keepalived role can find it when

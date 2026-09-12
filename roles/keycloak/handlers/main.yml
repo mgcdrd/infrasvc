@@ -4,3 +4,17 @@
   community.docker.docker_compose_v2:
     project_src: "{{ keycloak_base_dir }}"
     state: restarted
+
+- name: keycloak native build
+  ansible.builtin.command:
+    cmd:   "{{ keycloak_install_dir }}/bin/kc.sh build"
+    chdir: "{{ keycloak_install_dir }}"
+  become_user: "{{ keycloak_service_user }}"
+  changed_when: true
+  notify: keycloak native restart
+
+- name: keycloak native restart
+  ansible.builtin.systemd_service:
+    name:          "{{ keycloak_service_name }}"
+    state:         restarted
+    daemon_reload: true

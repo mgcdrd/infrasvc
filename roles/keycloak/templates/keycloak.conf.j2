@@ -1,0 +1,32 @@
+# {{ ansible_managed }}
+# mgcdrd.infrasvc.keycloak (native) — managed file, changes are overwritten.
+
+# --- Database ---
+db=postgres
+db-username={{ keycloak_db_user }}
+db-password={{ keycloak_db_password }}
+db-url=jdbc:postgresql://{{ postgres_host }}:{{ postgres_port }}/{{ postgres_db }}?sslmode={{ keycloak_db_sslmode }}&sslrootcert={{ keycloak_db_sslrootcert }}
+
+# --- Hostname / HTTP ---
+hostname={{ keycloak_hostname }}
+hostname-strict={{ keycloak_hostname_strict | lower }}
+http-enabled={{ keycloak_http_enabled | lower }}
+https-port={{ keycloak_https_port }}
+https-protocols={{ keycloak_https_protocols }}
+https-certificate-file={{ keycloak_cert_dir }}/{{ _keycloak_tls_cert_basename }}
+https-certificate-key-file={{ keycloak_cert_dir }}/key.pem
+https-management-protocols={{ keycloak_https_protocols }}
+
+# --- Observability ---
+http-access-log-enabled=true
+health-enabled=true
+metrics-enabled={{ keycloak_metrics_enabled | lower }}
+
+# --- Clustering ---
+cache={{ keycloak_cache }}
+cache-stack={{ keycloak_cache_stack }}
+cache-embedded-mtls-enabled={{ keycloak_cache_embedded_mtls_enabled | lower }}
+cache-embedded-network-bind-address={{ keycloak_cache_embedded_network_bind_address }}
+{% for key, value in keycloak_extra_conf | dictsort %}
+{{ key }}={{ value }}
+{% endfor %}

@@ -1,0 +1,17 @@
+---
+
+- name: keycloak tls - Issue TLS certificate
+  ansible.builtin.include_role:
+    name: mgcdrd.infrabase.acme_sh
+  vars:
+    acme_sh_certs:
+      - domains:
+          - "{{ keycloak_hostname }}"
+        challenge: "{{ keycloak_acme_challenge }}"
+        complete_chain: "{{ keycloak_acme_complete_chain }}"
+        root_cn: "{{ keycloak_acme_root_cn | default(omit, true) }}"
+        root_fingerprint: "{{ keycloak_acme_root_fingerprint | default(omit, true) }}"
+        root_urls: "{{ keycloak_acme_root_urls | default(omit, true) }}"
+        reload_cmd: "{{ _keycloak_acme_reload_cmd }}"
+        state: present
+  when: keycloak_manage_tls | bool

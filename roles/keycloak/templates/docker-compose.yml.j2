@@ -13,7 +13,7 @@ services:
       KC_HOSTNAME_PORT:              "443"
       KC_HTTP_PORT:                  "{{ keycloak_http_port }}"
       KC_HTTPS_PORT:                 "{{ keycloak_https_port }}"
-      KC_HTTPS_CERTIFICATE_FILE:     "/certs/fullchain.pem"
+      KC_HTTPS_CERTIFICATE_FILE:     "/certs/{{ _keycloak_tls_cert_basename }}"
       KC_HTTPS_CERTIFICATE_KEY_FILE: "/certs/key.pem"
       KC_HEALTH_ENABLED:             "true"
       KC_DB:                         postgres

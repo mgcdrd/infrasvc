@@ -1,2 +1,22 @@
 ---
-# No computed vars needed — all configuration is in defaults.
+
+# Distro Java package for native mode.
+_keycloak_java_package_default: >-
+  {{ 'java-21-openjdk-headless' if ansible_facts['os_family'] == 'RedHat'
+     else 'openjdk-21-jre-headless' }}
+
+# acme_sh with complete_chain deploys ca.pem and no fullchain.pem — the
+# compose file and keycloak.conf reference this basename.
+_keycloak_tls_cert_basename: >-
+  {{ 'ca.pem' if keycloak_acme_complete_chain | bool else 'fullchain.pem' }}
+
+# Cert-renewal reload command, per runtime. Quarkus does not hot-reload
+# TLS, so native restarts the service; the Docker path restarts the
+# container via compose.
+_keycloak_acme_reload_cmd: >-
+  {{ ('chown -R 1000:1000 ' ~ keycloak_cert_dir ~ ' && test -f ' ~ keycloak_base_dir
+      ~ '/docker-compose.yml && docker compose -f ' ~ keycloak_base_dir
+      ~ '/docker-compose.yml restart keycloak || true')
+     if keycloak_install_method == 'docker'
+     else ('chown -R ' ~ keycloak_service_user ~ ':' ~ keycloak_service_group ~ ' '
+      ~ keycloak_cert_dir ~ ' && systemctl try-restart ' ~ keycloak_service_name) }}

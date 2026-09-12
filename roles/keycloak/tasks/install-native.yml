@@ -1,0 +1,131 @@
+---
+
+- name: keycloak install-native - Install Java (RedHat, distro)
+  ansible.builtin.dnf:
+    name:  "{{ keycloak_java_package }}"
+    state: present
+  when:
+    - ansible_facts['os_family'] == 'RedHat'
+    - keycloak_java_package_method == 'distro'
+
+- name: keycloak install-native - Enable bookworm-backports (Debian 12)
+  ansible.builtin.apt_repository:
+    repo:     "deb http://deb.debian.org/debian bookworm-backports main"
+    filename: backports
+    state:    present
+  when:
+    - ansible_facts['os_family'] == 'Debian'
+    - ansible_facts['distribution_major_version'] == '12'
+    - keycloak_java_package_method == 'distro'
+
+- name: keycloak install-native - Install Java (Debian, distro)
+  ansible.builtin.apt:
+    name:            "{{ keycloak_java_package }}"
+    state:           present
+    default_release: "{{ 'bookworm-backports' if ansible_facts['distribution_major_version'] == '12' else omit }}"
+    update_cache:    true
+  when:
+    - ansible_facts['os_family'] == 'Debian'
+    - keycloak_java_package_method == 'distro'
+
+- name: keycloak install-native - Install Java (Adoptium Temurin)
+  ansible.builtin.include_tasks: java-adoptium.yml
+  when: keycloak_java_package_method == 'adoptium'
+
+- name: keycloak install-native - Create Keycloak group
+  ansible.builtin.group:
+    name:   "{{ keycloak_service_group }}"
+    system: true
+
+- name: keycloak install-native - Create Keycloak service user
+  ansible.builtin.user:
+    name:        "{{ keycloak_service_user }}"
+    group:       "{{ keycloak_service_group }}"
+    system:      true
+    home:        "{{ keycloak_install_dir }}"
+    shell:       /sbin/nologin
+    create_home: false
+
+- name: keycloak install-native - Download Keycloak distribution
+  ansible.builtin.get_url:
+    url:      "{{ keycloak_download_url }}"
+    dest:     "/opt/keycloak-{{ keycloak_release }}.tar.gz"
+    checksum: "{{ keycloak_download_checksum | default(omit, true) }}"
+    owner:    root
+    group:    root
+    mode:     "0644"
+
+- name: keycloak install-native - Create versioned directory
+  ansible.builtin.file:
+    path:  "{{ keycloak_versioned_dir }}"
+    state: directory
+    owner: "{{ keycloak_service_user }}"
+    group: "{{ keycloak_service_group }}"
+    mode:  "0750"
+
+- name: keycloak install-native - Unpack Keycloak
+  ansible.builtin.unarchive:
+    src:        "/opt/keycloak-{{ keycloak_release }}.tar.gz"
+    dest:       "{{ keycloak_versioned_dir }}"
+    remote_src: true
+    extra_opts:
+      - --strip-components=1
+    creates: "{{ keycloak_versioned_dir }}/bin/kc.sh"
+  register: _keycloak_unpack
+
+- name: keycloak install-native - Own the Keycloak tree
+  ansible.builtin.file:
+    path:    "{{ keycloak_versioned_dir }}"
+    state:   directory
+    owner:   "{{ keycloak_service_user }}"
+    group:   "{{ keycloak_service_group }}"
+    recurse: true
+  when: _keycloak_unpack is changed
+
+- name: keycloak install-native - Link the current version
+  ansible.builtin.file:
+    src:   "{{ keycloak_versioned_dir }}"
+    dest:  "{{ keycloak_install_dir }}"
+    state: link
+    force: true
+  notify: keycloak native build
+
+- name: keycloak install-native - Create data and log directories
+  ansible.builtin.file:
+    path:  "{{ keycloak_install_dir }}/{{ item }}"
+    state: directory
+    owner: "{{ keycloak_service_user }}"
+    group: "{{ keycloak_service_group }}"
+    mode:  "0750"
+  loop:
+    - data
+    - data/log
+    - conf/truststores
+
+- name: keycloak install-native - Deploy truststore files
+  ansible.builtin.copy:
+    content: "{{ item.content | default(omit) }}"
+    src:     "{{ item.src | default(omit) }}"
+    dest:    "{{ keycloak_install_dir }}/conf/truststores/{{ item.name }}"
+    owner:   "{{ keycloak_service_user }}"
+    group:   "{{ keycloak_service_group }}"
+    mode:    "0640"
+  loop: "{{ keycloak_truststore_files }}"
+  loop_control:
+    label: "{{ item.name }}"
+  no_log: true
+
+- name: keycloak install-native - Issue TLS certificate
+  ansible.builtin.import_tasks: tls.yml
+
+- name: keycloak install-native - Set cert directory ownership for the service user
+  ansible.builtin.file:
+    path:    "{{ keycloak_cert_dir }}"
+    state:   directory
+    owner:   "{{ keycloak_service_user }}"
+    group:   "{{ keycloak_service_group }}"
+    recurse: true
+  when: keycloak_manage_tls | bool
+
+- name: keycloak install-native - Deploy Keycloak
+  ansible.builtin.import_tasks: deploy-native.yml

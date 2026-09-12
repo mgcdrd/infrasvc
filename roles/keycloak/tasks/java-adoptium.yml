@@ -1,0 +1,50 @@
+---
+
+- name: keycloak java-adoptium - Create keyrings directory
+  ansible.builtin.file:
+    path:  /etc/apt/keyrings
+    state: directory
+    owner: root
+    group: root
+    mode:  "0755"
+  when: ansible_facts['os_family'] == 'Debian'
+
+- name: keycloak java-adoptium - Add Adoptium apt key
+  ansible.builtin.get_url:
+    url:   https://packages.adoptium.net/artifactory/api/gpg/key/public
+    dest:  /etc/apt/keyrings/adoptium.asc
+    mode:  "0644"
+    force: false
+  when: ansible_facts['os_family'] == 'Debian'
+
+- name: keycloak java-adoptium - Add Adoptium apt repository
+  ansible.builtin.apt_repository:
+    repo: >-
+      deb [signed-by=/etc/apt/keyrings/adoptium.asc]
+      https://packages.adoptium.net/artifactory/deb
+      {{ ansible_distribution_release }} main
+    state:    present
+    filename: adoptium
+  when: ansible_facts['os_family'] == 'Debian'
+
+- name: keycloak java-adoptium - Add Adoptium yum repository
+  ansible.builtin.yum_repository:
+    name:        adoptium
+    description: Eclipse Adoptium
+    baseurl:     https://packages.adoptium.net/artifactory/rpm/rhel/$releasever/$basearch
+    gpgcheck:    true
+    gpgkey:      https://packages.adoptium.net/artifactory/api/gpg/key/public
+  when: ansible_facts['os_family'] == 'RedHat'
+
+- name: keycloak java-adoptium - Install Temurin (Debian)
+  ansible.builtin.apt:
+    name:         "{{ keycloak_adoptium_package }}"
+    state:        present
+    update_cache: true
+  when: ansible_facts['os_family'] == 'Debian'
+
+- name: keycloak java-adoptium - Install Temurin (RedHat)
+  ansible.builtin.dnf:
+    name:  "{{ keycloak_adoptium_package }}"
+    state: present
+  when: ansible_facts['os_family'] == 'RedHat'

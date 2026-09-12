@@ -1,0 +1,34 @@
+---
+
+- name: keycloak preflight - Assert the install method is valid
+  ansible.builtin.assert:
+    quiet: true
+    that:
+      - keycloak_install_method in ['docker', 'native']
+    fail_msg: "keycloak_install_method must be 'docker' or 'native'"
+
+- name: keycloak preflight - Assert the hostname is set
+  ansible.builtin.assert:
+    quiet: true
+    that:
+      - keycloak_hostname | length > 0
+    fail_msg: "keycloak_hostname is required"
+
+- name: keycloak preflight - Assert the database host is set
+  ansible.builtin.assert:
+    quiet: true
+    that:
+      - postgres_host | length > 0
+    fail_msg: "postgres_host is required"
+
+- name: keycloak preflight - Assert the native release is pinned
+  ansible.builtin.assert:
+    quiet: true
+    that:
+      - keycloak_release | length > 0
+      - keycloak_release is match('^[0-9]+\.[0-9]+\.[0-9]+')
+    fail_msg: >-
+      keycloak_install_method is 'native' — set keycloak_release to a full
+      X.Y.Z release (e.g. 26.4.0). keycloak_version ('{{ keycloak_version }}')
+      is a floating container tag and does not resolve to a tarball.
+  when: keycloak_install_method == 'native'
