@@ -16,6 +16,10 @@ This collection contains common infrastructure roles used to standardize and aut
 |------|-------------|
 | `haproxy` | Installs and configures HAProxy (TCP mode) |
 | `k8s` | Deploys and configures Kubernetes nodes (master and worker), including OIDC and PSA |
+| `ipa_server` | Installs a FreeIPA primary server or replica (wraps `freeipa.ansible_freeipa`); no integrated DNS, realm records pushed to the PowerDNS API, Rocky Linux only |
+| `ipa_baseline` | Bootstraps the least-privilege `svc-ansible-enrollment` account used by `ipa_client` |
+| `ipa_client` | Enrolls a host as an IPA domain member |
+| `ipa_service_account` | Issues an IPA service principal + keytab for a service that isn't an enrolled client (e.g. a container), via a dedicated least-privilege manager account |
 | `keepalived` | Installs and configures keepalived for VRRP/HA |
 | `keycloak` | Deploys Keycloak via Docker Compose with TLS, PostgreSQL backend, and optional host/bridge network mode |
 | `keycloak_config` | Configures Keycloak post-deploy via REST API: LDAP federation, realms, k8s OIDC client, RBAC |

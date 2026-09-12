@@ -1,0 +1,76 @@
+---
+
+# ---- IPA CONNECTION ----
+# FQDN of the IPA server. Used for both the JSON-RPC API calls and as the
+# -s target for ipa-getkeytab.
+ipa_service_account_server: ""
+
+# IPA admin username used to bootstrap the manager account/role (below).
+ipa_service_account_admin_principal: "admin"
+
+# Set to false only in lab environments with self-signed IPA certificates.
+ipa_service_account_validate_certs: true
+
+
+# ---- MANAGER ACCOUNT ----
+# ipa-getkeytab requires a real Kerberos ticket, which this role obtains by
+# kiniting as a dedicated, least-privilege service account rather than the
+# host self-service trick (there's no enrolled host here — the caller is
+# usually a container with no persistent identity). This role bootstraps
+# that account itself if it doesn't exist yet.
+#
+# Privileges granted: the built-in "Host Administrators" and "Service
+# Administrators" IPA privileges (add/manage hosts and services, including
+# keytabs) — enough to issue a keytab for an arbitrary service principal,
+# nothing else. Deliberately not the `admins` group.
+ipa_service_account_manage_manager: true
+ipa_service_account_manager_principal: "svc-ipa-keytab-mgr"
+ipa_service_account_manager_role: "IPA Keytab Issuer"
+
+# Regenerate the manager account's password even if Vault already has one.
+# Use after a Vault DR restore, same as ipa_baseline_force_rotate.
+ipa_service_account_force_rotate_manager: false
+
+
+# ---- SERVICE PRINCIPAL / KEYTAB ----
+# FQDN the service principal is issued for, e.g. mokey.lab.provenzawt.dev.
+# A corresponding IPA host entry is created (--force, since it's never an
+# enrolled client) if one doesn't already exist.
+ipa_service_account_fqdn: ""
+
+# Kerberos service type, e.g. HTTP for a web app's HTTP/<fqdn> principal.
+ipa_service_account_principal_type: "HTTP"
+
+# ipa-getkeytab ROTATES the key on every fetch, invalidating any previously
+# issued copy. Only set true to deliberately reissue (e.g. suspected
+# compromise) — a normal run is a no-op once Vault already has a keytab for
+# this path, same guard philosophy as foreman_install's realm keytab fetch.
+ipa_service_account_force_rotate: false
+
+
+# ---- VAULT CONNECTION ----
+# Base URL of the Vault API — no trailing slash. Reused for both the
+# manager-account secret and the issued keytab.
+ipa_service_account_vault_url: ""
+
+# Vault token used to read and write secrets.
+# Defaults to the VAULT_TOKEN environment variable so AWX/CI can inject it.
+ipa_service_account_vault_token: "{{ lookup('env', 'VAULT_TOKEN') }}"
+
+# KV engine mount point. The collection convention is kv1 (KV v2 mounted as kv1).
+ipa_service_account_vault_kv_mount: "kv1"
+
+# Path within the KV mount where the manager account's own credentials live.
+# Not meant to be per-caller — every ipa_service_account invocation in this
+# environment shares the same manager account.
+ipa_service_account_vault_manager_path: "ipa/service-account-manager"
+
+# Path within the KV mount where the issued keytab is written, e.g.
+# "mokey/http_keytab" (required — caller-specific, one per service).
+ipa_service_account_vault_path: ""
+
+
+# ---- INJECTED SECRETS ----
+# IPA admin password — must be provided at runtime, only needed the first
+# time the manager account is bootstrapped.
+vault_ipa_admin_password: ""

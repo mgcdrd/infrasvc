@@ -1,0 +1,14 @@
+---
+galaxy_info:
+  author: mgcdrd
+  description: Issues an IPA Kerberos service principal + keytab for a service that isn't an enrolled IPA client, and stores it in Vault
+  role_name: ipa_service_account
+
+  license: GPL-3.0-or-later
+
+  min_ansible_version: '2.14'
+
+  galaxy_tags:
+    - mgcdrd
+
+collections: []

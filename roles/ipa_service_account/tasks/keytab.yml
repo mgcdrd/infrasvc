@@ -1,0 +1,109 @@
+---
+
+# The manager account authenticates via JSON-RPC for host/service creation
+# (no CLI dependency) but ipa-getkeytab itself has no RPC equivalent — it
+# speaks a Kerberos/LDAP protocol directly, so this half needs a real ticket
+# and the native binary (freeipa-client package) wherever this role runs.
+
+- name: ipa_service_account keytab - Authenticate to IPA as manager account
+  ansible.builtin.uri:
+    url: "https://{{ ipa_service_account_server }}/ipa/session/login_password"
+    method: POST
+    body: "user={{ ipa_service_account_manager_principal | urlencode }}&password={{ _ipa_svc_manager_password | urlencode }}"
+    headers:
+      Content-Type: "application/x-www-form-urlencoded"
+      Referer: "https://{{ ipa_service_account_server }}/ipa"
+    validate_certs: "{{ ipa_service_account_validate_certs }}"
+    status_code: 200
+  register: _ipa_svc_manager_session
+  no_log: true
+
+# Never an enrolled client, so --force is required (skips the DNS/reverse
+# lookup IPA normally expects for a real host).
+- name: ipa_service_account keytab - Ensure IPA host entry exists
+  ansible.builtin.uri:
+    url: "https://{{ ipa_service_account_server }}/ipa/json"
+    method: POST
+    body_format: json
+    body:
+      method: host_add
+      params:
+        - ["{{ ipa_service_account_fqdn }}"]
+        - force: true
+      id: 0
+    headers:
+      Cookie: "ipa_session={{ _ipa_svc_manager_session.cookies.ipa_session }}"
+      Referer: "https://{{ ipa_service_account_server }}/ipa"
+    validate_certs: "{{ ipa_service_account_validate_certs }}"
+    status_code: 200
+  register: _ipa_svc_host_add
+  failed_when: >-
+    _ipa_svc_host_add.json.error is not none and
+    _ipa_svc_host_add.json.error.code != 4002
+
+- name: ipa_service_account keytab - Ensure service principal exists
+  ansible.builtin.uri:
+    url: "https://{{ ipa_service_account_server }}/ipa/json"
+    method: POST
+    body_format: json
+    body:
+      method: service_add
+      params:
+        - ["{{ ipa_service_account_principal_type }}/{{ ipa_service_account_fqdn }}"]
+        - {}
+      id: 0
+    headers:
+      Cookie: "ipa_session={{ _ipa_svc_manager_session.cookies.ipa_session }}"
+      Referer: "https://{{ ipa_service_account_server }}/ipa"
+    validate_certs: "{{ ipa_service_account_validate_certs }}"
+    status_code: 200
+  register: _ipa_svc_service_add
+  failed_when: >-
+    _ipa_svc_service_add.json.error is not none and
+    _ipa_svc_service_add.json.error.code != 4002
+
+- name: ipa_service_account keytab - Obtain manager Kerberos ticket
+  ansible.builtin.shell:
+    cmd: "kinit {{ ipa_service_account_manager_principal }}"
+    stdin: "{{ _ipa_svc_manager_password }}"
+  no_log: true
+
+- name: ipa_service_account keytab - Retrieve keytab
+  ansible.builtin.shell:
+    cmd: >
+      ipa-getkeytab
+      -s {{ ipa_service_account_server }}
+      -p {{ ipa_service_account_principal_type }}/{{ ipa_service_account_fqdn }}
+      -k /tmp/ipa_service_account_{{ ipa_service_account_fqdn }}.keytab
+
+- name: ipa_service_account keytab - Destroy Kerberos ticket cache
+  ansible.builtin.shell:
+    cmd: kdestroy -A
+
+- name: ipa_service_account keytab - Read keytab file (base64)
+  ansible.builtin.slurp:
+    src: "/tmp/ipa_service_account_{{ ipa_service_account_fqdn }}.keytab"
+  register: _ipa_svc_keytab_file
+  no_log: true
+
+- name: ipa_service_account keytab - Write keytab to Vault
+  ansible.builtin.uri:
+    url: "{{ ipa_service_account_vault_url }}/v1/{{ ipa_service_account_vault_kv_mount }}/data/{{ ipa_service_account_vault_path }}"
+    method: POST
+    headers:
+      X-Vault-Token: "{{ ipa_service_account_vault_token }}"
+    body_format: json
+    body:
+      data:
+        fqdn: "{{ ipa_service_account_fqdn }}"
+        principal: "{{ ipa_service_account_principal_type }}/{{ ipa_service_account_fqdn }}"
+        keytab_b64: "{{ _ipa_svc_keytab_file.content }}"
+    status_code: [200, 204]
+  no_log: true
+
+# Local copy served its purpose once Vault has it — the consuming service
+# (e.g. a k8s deployment) reads the keytab back from Vault, not this file.
+- name: ipa_service_account keytab - Remove local keytab copy
+  ansible.builtin.file:
+    path: "/tmp/ipa_service_account_{{ ipa_service_account_fqdn }}.keytab"
+    state: absent

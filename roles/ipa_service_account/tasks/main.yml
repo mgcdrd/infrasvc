@@ -1,0 +1,35 @@
+---
+
+- name: ipa_service_account - Preflight validation
+  import_tasks: preflight.yml
+
+- name: ipa_service_account - Check for existing keytab in Vault
+  import_tasks: keytab_vault_check.yml
+
+- name: ipa_service_account - Check for existing manager account in Vault
+  import_tasks: manager_vault_check.yml
+  when: not _ipa_svc_keytab_exists | bool or ipa_service_account_force_rotate | bool
+
+- name: ipa_service_account - Bootstrap manager account and role
+  import_tasks: manager_setup.yml
+  when: >-
+    ipa_service_account_manage_manager | bool and
+    (not _ipa_svc_keytab_exists | bool or ipa_service_account_force_rotate | bool) and
+    (not _ipa_svc_manager_exists | bool or ipa_service_account_force_rotate_manager | bool)
+
+- name: ipa_service_account - Write manager credentials to Vault
+  import_tasks: manager_vault_write.yml
+  when: >-
+    ipa_service_account_manage_manager | bool and
+    (not _ipa_svc_keytab_exists | bool or ipa_service_account_force_rotate | bool) and
+    (not _ipa_svc_manager_exists | bool or ipa_service_account_force_rotate_manager | bool)
+
+- name: ipa_service_account - Read manager credentials from Vault
+  import_tasks: manager_vault_read.yml
+  when: >-
+    (not _ipa_svc_keytab_exists | bool or ipa_service_account_force_rotate | bool) and
+    _ipa_svc_manager_exists | bool and not ipa_service_account_force_rotate_manager | bool
+
+- name: ipa_service_account - Issue service principal and keytab
+  import_tasks: keytab.yml
+  when: not _ipa_svc_keytab_exists | bool or ipa_service_account_force_rotate | bool

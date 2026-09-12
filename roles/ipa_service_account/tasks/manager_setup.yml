@@ -1,0 +1,185 @@
+---
+
+- name: ipa_service_account manager_setup - Generate manager password
+  ansible.builtin.set_fact:
+    _ipa_svc_manager_new_password: "{{ lookup('password', '/dev/null length=32 chars=ascii_lowercase,ascii_uppercase,digits') }}"
+  no_log: true
+
+- name: ipa_service_account manager_setup - Authenticate to IPA as admin
+  ansible.builtin.uri:
+    url: "https://{{ ipa_service_account_server }}/ipa/session/login_password"
+    method: POST
+    body: "user={{ ipa_service_account_admin_principal | urlencode }}&password={{ vault_ipa_admin_password | urlencode }}"
+    headers:
+      Content-Type: "application/x-www-form-urlencoded"
+      Referer: "https://{{ ipa_service_account_server }}/ipa"
+    validate_certs: "{{ ipa_service_account_validate_certs }}"
+    status_code: 200
+  register: _ipa_svc_session
+  no_log: true
+
+# ---- Role ----
+
+- name: ipa_service_account manager_setup - Check manager role exists
+  ansible.builtin.uri:
+    url: "https://{{ ipa_service_account_server }}/ipa/json"
+    method: POST
+    body_format: json
+    body:
+      method: role_show
+      params:
+        - ["{{ ipa_service_account_manager_role }}"]
+        - {}
+      id: 0
+    headers:
+      Cookie: "ipa_session={{ _ipa_svc_session.cookies.ipa_session }}"
+      Referer: "https://{{ ipa_service_account_server }}/ipa"
+    validate_certs: "{{ ipa_service_account_validate_certs }}"
+    status_code: 200
+  register: _ipa_svc_role_check
+  changed_when: false
+  failed_when: >-
+    _ipa_svc_role_check.json.error is not none and
+    _ipa_svc_role_check.json.error.code != 4001
+
+- name: ipa_service_account manager_setup - Create manager role
+  ansible.builtin.uri:
+    url: "https://{{ ipa_service_account_server }}/ipa/json"
+    method: POST
+    body_format: json
+    body:
+      method: role_add
+      params:
+        - ["{{ ipa_service_account_manager_role }}"]
+        - description: "Issues per-service Kerberos keytabs (add host/service, manage keytab) for services that aren't IPA-enrolled clients"
+      id: 0
+    headers:
+      Cookie: "ipa_session={{ _ipa_svc_session.cookies.ipa_session }}"
+      Referer: "https://{{ ipa_service_account_server }}/ipa"
+    validate_certs: "{{ ipa_service_account_validate_certs }}"
+    status_code: 200
+  register: _ipa_svc_role_create
+  when: _ipa_svc_role_check.json.error is not none and _ipa_svc_role_check.json.error.code == 4001
+  failed_when: _ipa_svc_role_create.json.error is not none
+
+# Built-in privileges — not the `admins` group. "Host Administrators" covers
+# add/modify/remove host + manage host keytab; "Service Administrators"
+# covers the same for services. Idempotent — IPA returns success even when
+# already assigned.
+- name: ipa_service_account manager_setup - Assign Host/Service Administrators privileges to role
+  ansible.builtin.uri:
+    url: "https://{{ ipa_service_account_server }}/ipa/json"
+    method: POST
+    body_format: json
+    body:
+      method: role_add_privilege
+      params:
+        - ["{{ ipa_service_account_manager_role }}"]
+        - privilege:
+            - "Host Administrators"
+            - "Service Administrators"
+      id: 0
+    headers:
+      Cookie: "ipa_session={{ _ipa_svc_session.cookies.ipa_session }}"
+      Referer: "https://{{ ipa_service_account_server }}/ipa"
+    validate_certs: "{{ ipa_service_account_validate_certs }}"
+    status_code: 200
+  register: _ipa_svc_priv_assign
+  failed_when: _ipa_svc_priv_assign.json.error is not none
+
+# ---- Manager account ----
+
+- name: ipa_service_account manager_setup - Check manager account exists
+  ansible.builtin.uri:
+    url: "https://{{ ipa_service_account_server }}/ipa/json"
+    method: POST
+    body_format: json
+    body:
+      method: user_show
+      params:
+        - ["{{ ipa_service_account_manager_principal }}"]
+        - {}
+      id: 0
+    headers:
+      Cookie: "ipa_session={{ _ipa_svc_session.cookies.ipa_session }}"
+      Referer: "https://{{ ipa_service_account_server }}/ipa"
+    validate_certs: "{{ ipa_service_account_validate_certs }}"
+    status_code: 200
+  register: _ipa_svc_user_check
+  changed_when: false
+  failed_when: >-
+    _ipa_svc_user_check.json.error is not none and
+    _ipa_svc_user_check.json.error.code != 4001
+
+# krbPasswordExpiration is set far in the future so the account isn't
+# subject to the forced password-change-on-first-login IPA applies when an
+# admin sets a password via user_add.
+- name: ipa_service_account manager_setup - Create manager account
+  ansible.builtin.uri:
+    url: "https://{{ ipa_service_account_server }}/ipa/json"
+    method: POST
+    body_format: json
+    body:
+      method: user_add
+      params:
+        - ["{{ ipa_service_account_manager_principal }}"]
+        - givenname: "IPA"
+          sn: "Keytab Issuer"
+          userpassword: "{{ _ipa_svc_manager_new_password }}"
+          noprivate: true
+          setattr:
+            - "krbPasswordExpiration=20491231235959Z"
+      id: 0
+    headers:
+      Cookie: "ipa_session={{ _ipa_svc_session.cookies.ipa_session }}"
+      Referer: "https://{{ ipa_service_account_server }}/ipa"
+    validate_certs: "{{ ipa_service_account_validate_certs }}"
+    status_code: 200
+  register: _ipa_svc_user_create
+  no_log: true
+  when: _ipa_svc_user_check.json.error is not none and _ipa_svc_user_check.json.error.code == 4001
+  failed_when: _ipa_svc_user_create.json.error is not none
+
+- name: ipa_service_account manager_setup - Rotate manager account password
+  ansible.builtin.uri:
+    url: "https://{{ ipa_service_account_server }}/ipa/json"
+    method: POST
+    body_format: json
+    body:
+      method: user_mod
+      params:
+        - ["{{ ipa_service_account_manager_principal }}"]
+        - userpassword: "{{ _ipa_svc_manager_new_password }}"
+          setattr:
+            - "krbPasswordExpiration=20491231235959Z"
+      id: 0
+    headers:
+      Cookie: "ipa_session={{ _ipa_svc_session.cookies.ipa_session }}"
+      Referer: "https://{{ ipa_service_account_server }}/ipa"
+    validate_certs: "{{ ipa_service_account_validate_certs }}"
+    status_code: 200
+  register: _ipa_svc_user_rotate
+  no_log: true
+  when: ipa_service_account_force_rotate_manager | bool and _ipa_svc_user_check.json.error is none
+  failed_when: _ipa_svc_user_rotate.json.error is not none
+
+# Idempotent — IPA reports completed=0 but no error when member already present
+- name: ipa_service_account manager_setup - Add manager account to role
+  ansible.builtin.uri:
+    url: "https://{{ ipa_service_account_server }}/ipa/json"
+    method: POST
+    body_format: json
+    body:
+      method: role_add_member
+      params:
+        - ["{{ ipa_service_account_manager_role }}"]
+        - user:
+            - "{{ ipa_service_account_manager_principal }}"
+      id: 0
+    headers:
+      Cookie: "ipa_session={{ _ipa_svc_session.cookies.ipa_session }}"
+      Referer: "https://{{ ipa_service_account_server }}/ipa"
+    validate_certs: "{{ ipa_service_account_validate_certs }}"
+    status_code: 200
+  register: _ipa_svc_member_add
+  failed_when: _ipa_svc_member_add.json.error is not none
