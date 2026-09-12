@@ -46,10 +46,19 @@
     state: "{{ item.state | default('present') }}"
   loop: "{{ foreman_installation_media | default([]) }}"
 
-# Pass 2: re-apply RHEL OSes with template and media associations now that
-# they exist. provisioning_templates in vars is a kind → template map; the
-# operatingsystem module takes a flat list of template names.
-- name: provisioning - associate templates and media to RHEL-family operating systems
+# Pass 2: re-apply OSes with template and media associations now that they
+# exist. The two family lists carry the same shape; tag each with its
+# Foreman family so one pass covers both. provisioning_templates in vars is
+# a kind → template map; the operatingsystem module takes a flat list of
+# template names.
+- name: provisioning - build combined operating system list
+  become: false
+  ansible.builtin.set_fact:
+    _foreman_operatingsystems_all: >-
+      {{ (foreman_operatingsystems_rh | default([]) | map('combine', {'_family': 'Redhat'}) | list)
+         + (foreman_operatingsystems_deb | default([]) | map('combine', {'_family': 'Debian'}) | list) }}
+
+- name: provisioning - associate templates and media to operating systems
   become: false
   theforeman.foreman.operatingsystem:
     username: "{{ foreman_username }}"
@@ -57,14 +66,17 @@
     server_url: "{{ foreman_url }}"
     validate_certs: "{{ foreman_validate_certs }}"
     name: "{{ item.name }}"
-    family: Redhat
+    release_name: "{{ item.release_name | default(omit) }}"
+    family: "{{ item._family }}"
     major: "{{ item.major }}"
     architectures: "{{ item.architectures | default(foreman_architectures | map(attribute='name') | list) }}"
     ptables: "{{ item.partition_tables | default(omit) }}"
     media: "{{ item.install_media | default(omit) }}"
     provisioning_templates: "{{ (item.provisioning_templates.values() | list) if item.provisioning_templates is defined else omit }}"
     state: "{{ item.state | default('present') }}"
-  loop: "{{ foreman_operatingsystems_rh | default([]) }}"
+  loop: "{{ _foreman_operatingsystems_all }}"
+  loop_control:
+    label: "{{ item.name }} {{ item.major }}"
 
 # Selecting the default template per kind is a separate resource — flatten
 # each OS's kind → template map into (os, kind, template) tuples.
@@ -73,7 +85,7 @@
   ansible.builtin.set_fact:
     _foreman_os_default_templates: >-
       {%- set out = [] -%}
-      {%- for os in foreman_operatingsystems_rh | default([]) if os.provisioning_templates is defined -%}
+      {%- for os in _foreman_operatingsystems_all if os.provisioning_templates is defined -%}
       {%- for kind, tpl in os.provisioning_templates.items() -%}
       {%- set _ = out.append({'os': os.name ~ ' ' ~ os.major, 'kind': kind, 'template': tpl}) -%}
       {%- endfor -%}
@@ -128,5 +140,6 @@
     name: "{{ item.name }}"
     parameter_type: "{{ item.type | default('string') }}"
     value: "{{ item.value }}"
+    hidden_value: "{{ item.hidden | default(false) }}"
     state: "{{ item.state | default('present') }}"
   loop: "{{ foreman_global_parameters | default([]) }}"

@@ -40,7 +40,8 @@
 - name: foreman_config - operating systems and provisioning
   import_tasks: provisioning.yml
   when: >
-    foreman_operatingsystems is defined or
+    foreman_operatingsystems_rh is defined or
+    foreman_operatingsystems_deb is defined or
     foreman_installation_media is defined or
     foreman_global_parameters is defined
   tags: [foreman_config, provisioning]

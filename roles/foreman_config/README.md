@@ -226,6 +226,12 @@ foreman_operatingsystems_deb:
   - name: Debian
     release_name: Bookworm
     major: 12
+    partition_tables: [Preseed default]
+    install_media: [Debian mirror]
+    provisioning_templates:
+      PXELinux: Preseed default PXELinux
+      provision: Preseed default
+      finish: Preseed default finish
     state: present
 
 foreman_partition_table_os_families:
@@ -243,6 +249,11 @@ foreman_global_parameters:
   - name: allow-root-ssh
     type: boolean
     value: "true"
+    state: present
+  - name: some-secret-token
+    type: string
+    value: "{{ vault_foreman_some_secret_token }}"
+    hidden: true  # optional, defaults to false
     state: present
 ```
 
@@ -452,10 +463,13 @@ The GitLab host key is scanned automatically and written to
 Operating system provisioning notes
 ------------------------------------
 
-RHEL-family OSes are created in two passes. The first pass creates the OS record
-without template or media associations (which may not exist yet). The second pass
-re-applies with full associations. This avoids ordering failures when templates
-and media are also being created in the same run.
+OSes are created in two passes, for both `foreman_operatingsystems_rh` and
+`foreman_operatingsystems_deb`. The first pass creates the OS record without
+template or media associations (which may not exist yet). The second pass
+re-applies with full associations — `partition_tables`, `install_media`, and the
+`provisioning_templates` kind → template map — and sets the per-kind default
+templates. This avoids ordering failures when templates and media are also being
+created in the same run.
 
 
 License
