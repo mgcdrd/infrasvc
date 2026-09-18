@@ -44,13 +44,16 @@ http {
 
 
 {% if nginx_http_block.caching.enabled is defined and nginx_http_block.caching.enabled %}
+{# Same YAML on/off-as-boolean gotcha as add_opts above — user_temp_path: off is the documented example in vars/main.yml. #}
+{% set _use_temp_path = nginx_http_block.caching.user_temp_path | default('off') %}
+{% set _use_temp_path = 'on' if _use_temp_path is sameas true else ('off' if _use_temp_path is sameas false else _use_temp_path) %}
     # Provide a cache location that NGINX can cache proxied results
     proxy_cache_path    {{ nginx_http_block.caching.cache_path    | default('/var/cache/nginx') }}
                         levels={{ nginx_http_block.caching.levels | default('1:2') }}
                         keys_zone={{ nginx_http_block.caching.keys_zone | default('STATIC:10m') }}
                         inactive={{ nginx_http_block.caching.inactive   | default('24h') }}
                         max_size={{ nginx_http_block.caching.max_size   | default('10g') }}
-                        use_temp_path={{ nginx_http_block.caching.user_temp_path | default('off') }};
+                        use_temp_path={{ _use_temp_path }};
 {% endif %}
 
     # HTTP level hardening items
