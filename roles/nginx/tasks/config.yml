@@ -140,6 +140,22 @@
   when:
     - nginx_ssl_enable | bool
     - nginx_ssl_provider == 'acme_sh'
+    - inventory_hostname == (acme_sh_issuer_host | default(inventory_hostname))
+
+# Non-issuer hosts never run acme_sh's own issuance (see acme_sh_issuer_host
+# above) — they pull the issuer's already-pushed cert from Vault instead.
+# Ansible's linear strategy barriers at the end of the task above across all
+# hosts before this one starts on any host, so the issuer's Vault push is
+# always complete by the time a non-issuer host's lookup below runs.
+- name: nginx config - Deploy SSL certificate from Vault (acme_sh fan-out)
+  ansible.builtin.include_role:
+    name: mgcdrd.infrabase.acme_sh
+    tasks_from: vault_deploy.yml
+  when:
+    - nginx_ssl_enable | bool
+    - nginx_ssl_provider == 'acme_sh'
+    - acme_sh_vault_kv_enabled | default(false)
+    - inventory_hostname != (acme_sh_issuer_host | default(inventory_hostname))
 
 
 # ================
