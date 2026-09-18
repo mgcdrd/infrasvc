@@ -164,3 +164,18 @@
   ansible.builtin.command:
     cmd: /usr/sbin/nginx -t
   changed_when: false
+
+
+# ================
+# apt's postinst auto-starts nginx on Debian, but dnf's package install
+# does not on RedHat/Rocky — a fresh RedHat/Rocky host never got past
+# install.yml with a running service without this. Runs after config
+# validation above so a first start always picks up a known-good config.
+# Idempotent on every later run (already started/enabled is a no-op), so
+# the reload handlers above still own applying changes on an
+# already-running service — this task never fights them.
+- name: nginx config - Ensure nginx is started and enabled
+  ansible.builtin.systemd_service:
+    name: nginx
+    state: started
+    enabled: true
