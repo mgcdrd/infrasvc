@@ -32,6 +32,12 @@ nginx_shared_configs: {}
 # List of server block definitions, one conf file per entry.
 nginx_server_blocks: []
 
+# Base nginx conf.d directory — optional override, e.g. for a nonstandard
+# install. Exists mainly so paths derived from it (nginx_proxy_files_dir
+# below, or a custom proxy_files_path on an nginx_server_blocks entry)
+# have a single var to reference instead of retyping the literal path.
+nginx_conf_d_dir: /etc/nginx/conf.d
+
 # ---- PROXY FILES (devops-owned location block content) ----
 # Clean break between infra (this role — the server block shell,
 # certs, hardening) and whoever owns the actual proxy_pass/location
@@ -41,10 +47,10 @@ nginx_server_blocks: []
 # touching anything else this role manages. Ansible never overwrites an
 # existing proxy file — see "Ensure proxy file exists" in tasks/config.yml.
 #
-# A dedicated directory, not the rest of /etc/nginx/conf.d/ (which holds
+# A dedicated directory, not the rest of nginx_conf_d_dir (which holds
 # Ansible-managed server block/shared config files this account has no
 # business touching).
-nginx_proxy_files_dir: /etc/nginx/conf.d/proxies
+nginx_proxy_files_dir: "{{ nginx_conf_d_dir }}/proxies"
 
 # Required whenever any nginx_server_blocks entry has
 # exclude_proxy_files: false — the group that owns nginx_proxy_files_dir

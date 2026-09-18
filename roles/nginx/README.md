@@ -128,8 +128,13 @@ real file exists there (devops replaced the placeholder), Ansible never
 touches it again on any later run.
 
 ```yaml
-nginx_proxy_files_dir:   /etc/nginx/conf.d/proxies   # dedicated — deliberately
-                                                       # not /etc/nginx/conf.d/
+nginx_conf_d_dir: /etc/nginx/conf.d   # optional override — nginx_proxy_files_dir
+                                       # (and any custom proxy_files_path) can
+                                       # reference this instead of retyping the
+                                       # literal path
+nginx_proxy_files_dir:   "{{ nginx_conf_d_dir }}/proxies"   # dedicated —
+                                                       # deliberately not
+                                                       # nginx_conf_d_dir
                                                        # itself, which holds
                                                        # Ansible-managed files
 nginx_proxy_files_group: ""   # required whenever any server block has
@@ -146,7 +151,9 @@ nginx_proxy_files_group }}`, mode `02770` (setgid, so files the service
 account creates inherit the group automatically). Each placeholder file is
 the same owner/group, mode `0664`. `proxy_files_path` on a server block
 entry still overrides the default `<nginx_proxy_files_dir>/<name>.proxies`
-path per site if needed.
+path per site if needed — reference `nginx_conf_d_dir`/`nginx_proxy_files_dir`
+there too rather than a hardcoded literal, e.g.
+`proxy_files_path: "{{ nginx_proxy_files_dir }}/mysite.proxies"`.
 
 **Not yet built:** granting the service account sudo rights to test/reload
 nginx (e.g. via `mgcdrd.infrabase.sudoers`) — that role currently only
