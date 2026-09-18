@@ -32,6 +32,26 @@ nginx_shared_configs: {}
 # List of server block definitions, one conf file per entry.
 nginx_server_blocks: []
 
+# ---- PROXY FILES (devops-owned location block content) ----
+# Clean break between infra (this role — the server block shell,
+# certs, hardening) and whoever owns the actual proxy_pass/location
+# content per site: this role only ensures the directory and an empty
+# placeholder file exist, with ownership split so a devops service
+# account can log in and manage the content directly, without ever
+# touching anything else this role manages. Ansible never overwrites an
+# existing proxy file — see "Ensure proxy file exists" in tasks/config.yml.
+#
+# A dedicated directory, not the rest of /etc/nginx/conf.d/ (which holds
+# Ansible-managed server block/shared config files this account has no
+# business touching).
+nginx_proxy_files_dir: /etc/nginx/conf.d/proxies
+
+# Required whenever any nginx_server_blocks entry has
+# exclude_proxy_files: false — the group that owns nginx_proxy_files_dir
+# and every placeholder file in it. No default: this is a specific
+# service account per deployment, not a lab-wide constant.
+nginx_proxy_files_group: ""
+
 # ---- SSL ----
 # Whether SSL cert management is enabled at all.
 nginx_ssl_enable: false

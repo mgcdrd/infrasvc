@@ -9,8 +9,8 @@ server {
   error_log  /var/log/nginx/{{ tpl.name }}.error.log       info;
 
 {% if tpl.exclude_proxy_files is defined and not tpl.exclude_proxy_files %}
-  # to keep it a bit cleaner, put the proxies into their own file
-  include {{ tpl.proxy_files_path | default('/etc/nginx/conf.d/{}.proxies'.format(tpl.name)) }};
+  # devops-owned location block content — see nginx_proxy_files_dir
+  include {{ tpl.proxy_files_path | default(nginx_proxy_files_dir + '/' + tpl.name + '.proxies') }};
 {% endif %}
 
 #end of the server section

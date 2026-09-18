@@ -106,6 +106,50 @@
 
 
 # ================
+# Proxy files — devops-owned location block content, split from everything
+# else this role manages. Directory + an empty placeholder only; Ansible
+# never touches a proxy file's content once it exists (force: false below),
+# so a devops service account can freely edit/replace it without a later
+# Ansible run ever clobbering it.
+- name: nginx config - Determine whether any server block needs proxy files
+  ansible.builtin.set_fact:
+    _nginx_proxy_files_needed: "{{ nginx_server_blocks | selectattr('exclude_proxy_files', 'defined') | selectattr('exclude_proxy_files', 'equalto', false) | list | length > 0 }}"
+
+- name: nginx config - Assert nginx_proxy_files_group is set
+  ansible.builtin.assert:
+    quiet: true
+    that:
+      - nginx_proxy_files_group | length > 0
+    fail_msg: >-
+      nginx_proxy_files_group must be set when any nginx_server_blocks entry
+      has exclude_proxy_files: false.
+  when: _nginx_proxy_files_needed
+
+- name: nginx config - Create proxy files directory
+  ansible.builtin.file:
+    path:  "{{ nginx_proxy_files_dir }}"
+    state: directory
+    owner: "{{ nginx_process_user }}"
+    group: "{{ nginx_proxy_files_group }}"
+    mode:  "02770"
+  when: _nginx_proxy_files_needed
+
+- name: "nginx config - Ensure proxy file exists for {{ tpl.name }} (placeholder only, never overwritten)"
+  ansible.builtin.copy:
+    dest:    "{{ tpl.proxy_files_path | default(nginx_proxy_files_dir + '/' + tpl.name + '.proxies') }}"
+    content: "# Managed by the devops team -- Ansible only creates this file if missing, never edits it.\n"
+    owner:   "{{ nginx_process_user }}"
+    group:   "{{ nginx_proxy_files_group }}"
+    mode:    "0664"
+    force:   false
+  loop: "{{ nginx_server_blocks }}"
+  loop_control:
+    loop_var: tpl
+    label: "{{ tpl.name }}"
+  when: tpl.exclude_proxy_files is defined and not tpl.exclude_proxy_files
+
+
+# ================
 # Server block conf files
 - name: nginx config - Deploy server block configs
   ansible.builtin.template:

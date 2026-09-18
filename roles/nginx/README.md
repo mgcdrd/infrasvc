@@ -114,8 +114,44 @@ nginx_server_blocks:
     server_names:
       - mysite.example.com
     exclude_proxy_files: false
-    proxy_files_path: /etc/nginx/conf.d/mysite.proxies
+    proxy_files_path: /etc/nginx/conf.d/proxies/mysite.proxies   # optional — see below
 ```
+
+### Proxy files (devops-owned location block content)
+
+Deliberate split between infra (this role — the server block shell, certs,
+hardening) and whoever owns the actual `proxy_pass`/`location` content per
+site: this role only ensures `nginx_proxy_files_dir` and an **empty
+placeholder** exist for each `exclude_proxy_files: false` server block —
+never the content. `ansible.builtin.copy`'s `force: false` means once a
+real file exists there (devops replaced the placeholder), Ansible never
+touches it again on any later run.
+
+```yaml
+nginx_proxy_files_dir:   /etc/nginx/conf.d/proxies   # dedicated — deliberately
+                                                       # not /etc/nginx/conf.d/
+                                                       # itself, which holds
+                                                       # Ansible-managed files
+nginx_proxy_files_group: ""   # required whenever any server block has
+                               # exclude_proxy_files: false — the group that
+                               # owns nginx_proxy_files_dir and every
+                               # placeholder in it (the devops service
+                               # account that logs in to manage these files
+                               # is expected to already exist and belong to
+                               # this group — this role does not create it)
+```
+
+`nginx_proxy_files_dir` is created `{{ nginx_process_user }}:{{
+nginx_proxy_files_group }}`, mode `02770` (setgid, so files the service
+account creates inherit the group automatically). Each placeholder file is
+the same owner/group, mode `0664`. `proxy_files_path` on a server block
+entry still overrides the default `<nginx_proxy_files_dir>/<name>.proxies`
+path per site if needed.
+
+**Not yet built:** granting the service account sudo rights to test/reload
+nginx (e.g. via `mgcdrd.infrabase.sudoers`) — that role currently only
+does global sudo hardening, no per-user/per-command grants. Flagged as
+follow-up work, not implemented here.
 
 ### SSL cert management
 
