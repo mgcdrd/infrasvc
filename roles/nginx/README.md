@@ -110,12 +110,25 @@ One `.conf` file is created per entry:
 
 ```yaml
 nginx_server_blocks:
-  - name: mysite               # → /etc/nginx/conf.d/mysite.conf
+  - name: mysite               # → /etc/nginx/conf.d/mysite.conf — a config
+                                # filename label only, no SSL/cert significance
     server_names:
       - mysite.example.com
     exclude_proxy_files: false
     proxy_files_path: /etc/nginx/conf.d/proxies/mysite.proxies   # optional — see below
 ```
+
+**`name` has no relationship to `mgcdrd.infrabase.acme_sh`'s `acme_sh_certs`**
+— it's only ever used to name this entry's `.conf` file (and the default
+`proxy_files_path`). What actually has to line up is `server_names` here
+against `acme_sh_certs[].domains`/`.domain` — a client's SNI hostname (one
+of this block's `server_names`) needs a matching cert issued for that
+exact domain, via `acme_sh_flat_ssl_dir`'s `<domain>.crt`/`.key` lookup
+(see `mgcdrd.infrabase.acme_sh`'s README). The two lists are independent
+on purpose — a server block's `name` can be anything, and a single cert's
+SANs can cover multiple server blocks — so there's no automatic wiring
+between them to get wrong here, only domain names to keep consistent by
+hand between the two lists.
 
 ### Proxy files (devops-owned location block content)
 
