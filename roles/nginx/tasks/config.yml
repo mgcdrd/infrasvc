@@ -123,24 +123,26 @@
     fail_msg: >-
       nginx_proxy_files_group must be set when any nginx_server_blocks entry
       has exclude_proxy_files: false.
-  when: _nginx_proxy_files_needed
+  when:
+    - _nginx_proxy_files_needed
+    - not nginx_proxy_sync_enabled
 
 - name: nginx config - Create proxy files directory
   ansible.builtin.file:
     path:  "{{ nginx_proxy_files_dir }}"
     state: directory
-    owner: "{{ nginx_process_user }}"
-    group: "{{ nginx_proxy_files_group }}"
-    mode:  "02770"
+    owner: "{{ 'root' if nginx_proxy_sync_enabled else nginx_process_user }}"
+    group: "{{ 'root' if nginx_proxy_sync_enabled else nginx_proxy_files_group }}"
+    mode:  "{{ '0755' if nginx_proxy_sync_enabled else '02770' }}"
   when: _nginx_proxy_files_needed
 
 - name: "nginx config - Ensure proxy file exists for {{ tpl.name }} (placeholder only, never overwritten)"
   ansible.builtin.copy:
     dest:    "{{ tpl.proxy_files_path | default(nginx_proxy_files_dir + '/' + tpl.name + '.proxies') }}"
     content: "# Managed by the devops team -- Ansible only creates this file if missing, never edits it.\n"
-    owner:   "{{ nginx_process_user }}"
-    group:   "{{ nginx_proxy_files_group }}"
-    mode:    "0664"
+    owner:   "{{ 'root' if nginx_proxy_sync_enabled else nginx_process_user }}"
+    group:   "{{ 'root' if nginx_proxy_sync_enabled else nginx_proxy_files_group }}"
+    mode:    "{{ '0644' if nginx_proxy_sync_enabled else '0664' }}"
     force:   false
   loop: "{{ nginx_server_blocks }}"
   loop_control:
@@ -223,3 +225,11 @@
     name: nginx
     state: started
     enabled: true
+
+
+# ================
+# Proxy sync — opt-in pull of the devops-published proxy files from S3.
+# Last, so nginx is already validated and running when the timer first fires.
+- name: nginx config - Configure proxy sync from S3
+  import_tasks: proxy_sync.yml
+  when: nginx_proxy_sync_enabled | bool

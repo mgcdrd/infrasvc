@@ -1,0 +1,84 @@
+---
+# Pull-based distribution of devops-published proxy files. See README,
+# "Proxy sync". Only imported when nginx_proxy_sync_enabled is true.
+
+- name: nginx proxy_sync - Assert required variables are set
+  ansible.builtin.assert:
+    quiet: true
+    that:
+      - nginx_proxy_sync_s3_endpoint | length > 0
+      - nginx_proxy_sync_s3_bucket | length > 0
+      - nginx_proxy_sync_vault_secret_path | length > 0
+      - _nginx_proxy_files_needed | bool
+    fail_msg: >-
+      nginx_proxy_sync_s3_endpoint, nginx_proxy_sync_s3_bucket and
+      nginx_proxy_sync_vault_secret_path must be set, and at least one
+      nginx_server_blocks entry needs exclude_proxy_files: false, when
+      nginx_proxy_sync_enabled is true.
+
+- name: nginx proxy_sync - Install curl and jq (Debian)
+  ansible.builtin.apt:
+    pkg:
+      - curl
+      - jq
+    state: present
+  when: ansible_facts['os_family'] == 'Debian'
+
+- name: nginx proxy_sync - Install curl and jq (RedHat)
+  ansible.builtin.dnf:
+    name:
+      - curl
+      - jq
+    state: present
+  when: ansible_facts['os_family'] == 'RedHat'
+
+- name: nginx proxy_sync - Create state directory
+  ansible.builtin.file:
+    path:  "{{ nginx_proxy_sync_state_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode:  "0700"
+
+- name: nginx proxy_sync - Deploy sync script
+  ansible.builtin.template:
+    src:   nginx-proxy-sync.sh.j2
+    dest:  /usr/local/sbin/nginx-proxy-sync.sh
+    owner: root
+    group: root
+    mode:  "0750"
+
+- name: nginx proxy_sync - Deploy S3 GET helper
+  ansible.builtin.copy:
+    src:   nginx-proxy-sync-s3get.py
+    dest:  /usr/local/sbin/nginx-proxy-sync-s3get.py
+    owner: root
+    group: root
+    mode:  "0750"
+
+- name: nginx proxy_sync - Deploy systemd service unit
+  ansible.builtin.template:
+    src:   nginx-proxy-sync.service.j2
+    dest:  /etc/systemd/system/nginx-proxy-sync.service
+    owner: root
+    group: root
+    mode:  "0644"
+  notify: nginx proxy sync reload systemd
+
+- name: nginx proxy_sync - Deploy systemd timer unit
+  ansible.builtin.template:
+    src:   nginx-proxy-sync.timer.j2
+    dest:  /etc/systemd/system/nginx-proxy-sync.timer
+    owner: root
+    group: root
+    mode:  "0644"
+  notify: nginx proxy sync reload systemd
+
+- name: nginx proxy_sync - Flush handlers so the units are known to systemd
+  ansible.builtin.meta: flush_handlers
+
+- name: nginx proxy_sync - Enable and start the timer
+  ansible.builtin.systemd_service:
+    name:    nginx-proxy-sync.timer
+    state:   started
+    enabled: true

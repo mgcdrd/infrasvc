@@ -168,10 +168,90 @@ path per site if needed — reference `nginx_conf_d_dir`/`nginx_proxy_files_dir`
 there too rather than a hardcoded literal, e.g.
 `proxy_files_path: "{{ nginx_proxy_files_dir }}/mysite.proxies"`.
 
-**Not yet built:** granting the service account sudo rights to test/reload
-nginx (e.g. via `mgcdrd.infrabase.sudoers`) — that role currently only
-does global sudo hardening, no per-user/per-command grants. Flagged as
-follow-up work, not implemented here.
+Granting that service account sudo rights to test and reload nginx is done
+from the deployment, through `mgcdrd.infrabase.sudoers`'s `sudoers_rules`, not
+by this role. With proxy sync (below) nobody edits on the node, so the grant
+isn't needed.
+
+### Proxy sync (pull proxy files from S3)
+
+Proxy sync is an opt-in alternative to editing proxy files on a node. The
+devops team's CI publishes each site's proxy file to a local S3-compatible
+bucket, and a root systemd timer on every node pulls, validates and reloads.
+Every node converges on the same content within one interval.
+
+```yaml
+nginx_proxy_sync_enabled: true
+nginx_proxy_sync_interval: 5min                       # default
+nginx_proxy_sync_s3_endpoint: https://s3.example.com:9000   # path-style
+nginx_proxy_sync_s3_bucket: proxy
+nginx_proxy_sync_s3_prefix: webproxy
+# nginx_proxy_sync_s3_region: us-east-1               # default
+# nginx_proxy_sync_s3_ca_file: /etc/pki/ca-trust/source/anchors/lab-ca.pem
+# nginx_proxy_sync_vault_secret_path defaults to
+#   <vault_kv_infra_mount>/data/<vault_kv_env>/webproxy/s3
+```
+
+#### Bucket contract
+
+The bucket holds one object per server block with `exclude_proxy_files: false`,
+at `<s3_prefix>/<server block name>.proxies`. The role builds that list from
+`nginx_server_blocks`, so nothing lists the bucket. The publishing CI job
+should run `nginx -t` or a syntax lint before it uploads. The check on the
+node is a safety net, not the first line of defense.
+
+#### What each run does
+
+`/usr/local/sbin/nginx-proxy-sync.sh` runs from `nginx-proxy-sync.timer`:
+
+1. It takes a lock, logs in to Vault with AppRole, and reads the S3
+   `access_key` and `secret_key` from `nginx_proxy_sync_vault_secret_path`.
+   The role_id and secret_id files (`nginx_proxy_sync_vault_*_file`) must
+   already be on the node, as with `acme_sh` and `ups_shed`; this role doesn't
+   create them. Nothing is cached on disk.
+2. It fetches each site's object and compares its sha256 with the installed
+   file. A 404 means nothing is published yet, and the current file stays. An
+   S3 error or an empty object also keeps the current file and fails the run.
+3. If nothing changed, it exits. Otherwise it confirms `nginx -t` passes
+   before touching anything, so a pre-existing config problem can't get a good
+   file rejected. Then it swaps the changed files in and runs `nginx -t`
+   again.
+4. If that fails, it restores the old files and retries the changed ones one
+   at a time, so one bad site doesn't block the others. A file that fails is
+   rolled back and its hash is remembered. The script skips it until the
+   published content changes.
+5. It runs `nginx -s reload`, never a restart, so a failed reload leaves the
+   old workers running. If the reload fails, a `reload-pending` marker makes
+   the next run retry it even though no file differs.
+
+The run exits non-zero whenever the node isn't fully in sync: an S3 or Vault
+failure, a rejected file, or a failed reload. A failed systemd unit is the
+alert. State lives in `nginx_proxy_sync_state_dir`
+(`/var/lib/nginx-proxy-sync`).
+
+#### Ownership
+
+With sync enabled, the proxy directory and files are `root:root` (`0755` and
+`0644`), and `nginx_proxy_files_group` is no longer required.
+
+#### S3 signing
+
+`nginx-proxy-sync-s3get.py` signs the S3 requests using the host's
+`/usr/bin/python3` and only the standard library. It replaces
+`curl --aws-sigv4` because Rocky 9's curl 7.76 produced signatures that MinIO
+rejected with `SignatureDoesNotMatch`. The host still needs `curl` and `jq`,
+which this role installs.
+
+#### Limitations
+
+- Nodes can differ by up to one interval plus 30 seconds of jitter. Per-file
+  objects give no atomicity across sites.
+- `nginx -t` fails on a `proxy_pass` or `upstream` hostname that doesn't
+  resolve, so use IPs or names that resolve.
+- `nginx -t` checks syntax. It doesn't catch a valid config that sends
+  traffic to the wrong place.
+- For a few seconds between swapping a file in and rolling it back, an
+  unrelated reload (such as `acme_sh`'s `reload_cmd`) could load the bad file.
 
 ### SSL cert management
 

@@ -4,3 +4,7 @@
   ansible.builtin.shell:
     cmd: /usr/sbin/nginx -t && /usr/sbin/nginx -s reload
   changed_when: false
+
+- name: nginx proxy sync reload systemd
+  ansible.builtin.systemd_service:
+    daemon_reload: true

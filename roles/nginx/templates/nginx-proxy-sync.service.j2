@@ -1,0 +1,9 @@
+#=============DO NOT EDIT - ANSIBLE CONTROLLED===============
+[Unit]
+Description=nginx proxy sync - pull proxy files from S3, validate, reload nginx
+After=network-online.target nginx.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/nginx-proxy-sync.sh

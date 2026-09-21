@@ -1,0 +1,13 @@
+#=============DO NOT EDIT - ANSIBLE CONTROLLED===============
+[Unit]
+Description=nginx proxy sync - periodic pull
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec={{ nginx_proxy_sync_interval }}
+# Keeps the nodes from hitting S3 and Vault in lockstep.
+RandomizedDelaySec=30s
+AccuracySec=1s
+
+[Install]
+WantedBy=timers.target

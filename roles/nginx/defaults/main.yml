@@ -58,6 +58,39 @@ nginx_proxy_files_dir: "{{ nginx_conf_d_dir }}/proxies"
 # service account per deployment, not a lab-wide constant.
 nginx_proxy_files_group: ""
 
+# ---- PROXY SYNC (opt-in: pull proxy files from S3) ----
+# Instead of editing proxy files on the node, the devops team's CI publishes
+# one object per server block (<s3_prefix>/<server block name>.proxies) to a
+# local S3-compatible bucket, and a root systemd timer on every node pulls
+# them, runs `nginx -t`, and reloads — rolling back on a failed test. Off
+# by default; nothing below has any effect unless enabled. See README,
+# "Proxy sync".
+nginx_proxy_sync_enabled: false
+
+# systemd time span between pulls (OnUnitActiveSec).
+nginx_proxy_sync_interval: 5min
+
+# Path-style S3 endpoint (MinIO, Ceph RGW, ...), e.g. https://s3.example.com:9000
+nginx_proxy_sync_s3_endpoint: ""
+nginx_proxy_sync_s3_bucket: ""
+nginx_proxy_sync_s3_prefix: ""
+nginx_proxy_sync_s3_region: us-east-1
+# CA bundle for a private-CA endpoint. Empty uses the system trust store.
+nginx_proxy_sync_s3_ca_file: ""
+
+# S3 access_key/secret_key are read from this Vault KV v2 API path at
+# runtime (mount and /data/ included, same shape as ups_shed) via AppRole —
+# never stored on the node. The role_id/secret_id files are pre-positioned
+# by the identity build, same convention as acme_sh_vault_* /
+# ups_shed_vault_*; this role does not create them.
+nginx_proxy_sync_vault_addr: "{{ vault_addr }}"
+nginx_proxy_sync_vault_secret_path: "{{ vault_kv_infra_mount }}/data/{{ vault_kv_env }}/webproxy/s3"
+nginx_proxy_sync_vault_role_id_file: /etc/vault/webproxy-s3-role-id
+nginx_proxy_sync_vault_secret_id_file: /etc/vault/webproxy-s3-secret-id
+
+# Holds the lock file, last-good backups and rejected-file hashes.
+nginx_proxy_sync_state_dir: /var/lib/nginx-proxy-sync
+
 # ---- SSL ----
 # Whether SSL cert management is enabled at all.
 nginx_ssl_enable: false

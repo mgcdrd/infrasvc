@@ -1,0 +1,176 @@
+#!/bin/bash
+#=============DO NOT EDIT - ANSIBLE CONTROLLED===============
+# Pulls the devops-published proxy files from S3, validates them with
+# `nginx -t`, and reloads nginx. A file that fails validation is rolled
+# back and its hash remembered so it isn't retried until it changes. See
+# the nginx role README, "Proxy sync".
+#
+# Exit status is non-zero whenever this node is not fully in sync with the
+# bucket (fetch failure, rejected file, nginx down), so the systemd unit
+# staying failed is the alert.
+set -euo pipefail
+
+NGINX=/usr/sbin/nginx
+STATE_DIR="{{ nginx_proxy_sync_state_dir }}"
+STG="${STATE_DIR}/staging"
+BK="${STATE_DIR}/last-good"
+REJ="${STATE_DIR}/rejected"
+PENDING="${STATE_DIR}/reload-pending"
+
+VAULT_ADDR="{{ nginx_proxy_sync_vault_addr }}"
+ROLE_ID_FILE="{{ nginx_proxy_sync_vault_role_id_file }}"
+SECRET_ID_FILE="{{ nginx_proxy_sync_vault_secret_id_file }}"
+VAULT_SECRET_PATH="{{ nginx_proxy_sync_vault_secret_path }}"
+
+S3_URL="{{ nginx_proxy_sync_s3_endpoint | regex_replace('/+$', '') }}/{{ nginx_proxy_sync_s3_bucket }}"
+S3_PREFIX="{{ nginx_proxy_sync_s3_prefix | regex_replace('^/+|/+$', '') }}"
+S3_REGION="{{ nginx_proxy_sync_s3_region }}"
+S3_CA_FILE="{{ nginx_proxy_sync_s3_ca_file }}"
+
+# Server block name -> where its proxy file lives on this node.
+declare -A DEST=(
+{% for tpl in nginx_server_blocks if tpl.exclude_proxy_files is defined and not tpl.exclude_proxy_files %}
+  ["{{ tpl.name }}"]="{{ tpl.proxy_files_path | default(nginx_proxy_files_dir + '/' + tpl.name + '.proxies') }}"
+{% endfor %}
+)
+
+FAILED=0
+log()  { echo "nginx-proxy-sync: $*"; }
+warn() { echo "nginx-proxy-sync: $*" >&2; FAILED=1; }
+
+mkdir -p "$STG" "$BK" "$REJ"
+chmod 0700 "$STATE_DIR"
+
+exec 9>"${STATE_DIR}/lock"
+if ! flock -n 9; then
+  log "another run in progress, skipping"
+  exit 0
+fi
+
+# curl config-file syntax quoting, so credentials never show up in `ps`.
+cfgq() { local v="${1//\\/\\\\}"; printf '%s' "${v//\"/\\\"}"; }
+
+# --- credentials: AppRole login, then the S3 keys. Nothing is cached. ---
+TOKEN="$(jq -n --arg r "$(cat "$ROLE_ID_FILE")" --arg s "$(cat "$SECRET_ID_FILE")" \
+    '{role_id: $r, secret_id: $s}' \
+  | curl -sf --max-time 30 --data @- "${VAULT_ADDR}/v1/auth/approle/login" \
+  | jq -r '.auth.client_token')" || TOKEN=""
+if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+  echo "nginx-proxy-sync: Vault AppRole login failed" >&2
+  exit 1
+fi
+
+SECRET_JSON="$(curl -sf --max-time 30 \
+  -K <(printf 'header = "X-Vault-Token: %s"\n' "$(cfgq "$TOKEN")") \
+  "${VAULT_ADDR}/v1/${VAULT_SECRET_PATH}")" || SECRET_JSON=""
+S3_ACCESS_KEY="$(jq -r '.data.data.access_key // empty' <<<"$SECRET_JSON")"
+S3_SECRET_KEY="$(jq -r '.data.data.secret_key // empty' <<<"$SECRET_JSON")"
+unset TOKEN SECRET_JSON
+if [ -z "$S3_ACCESS_KEY" ] || [ -z "$S3_SECRET_KEY" ]; then
+  echo "nginx-proxy-sync: could not read S3 credentials from ${VAULT_SECRET_PATH}" >&2
+  exit 1
+fi
+
+export S3_ACCESS_KEY S3_SECRET_KEY
+
+# GET one object into $2. Prints the HTTP status (000 if the request itself
+# failed). Signing is done by a small Python helper, not curl --aws-sigv4,
+# which is broken on Rocky 9's curl 7.76.
+s3_get() {
+  /usr/bin/python3 /usr/local/sbin/nginx-proxy-sync-s3get.py \
+    "${S3_URL}/$1" "$2" "$S3_REGION" "$S3_CA_FILE"
+}
+
+sha() { sha256sum <"$1" | cut -d' ' -f1; }
+
+install_file() {
+  local name="$1" dest="${DEST[$1]}"
+  if [ -f "$dest" ]; then cp -p "$dest" "${BK}/${name}"; else rm -f "${BK}/${name}"; fi
+  install -o root -g root -m 0644 "${STG}/${name}" "${dest}.new"
+  mv -f "${dest}.new" "$dest"
+}
+
+restore_file() {
+  local name="$1" dest="${DEST[$1]}"
+  if [ -f "${BK}/${name}" ]; then
+    cp -p "${BK}/${name}" "${dest}.new"
+    mv -f "${dest}.new" "$dest"
+  else
+    rm -f "$dest"
+  fi
+}
+
+reject() { sha "${STG}/$1" >"${REJ}/$1"; warn "$1: rejected by nginx -t, rolled back (skipped until it changes)"; }
+
+# --- fetch everything first, work out what actually changed ---
+rm -f "${STG}"/* "${BK}"/*
+CHANGED=()
+for name in "${!DEST[@]}"; do
+  dest="${DEST[$name]}"
+  code="$(s3_get "${S3_PREFIX:+${S3_PREFIX}/}${name}.proxies" "${STG}/${name}")"
+  case "$code" in
+    200) ;;
+    404) rm -f "${STG}/${name}"; continue ;;
+    *)   rm -f "${STG}/${name}"; warn "${name}: S3 GET returned HTTP ${code}, keeping current file"; continue ;;
+  esac
+  if [ ! -s "${STG}/${name}" ]; then
+    rm -f "${STG}/${name}"; warn "${name}: published file is empty, keeping current file"; continue
+  fi
+  new="$(sha "${STG}/${name}")"
+  if [ -f "$dest" ] && [ "$new" = "$(sha "$dest")" ]; then
+    rm -f "${REJ}/${name}"
+    continue
+  fi
+  if [ -f "${REJ}/${name}" ] && [ "$new" = "$(cat "${REJ}/${name}")" ]; then
+    warn "${name}: still the previously rejected version, keeping current file"
+    continue
+  fi
+  CHANGED+=("$name")
+done
+
+# --- apply, validate, roll back on failure ---
+APPLIED=()
+if [ -n "${CHANGED[*]-}" ]; then
+  # Never touch anything if nginx is already unhappy — otherwise every
+  # candidate would fail `nginx -t` and get wrongly rejected.
+  if ! out="$("$NGINX" -t 2>&1)"; then
+    echo "nginx-proxy-sync: nginx -t fails before any change, not applying: ${out}" >&2
+    exit 1
+  fi
+
+  for name in "${CHANGED[@]}"; do install_file "$name"; done
+  if "$NGINX" -t >/dev/null 2>&1; then
+    APPLIED=("${CHANGED[@]}")
+  else
+    # Something in the batch is bad. Put everything back, then retry one
+    # file at a time so a bad site never blocks the good ones.
+    for name in "${CHANGED[@]}"; do restore_file "$name"; done
+    for name in "${CHANGED[@]}"; do
+      install_file "$name"
+      if "$NGINX" -t >/dev/null 2>&1; then
+        APPLIED+=("$name")
+      else
+        log "$("$NGINX" -t 2>&1 | tr '\n' ' ')"
+        restore_file "$name"
+        reject "$name"
+      fi
+    done
+  fi
+fi
+
+# A failed reload leaves files on disk that nginx isn't serving yet. The
+# next run sees no diff, so the marker is what makes it retry the reload.
+if [ -n "${APPLIED[*]-}" ] || [ -f "$PENDING" ]; then
+  if "$NGINX" -s reload; then
+    rm -f "$PENDING"
+    for name in ${APPLIED[@]+"${APPLIED[@]}"}; do
+      rm -f "${REJ}/${name}"
+      log "${name}: applied sha256=$(sha "${DEST[$name]}"), nginx reloaded"
+    done
+  else
+    touch "$PENDING"
+    warn "nginx -s reload failed, will retry next run"
+  fi
+fi
+
+exit "$FAILED"
