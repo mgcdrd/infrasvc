@@ -4,7 +4,9 @@ kind: InitConfiguration
 bootstrapTokens:
 - groups:
   - system:bootstrappers:kubeadm:default-node-token
+{% if k8s_init_token | default('') | length > 0 %}
   token: {{ k8s_init_token }}
+{% endif %}
   ttl: 4h0m0s
   usages:
   - signing

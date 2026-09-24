@@ -118,4 +118,6 @@ k8s_keepalived_enabled: false
 #
 #   k8s_init_master:             # FQDN of the node that runs kubeadm init
 #   k8s_control_plane_endpoint:  # DNS name for the HA API endpoint (VIP)
-#   k8s_init_token:              # bootstrap token — printf '%s.%s\n' $(tr -dc a-z0-9 </dev/urandom | head -c 6) $(tr -dc a-f0-9 </dev/urandom | head -c 16)
+#
+# k8s_init_token is optional: unset, kubeadm generates a random bootstrap
+# token at init. See vars/main.yml.

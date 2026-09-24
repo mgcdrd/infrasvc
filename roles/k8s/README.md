@@ -41,19 +41,21 @@ Role Variables
 |------------------------------|----------------------------------------------------------------------------------|
 | `k8s_init_master`            | FQDN of the node that runs `kubeadm init`. All other masters join after it.     |
 | `k8s_control_plane_endpoint` | DNS name or VIP for the HA API endpoint. Used in kubeadm config and cert SANs.  |
-| `k8s_init_token`             | Bootstrap token. See generation command below. Store in Vault — do not commit.  |
 
-Generate `k8s_init_token`:
-```bash
-printf '%s.%s\n' "$(tr -dc a-z0-9 </dev/urandom | head -c 6)" \
-                 "$(tr -dc a-f0-9 </dev/urandom | head -c 16)"
-```
+`k8s_init_token` (the `kubeadm init` bootstrap token) is optional and normally
+left unset: kubeadm then generates a random one. It is only used by `kubeadm
+init` (expires after 4h, `ttl: 4h0m0s` in the init config) and nothing reads
+it afterwards. `addnodes` gets a fresh join token from `kubeadm token create
+--print-join-command` on the init master, so it never needs the init token.
+Set it only to pin a known value, and treat it as a secret if you do (inject
+from Vault, never commit).
 
 ### Optional
 
 | Variable                | Default                    | Description                                                               |
 |-------------------------|----------------------------|---------------------------------------------------------------------------|
 | `k8s_run`               | `config`                   | Phase to execute. See **Phases** below.                                   |
+| `k8s_init_token`        | unset (kubeadm generates)  | Pin the `kubeadm init` bootstrap token. Format `[a-z0-9]{6}.[a-z0-9]{16}`.  |
 | `k8s_version`           | `1.32`                     | Kubernetes minor version. Also passed to the container runtime role.      |
 | `k8s_calico_version`    | `3.31.0`                   | Calico CNI version.                                                       |
 | `k8s_container_runtime` | `cri-o`                    | Runtime to install: `cri-o`, `docker`, or `podman`.                      |

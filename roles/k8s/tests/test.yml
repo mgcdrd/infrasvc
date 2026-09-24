@@ -24,6 +24,5 @@
     k8s_version:                "1.32"
     k8s_init_master:            k8s-cp1.example.com
     k8s_control_plane_endpoint: k8s-api.example.com
-    k8s_init_token:             "{{ vault_k8s_init_token }}"
     k8s_svc_cidr:               "10.96.0.0/12"
     k8s_pod_cidr:               "10.112.0.0/12"

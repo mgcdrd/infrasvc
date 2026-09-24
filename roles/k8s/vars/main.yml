@@ -14,9 +14,10 @@
 #   or an external load balancer. Used in kubeadm config and cert SANs.
 
 # k8s_init_token: "abc123.0123456789abcdef"
-#   Bootstrap token for kubeadm. Generate with:
-#   printf '%s.%s\n' "$(tr -dc a-z0-9 </dev/urandom | head -c 6)" "$(tr -dc a-f0-9 </dev/urandom | head -c 16)"
-#   Store in vault — do not commit plaintext.
+#   Optional. Unset (recommended), kubeadm generates a random bootstrap token
+#   at init; only `kubeadm init` uses it (4h ttl). addnodes creates its own
+#   join tokens. Set it only to pin a value, sourced from Vault, never
+#   committed in plaintext. Format: [a-z0-9]{6}.[a-z0-9]{16}
 
 
 # ---- OPTIONAL OVERRIDES ----
