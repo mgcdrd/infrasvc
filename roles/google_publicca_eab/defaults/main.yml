@@ -5,13 +5,15 @@
 # GCP project ID that owns the Public CA external account key. Required.
 google_publicca_eab_project: ""
 
-# Service-account JSON key *content* (not a path) used to authenticate
-# gcloud for this one call. Required. Feed this from Vault at the
-# deployment layer, e.g.:
-#   google_publicca_eab_gcp_sa_json: "{{ vault_google_sa_json }}"
-# The service account needs the Public CA External Account Key Creator
-# role (roles/publicca.externalAccountKeyCreator) on the project.
-google_publicca_eab_gcp_sa_json: ""
+# Full Vault path (mount included) that returns a short-lived GCP OAuth
+# access token from the Vault GCP secrets engine. Required. The token is
+# handed to gcloud in-memory via CLOUDSDK_AUTH_ACCESS_TOKEN — no key file
+# is ever written. The roleset/static account behind it needs the Public
+# CA External Account Key Creator role
+# (roles/publicca.externalAccountKeyCreator) on the project, e.g.:
+#   google_publicca_eab_vault_gcp_token_path: "gcp/roleset/publicca-eab/token"
+#   google_publicca_eab_vault_gcp_token_path: "gcp/static-account/publicca-eab/token"
+google_publicca_eab_vault_gcp_token_path: ""
 
 # ---- ACCOUNT ----
 
@@ -24,10 +26,11 @@ google_publicca_eab_gcp_sa_json: ""
 # each registration needs its own freshly minted key.
 google_publicca_eab_account_name: "{{ inventory_hostname }}"
 
-# ---- VAULT (write destination) ----
+# ---- VAULT (GCP token source + write destination) ----
 
-# HashiCorp Vault address, KV mount, and full KV path to write kid/
-# hmac_key to. All three required. The path is not built from
+# HashiCorp Vault address (used for both the GCP token read above and the
+# KV write below), KV mount, and full KV path to write kid/hmac_key to.
+# All three required. The path is not built from
 # account_name automatically — compose it explicitly at the deployment
 # layer so it's obvious what consumes it, e.g.:
 #   google_publicca_eab_vault_path: "{{ vault_kv_env }}/acme/google/{{ google_publicca_eab_account_name }}"

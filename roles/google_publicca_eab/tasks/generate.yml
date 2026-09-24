@@ -10,19 +10,10 @@
   become: false
   block:
 
-    - name: google_publicca_eab generate - Create a temp file for the GCP service-account key
-      ansible.builtin.tempfile:
-        state: file
-        suffix: .json
-      register: _google_publicca_eab_sa_keyfile
-
-    - name: google_publicca_eab generate - Write the service-account key to the temp file
-      ansible.builtin.copy:
-        content: "{{ google_publicca_eab_gcp_sa_json }}"
-        dest: "{{ _google_publicca_eab_sa_keyfile.path }}"
-        mode: "0600"
-      no_log: true
-
+    # The token is read straight into gcloud's environment from the Vault GCP
+    # secrets engine — never written to disk or registered as a fact. Lookup
+    # plugins inherit ANSIBLE_HASHI_VAULT_* declaratively, so no explicit
+    # auth args are needed here (unlike the KV write module below).
     - name: google_publicca_eab generate - Create the external account key
       ansible.builtin.command:
         argv:
@@ -33,7 +24,7 @@
           - "--project={{ google_publicca_eab_project }}"
           - "--format=json"
       environment:
-        GOOGLE_APPLICATION_CREDENTIALS: "{{ _google_publicca_eab_sa_keyfile.path }}"
+        CLOUDSDK_AUTH_ACCESS_TOKEN: "{{ lookup('community.hashi_vault.vault_read', google_publicca_eab_vault_gcp_token_path, url=google_publicca_eab_vault_addr).data.token }}"
       register: _google_publicca_eab_create
       changed_when: true
       no_log: true
@@ -72,21 +63,3 @@
           {{ google_publicca_eab_vault_kv_mount }}/{{ google_publicca_eab_vault_path }}.
           It registers exactly one ACME account and is invalidated once
           used — unused, it expires in 7 days.
-
-  always:
-
-    - name: google_publicca_eab generate - Shred the temp service-account key
-      ansible.builtin.command:
-        argv:
-          - shred
-          - --remove
-          - "{{ _google_publicca_eab_sa_keyfile.path }}"
-      changed_when: true
-      failed_when: false
-      when: _google_publicca_eab_sa_keyfile is defined
-
-    - name: google_publicca_eab generate - Remove the temp file if shred left it behind
-      ansible.builtin.file:
-        path: "{{ _google_publicca_eab_sa_keyfile.path }}"
-        state: absent
-      when: _google_publicca_eab_sa_keyfile is defined

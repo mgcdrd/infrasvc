@@ -44,13 +44,17 @@ Requirements
 ------------
 
 - `gcloud` CLI installed and on `PATH` on the control node.
-- A GCP service-account JSON key with the **Public CA External Account
-  Key Creator** role (`roles/publicca.externalAccountKeyCreator`) on the
-  target project.
-- A Vault token or AppRole (`ANSIBLE_HASHI_VAULT_*` env vars) with write
-  access to the destination KV path — `community.hashi_vault` module
-  tasks don't inherit `ANSIBLE_HASHI_VAULT_*` declaratively, so this role
-  passes them through explicitly (see `generate.yml`).
+- The Vault **GCP secrets engine** enabled, with a roleset (or static
+  account) bound to **Public CA External Account Key Creator**
+  (`roles/publicca.externalAccountKeyCreator`) on the target project — see
+  [Vault-side setup](#vault-side-setup). The Public Certificate Authority
+  API (`publicca.googleapis.com`) must be enabled on that project.
+- A Vault token or AppRole (`ANSIBLE_HASHI_VAULT_*` env vars) with `read`
+  on the GCP token path and write access to the destination KV path.
+  `community.hashi_vault` module tasks don't inherit
+  `ANSIBLE_HASHI_VAULT_*` declaratively, so the KV write passes them
+  through explicitly (see `generate.yml`); the token read is a lookup and
+  inherits them on its own.
 
 
 Role Variables
@@ -60,13 +64,14 @@ Role Variables
 
 ```yaml
 google_publicca_eab_project: ""          # GCP project ID — required
-google_publicca_eab_gcp_sa_json: ""      # GCP service-account JSON key content — required
-                                          # e.g. "{{ vault_google_sa_json }}"
+google_publicca_eab_vault_gcp_token_path: ""   # full Vault path returning a GCP access token — required
+                                                # e.g. "gcp/roleset/publicca-eab/token"
 ```
 
-The service-account JSON is written to a `mode: "0600"` temp file only
-for the duration of the `gcloud` call (`GOOGLE_APPLICATION_CREDENTIALS`),
-then shredded — never persisted on the control node.
+The role reads a short-lived OAuth token from that Vault path and passes
+it to `gcloud` through `CLOUDSDK_AUTH_ACCESS_TOKEN`. No service-account
+key exists anywhere: nothing is written to disk on the control node, and
+the token is never registered as a fact.
 
 ### Account
 
@@ -101,7 +106,7 @@ Example Playbook
     - role: mgcdrd.infrasvc.google_publicca_eab
       vars:
         google_publicca_eab_project: "acme-lab-pki"
-        google_publicca_eab_gcp_sa_json: "{{ vault_google_sa_json }}"
+        google_publicca_eab_vault_gcp_token_path: "gcp/roleset/publicca-eab/token"
         google_publicca_eab_vault_addr: "{{ vault_addr }}"
         google_publicca_eab_vault_kv_mount: "{{ vault_kv_infra_mount }}"
         google_publicca_eab_vault_path: "{{ vault_kv_env }}/acme/google/{{ inventory_hostname }}"
@@ -119,6 +124,33 @@ acme_sh_eab_hmac_key: "{{ lookup('community.hashi_vault.vault_kv2_get', vault_kv
 
 Once `acme_sh` has registered the account, EAB vars are no longer
 needed — see `acme_sh`'s README.
+
+
+Vault-side setup
+-----------------
+
+One-time, outside this role. Vault's own GCP credentials (the "root"
+service account used to create rolesets) stay inside Vault; Ansible only
+ever sees the short-lived tokens.
+
+```bash
+vault secrets enable gcp
+vault write gcp/config credentials=@root-sa.json   # then delete root-sa.json
+
+vault write gcp/roleset/publicca-eab \
+    project="<gcp-project>" \
+    secret_type="access_token" \
+    token_scopes="https://www.googleapis.com/auth/cloud-platform" \
+    bindings='resource "//cloudresourcemanager.googleapis.com/projects/<gcp-project>" {
+      roles = ["roles/publicca.externalAccountKeyCreator"]
+    }'
+```
+
+The root service account needs enough IAM to create the roleset's
+service account and apply the binding (`roles/iam.serviceAccountAdmin`,
+`roles/iam.serviceAccountKeyAdmin`, and a role that can set project IAM
+policy). Grant the identity Ansible authenticates as `read` on
+`gcp/roleset/publicca-eab/token` in its Vault policy.
 
 
 Recovery
