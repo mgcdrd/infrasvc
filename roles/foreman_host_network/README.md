@@ -23,11 +23,11 @@ Foreman knows which underlying VMID/node to push interface changes to
 Checked live against this lab's Foreman: **none of its hosts are
 compute-resource-linked** — every one shows `provision_method: build` and
 null `compute_resource_id`/`uuid`, because VMs here are cloned directly
-via `mgcdrd.infrabase.proxmox_vm` against the PVE API, not through
+via `mgcdrd.proxmox.proxmox_vm` against the PVE API, not through
 Foreman's provisioning wizard. On a host like that, setting
 `foreman_host_network_vlan_tag` only updates Foreman's own interface
 record — it does **not** touch Proxmox. For the actual VLAN/bridge
-change, call `mgcdrd.infrabase.proxmox_nic` directly (see the
+change, call `mgcdrd.proxmox.proxmox_nic` directly (see the
 `vm-migrate` deployment, which does exactly that).
 
 If you're pointing this role at a customer environment where hosts *are*
@@ -47,6 +47,21 @@ account.
 
 Role Variables
 ---------------
+
+### Variable reference
+
+| Variable | Default | Required | Description |
+|---|---|---|---|
+| `foreman_host_network_url` | *(lab-specific; see defaults)* | No | Foreman API base URL |
+| `foreman_host_network_username` | `""` | Yes | Foreman API user |
+| `foreman_host_network_password` | `""` | Yes | Foreman API password; use `{{ vault_* }}` |
+| `foreman_host_network_validate_certs` | `true` | No | Validate the Foreman API TLS certificate |
+| `foreman_host_network_host` | `""` | Yes | Foreman host whose interface is updated |
+| `foreman_host_network_subnet` | `""` | Yes | Target Foreman subnet name |
+| `foreman_host_network_ip` | `""` | Yes | New IP for the interface |
+| `foreman_host_network_interface_identifier` | `""` | No | Interface to update; set only when it is not the one Foreman flags as primary (multi-NIC hosts) |
+| `foreman_host_network_vlan_tag` | `""` | No | VLAN tag to set on the interface |
+
 
 ```yaml
 foreman_host_network_url: "https://foreman.lab.provenzawt.dev"

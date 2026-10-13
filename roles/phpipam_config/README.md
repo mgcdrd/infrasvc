@@ -44,6 +44,27 @@ customers → sections → vlans → nameservers → nat → locations
 Role Variables
 --------------
 
+### Variable reference
+
+| Variable | Default | Required | Description |
+|---|---|---|---|
+| `phpipam_config_url` | `"http://127.0.0.1"` | No | phpIPAM base URL, no trailing slash |
+| `phpipam_config_app_id` | `"ansible"` | No | API application ID; must be pre-created under Administration > API |
+| `phpipam_config_username` | `""` | Yes | phpIPAM username |
+| `phpipam_config_password` | `""` | Yes | phpIPAM password; use `{{ vault_* }}` |
+| `phpipam_config_validate_certs` | `true` | No | Validate the phpIPAM TLS certificate; set false only for a self-signed cert the controller cannot trust |
+| `phpipam_config_customers` | `[]` | No | Customers used to tag subnets and addresses to an owner |
+| `phpipam_config_sections` | `[]` | No | Sections, the top-level buckets that contain subnets |
+| `phpipam_config_vlans` | `[]` | No | VLAN definitions |
+| `phpipam_config_nameservers` | `[]` | No | Nameserver sets assignable to subnets |
+| `phpipam_config_nat` | `[]` | No | NAT policy definitions |
+| `phpipam_config_locations` | `[]` | No | Physical locations (data centres, rooms) |
+| `phpipam_config_racks` | `[]` | No | Racks; reference a location by name |
+| `phpipam_config_subnets` | `[]` | No | Subnets; reference a section and optionally a VLAN and nameserver by name |
+| `phpipam_config_devices` | `[]` | No | Network devices |
+| `phpipam_config_circuits` | `[]` | No | Network circuits and connectivity links |
+
+
 ### Required
 
 ```yaml

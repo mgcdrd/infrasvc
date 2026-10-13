@@ -54,6 +54,36 @@ account is `mgcdrd.infrasvc.ipa_baseline`, run once after the primary is up.
 - For `replica` mode, `ipa_server_primary` set to a running server and that
   server's realm records already in PowerDNS.
 
+Role Variables
+--------------
+
+### Variable reference
+
+| Variable | Default | Required | Description |
+|---|---|---|---|
+| `ipa_server_mode` | `"primary"` | No | `primary` runs `ipa-server-install` to create a new domain, realm, and CA; `replica` joins an existing one |
+| `ipa_server_domain` | `""` | Yes | IPA domain (lowercase), e.g. `lab.example.com` |
+| `ipa_server_realm` | `""` | Yes | Kerberos realm (uppercase), e.g. `LAB.EXAMPLE.COM` |
+| `ipa_server_primary` | `""` | If `ipa_server_mode: replica` | FQDN of an existing IPA server to replicate from; ignored for `primary` |
+| `ipa_server_hostname` | `"{{ ansible_fqdn }}"` | No | FQDN this server registers itself as |
+| `ipa_server_setup_ca` | `true` | No | Configure a CA on this node |
+| `ipa_server_mkhomedir` | `true` | No | Create home directories on first login (pam_oddjob_mkhomedir) |
+| `ipa_server_validate_certs` | `true` | No | Validate TLS certificates on the PowerDNS API calls |
+| `ipa_server_register_dns` | `true` | No | Register this server's own A/PTR records in PowerDNS before the install |
+| `ipa_server_host_ip` | `"{{ ansible_default_ipv4.address }}"` | No | IP address to register for this host's A/PTR records |
+| `ipa_server_manage_srv_records` | `true` | No | Push the realm SRV/TXT records and the ipa-ca A record into PowerDNS |
+| `ipa_server_srv_hosts` | *(list, 1 items)* | No | FQDNs of every IPA server that should appear in the SRV / ipa-ca records |
+| `ipa_server_pdns_api_url` | `""` | If DNS registration or SRV management | PowerDNS authoritative API endpoint reachable from the target host |
+| `ipa_server_pdns_server_id` | `"localhost"` | No | PowerDNS server ID — almost always "localhost" |
+| `ipa_server_dns_forward_zone` | `""` | If DNS registration or SRV management | Forward zone for the A, SRV, and TXT records |
+| `ipa_server_dns_reverse_zone` | `""` | If `ipa_server_register_dns` | Reverse zone for the PTR record |
+| `ipa_server_dns_ttl` | `300` | No | TTL for registered DNS records (seconds) |
+| `ipa_server_manage_acme_cert` | `false` | No | Deploy `/usr/local/sbin/acme.sh.renewal.sh`, which roots an acme.sh-issued chain and installs it as this server's IPA CA trust and httpd/LDAP cert |
+| `ipa_server_acme_cert_name` | `"{{ ipa_server_hostname }}"` | No | acme.sh cert directory (under `/root/.acme.sh/`) the script installs when run with no argument |
+| `vault_ipa_admin_password` | `""` | Yes | IPA admin (`admin@REALM`) password |
+| `vault_ipa_dirman_password` | `""` | Yes | Directory Manager (`cn=Directory Manager`) password |
+| `vault_ipa_pdns_api_key` | `""` | If DNS registration or SRV management | PowerDNS API key |
+
 ## Usage
 
 ```yaml
@@ -85,33 +115,6 @@ account is `mgcdrd.infrasvc.ipa_baseline`, run once after the primary is up.
   roles:
     - mgcdrd.infrasvc.ipa_server
 ```
-
-## Variables
-
-| Variable | Default | Description |
-|---|---|---|
-| `ipa_server_mode` | `primary` | `primary` or `replica` |
-| `ipa_server_domain` | `""` | IPA domain, lowercase (required) |
-| `ipa_server_realm` | `""` | Kerberos realm, uppercase (required) |
-| `ipa_server_primary` | `""` | Existing server FQDN to replicate from (required for `replica`) |
-| `ipa_server_hostname` | `ansible_fqdn` | FQDN this server registers as |
-| `ipa_server_setup_ca` | `true` | CA on this node (maps to `ipareplica_setup_ca`) |
-| `ipa_server_mkhomedir` | `true` | Create home dirs on first login |
-| `ipa_server_validate_certs` | `true` | Validate TLS on PowerDNS API calls |
-| `ipa_server_register_dns` | `true` | Register this host's A/PTR in PowerDNS |
-| `ipa_server_host_ip` | `ansible_host` / detected IPv4 | IP for the A / `ipa-ca` / PTR records |
-| `ipa_server_manage_srv_records` | `true` | Push realm SRV/TXT/`ipa-ca` to PowerDNS |
-| `ipa_server_srv_hosts` | `[ipa_server_hostname]` | All IPA server FQDNs for the SRV / `ipa-ca` records |
-| `ipa_server_pdns_api_url` | `""` | PowerDNS API base URL |
-| `ipa_server_pdns_server_id` | `localhost` | PowerDNS server ID |
-| `ipa_server_dns_forward_zone` | `""` | Forward zone for A/SRV/TXT |
-| `ipa_server_dns_reverse_zone` | `""` | Reverse zone for PTR |
-| `ipa_server_dns_ttl` | `300` | DNS record TTL |
-| `ipa_server_manage_acme_cert` | `false` | Deploy `/usr/local/sbin/acme.sh.renewal.sh` |
-| `ipa_server_acme_cert_name` | `ipa_server_hostname` | Default acme.sh cert dir name the script installs |
-| `vault_ipa_admin_password` | `""` | `admin@REALM` password (inject from Vault) |
-| `vault_ipa_dirman_password` | `""` | Directory Manager password (inject from Vault) |
-| `vault_ipa_pdns_api_key` | `""` | PowerDNS API key (inject from Vault) |
 
 ## OS support
 

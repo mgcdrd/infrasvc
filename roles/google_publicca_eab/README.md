@@ -60,6 +60,18 @@ Requirements
 Role Variables
 ---------------
 
+### Variable reference
+
+| Variable | Default | Required | Description |
+|---|---|---|---|
+| `google_publicca_eab_project` | `""` | Yes | GCP project ID that owns the Public CA external account key |
+| `google_publicca_eab_vault_gcp_token_path` | `""` | Yes | Full Vault path (mount included) that returns a short-lived GCP access token from the GCP secrets engine |
+| `google_publicca_eab_account_name` | `"{{ inventory_hostname }}"` | No | Label for the ACME account the key will register |
+| `google_publicca_eab_vault_addr` | `""` | Yes | Vault address, used for both the GCP token read and the KV write |
+| `google_publicca_eab_vault_kv_mount` | `""` | Yes | KV mount the minted key is written to |
+| `google_publicca_eab_vault_path` | `""` | Yes | KV path the minted key is written to |
+
+
 ### GCP
 
 ```yaml

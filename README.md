@@ -34,6 +34,10 @@ It is designed for use with:
 
 ---
 
+## Variables
+
+Every role's variables, with defaults, whether they are required, and what they do, are in its README under "Role Variables" > "Variable reference" (`roles/<role>/README.md`).
+
 ## Installation
 
 ### From Git (recommended for internal use)

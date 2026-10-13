@@ -51,6 +51,30 @@ against the freshly written Vault secret immediately after.
   installed wherever this role runs, with network reachability to the IPA
   server's HTTPS, Kerberos, and LDAP ports.
 
+Role Variables
+--------------
+
+### Variable reference
+
+| Variable | Default | Required | Description |
+|---|---|---|---|
+| `ipa_service_account_server` | `""` | Yes | FQDN of the IPA server |
+| `ipa_service_account_admin_principal` | `"admin"` | No | IPA admin username used to bootstrap the manager account/role (below) |
+| `ipa_service_account_validate_certs` | `true` | No | Set to false only in lab environments with self-signed IPA certificates |
+| `ipa_service_account_manage_manager` | `true` | No | Create and maintain a least-privilege manager account that `kinit`s for `ipa-getkeytab`, rather than using admin |
+| `ipa_service_account_manager_principal` | `"svc-ipa-keytab-mgr"` | No | Shared manager account username |
+| `ipa_service_account_manager_role` | `"IPA Keytab Issuer"` | No | IPA role holding the manager's privileges |
+| `ipa_service_account_force_rotate_manager` | `false` | No | Regenerate the manager account's password even if Vault already has one |
+| `ipa_service_account_fqdn` | `""` | Yes | FQDN the service principal is issued for |
+| `ipa_service_account_principal_type` | `"HTTP"` | No | Kerberos service type, e.g. `HTTP` for `HTTP/<fqdn>` |
+| `ipa_service_account_force_rotate` | `false` | No | Re-fetch the keytab even if one exists; `ipa-getkeytab` rotates the key, invalidating earlier copies |
+| `ipa_service_account_vault_url` | `""` | Yes | Base URL of the Vault API, no trailing slash |
+| `ipa_service_account_vault_token` | *(`VAULT_TOKEN` environment variable)* | No | Vault token used to read and write secrets |
+| `ipa_service_account_vault_kv_mount` | `"kv1"` | No | KV engine mount point |
+| `ipa_service_account_vault_manager_path` | `"ipa/service-account-manager"` | No | KV path holding the manager account's credentials |
+| `ipa_service_account_vault_path` | `""` | Yes | KV path the issued keytab is written to (e.g. `mokey/http_keytab`); one per service |
+| `vault_ipa_admin_password` | `""` | If bootstrapping the manager | IPA admin password; needed only the first time the manager account is created |
+
 ## Usage
 
 Runs entirely via API calls plus one local `kinit`/`ipa-getkeytab` shell-out
@@ -71,27 +95,6 @@ for.
   roles:
     - mgcdrd.infrasvc.ipa_service_account
 ```
-
-## Variables
-
-| Variable | Default | Description |
-|---|---|---|
-| `ipa_service_account_server` | `""` | IPA server FQDN (required) |
-| `ipa_service_account_admin_principal` | `admin` | IPA admin username (manager bootstrap only) |
-| `ipa_service_account_validate_certs` | `true` | Validate IPA TLS certificate |
-| `ipa_service_account_manage_manager` | `true` | Bootstrap the manager account/role if missing |
-| `ipa_service_account_manager_principal` | `svc-ipa-keytab-mgr` | Shared manager account username |
-| `ipa_service_account_manager_role` | `IPA Keytab Issuer` | IPA role holding the privileges |
-| `ipa_service_account_force_rotate_manager` | `false` | Regenerate the manager account's own password |
-| `ipa_service_account_fqdn` | `""` | FQDN the service principal is issued for (required) |
-| `ipa_service_account_principal_type` | `HTTP` | Kerberos service type |
-| `ipa_service_account_force_rotate` | `false` | Reissue the keytab even if Vault already has one |
-| `ipa_service_account_vault_url` | `""` | Vault API base URL (required) |
-| `ipa_service_account_vault_token` | `$VAULT_TOKEN` | Vault auth token |
-| `ipa_service_account_vault_kv_mount` | `kv1` | KV v2 engine mount point |
-| `ipa_service_account_vault_manager_path` | `ipa/service-account-manager` | Path for the manager account's own credentials |
-| `ipa_service_account_vault_path` | `""` | Path the issued keytab is written to (required, per-caller) |
-| `vault_ipa_admin_password` | `""` | IPA admin password (required only for first-time manager bootstrap) |
 
 ## Vault paths
 

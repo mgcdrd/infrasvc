@@ -23,6 +23,39 @@ For SSL cert management, install the appropriate infrabase collection role:
 Role Variables
 --------------
 
+### Variable reference
+
+| Variable | Default | Required | Description |
+|---|---|---|---|
+| `nginx_process_user` | `nginx` | No | `user` directive |
+| `nginx_worker_processes` | `auto` | No | `worker_processes` |
+| `nginx_pid_file` | `/run/nginx.pid` | No | `pid` file path |
+| `nginx_load_dynamic_mods` | `false` | No | Emit `load_module` lines for dynamic modules |
+| `nginx_events` | *(map, 1 lines)* | No | `events` block settings |
+| `nginx_http_block` | *(map, 9 lines)* | No | `http` block settings (logging, timeouts, TLS, security headers); see `vars/main.yml` for the annotated structure |
+| `nginx_shared_configs` | `{}` | No | Variables consumed by the `shared_configs/*.conf.j2` templates |
+| `nginx_server_blocks` | `[]` | Yes | Server block definitions, one conf file per entry (fields below) |
+| `nginx_conf_d_dir` | `/etc/nginx/conf.d` | No | Base `conf.d` directory; override for a nonstandard install |
+| `nginx_proxy_files_dir` | `"{{ nginx_conf_d_dir }}/proxies"` | No | Directory of per-server-block proxy files owned by another team, kept separate from this role's server block shell |
+| `nginx_proxy_files_group` | `""` | If any server block has `exclude_proxy_files: false` | Group that owns `nginx_proxy_files_dir` and the placeholder files in it |
+| `nginx_proxy_sync_enabled` | `false` | No | Pull proxy files from S3-compatible storage on a timer instead of editing them on the node |
+| `nginx_proxy_sync_interval` | `5min` | No | systemd time span between pulls |
+| `nginx_proxy_sync_s3_endpoint` | `""` | If `nginx_proxy_sync_enabled` | Path-style S3 endpoint (MinIO, Ceph RGW), e.g. `https://s3.example.com:9000` |
+| `nginx_proxy_sync_s3_bucket` | `""` | If `nginx_proxy_sync_enabled` | Bucket holding the proxy files |
+| `nginx_proxy_sync_s3_prefix` | `""` | No | Key prefix under the bucket; files are `<prefix>/<server block name>.proxies` |
+| `nginx_proxy_sync_s3_region` | `us-east-1` | No | S3 region |
+| `nginx_proxy_sync_s3_ca_file` | `""` | No | CA bundle for a private-CA endpoint |
+| `nginx_proxy_sync_vault_addr` | `"{{ vault_addr }}"` | No | Vault address the S3 credentials are read from at runtime (AppRole) |
+| `nginx_proxy_sync_vault_secret_path` | *(see defaults)* | If `nginx_proxy_sync_enabled` | Vault KV v2 API path (mount and `/data/` included) holding `access_key` and `secret_key` |
+| `nginx_proxy_sync_vault_role_id_file` | `/etc/vault/webproxy-s3-role-id` | No | AppRole role_id file, pre-positioned on the host |
+| `nginx_proxy_sync_vault_secret_id_file` | `/etc/vault/webproxy-s3-secret-id` | No | AppRole secret_id file, pre-positioned on the host |
+| `nginx_proxy_sync_state_dir` | `/var/lib/nginx-proxy-sync` | No | Holds the lock file, last-good backups, and rejected-file hashes |
+| `nginx_ssl_enable` | `false` | No | Enable SSL cert management |
+| `nginx_ssl_provider` | `""` | If `nginx_ssl_enable` | Role that manages certs: `acme_sh` or `ssl_scripting` |
+| `nginx_ssl_scripting` | `{}` | No | Variables passed to `ssl_scripting` when `nginx_ssl_provider: ssl_scripting` |
+| `nginx_dhparam_bits` | `2048` | No | dhparam size when `ssl_dhparam` is set and the provider is `acme_sh` or empty |
+
+
 All variables are prefixed `nginx_`. The full annotated structure is in
 `vars/main.yml`. Commonly used variables:
 

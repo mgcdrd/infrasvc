@@ -33,6 +33,82 @@ Requirements
 Role Variables
 --------------
 
+### Variable reference
+
+| Variable | Default | Required | Description |
+|---|---|---|---|
+| `pdns_phpipam_base_dir` | `/srv` | No | Base directory on the host |
+| `pdns_phpipam_runtime_dir` | `"{{ pdns_phpipam_base_dir }}/phpipam"` | No | Runtime directory for the compose stack |
+| `pdns_phpipam_mariadb_dir` | `"{{ pdns_phpipam_runtime_dir }}/mariadb"` | No | MariaDB data directory |
+| `pdns_phpipam_auth_dir` | `"{{ pdns_phpipam_runtime_dir }}/pdns_auth"` | No | PowerDNS Authoritative config directory |
+| `pdns_phpipam_recu_dir` | `"{{ pdns_phpipam_runtime_dir }}/pdns_recursor"` | No | PowerDNS Recursor config directory |
+| `pdns_phpipam_dist_dir` | `"{{ pdns_phpipam_runtime_dir }}/pdns_dnsdist"` | No | dnsdist config directory |
+| `pdns_phpipam_docker_network_name` | `dns_net` | No | Docker network name |
+| `pdns_phpipam_docker_network_cidr` | `"10.5.0.0/16"` | No | Docker network CIDR |
+| `pdns_phpipam_docker_network_gateway` | `"10.5.0.1"` | No | Docker network gateway |
+| `pdns_phpipam_docker_network_mariadb` | `"10.5.0.2"` | No | Fixed IP of the MariaDB container |
+| `pdns_phpipam_docker_network_auth` | `"10.5.0.3"` | No | Fixed IP of the PowerDNS Authoritative container |
+| `pdns_phpipam_docker_network_recu` | `"10.5.0.4"` | No | Fixed IP of the PowerDNS Recursor container |
+| `pdns_phpipam_docker_network_dist` | `"10.5.0.5"` | No | Fixed IP of the dnsdist container |
+| `pdns_phpipam_docker_network_ipam_web` | `"10.5.0.6"` | No | Fixed IP of the phpIPAM web container |
+| `pdns_phpipam_docker_network_nginx` | `"10.5.0.7"` | No | Fixed IP of the nginx TLS container |
+| `pdns_phpipam_mariadb_pdns_db` | `pdns` | No | PowerDNS database name |
+| `pdns_phpipam_mariadb_pdns_user` | `pdns` | No | PowerDNS database user |
+| `pdns_phpipam_mariadb_ipam_db` | `ipam` | No | phpIPAM database name |
+| `pdns_phpipam_mariadb_ipam_user` | `ipam` | No | phpIPAM database user |
+| `pdns_phpipam_domain` | `"lab.example.com"` | Yes | Primary forward DNS zone |
+| `pdns_phpipam_domain_ip_rev` | *(lab-specific; see defaults)* | Yes | Reverse zone prefix for the network (first three octets) |
+| `pdns_phpipam_auth_api_port` | `0` | If `you want to run mgcdrd` | Host port exposing PowerDNS Authoritative's HTTP API; `0` does not expose it |
+| `pdns_phpipam_recu_api_port` | `0` | No | Host port exposing the Recursor's HTTP API; `0` does not expose it |
+| `pdns_phpipam_dist_api_port` | `0` | No | Host port exposing dnsdist's HTTP API; `0` does not expose it |
+| `pdns_phpipam_ssl_enabled` | `false` | No | Add an nginx container that terminates TLS in front of phpIPAM web |
+| `pdns_phpipam_ssl_cert_dir` | `""` | If `pdns_phpipam_ssl_enabled` | Path to the `acme_sh` cert directory, e.g. `/etc/ssl/acme/dns.lab.example.com` |
+| `pdns_phpipam_ssl_hostname` | `""` | No | `ServerName` and TLS SNI; empty uses `inventory_hostname` |
+| `pdns_phpipam_ssl_dir` | `"{{ pdns_phpipam_runtime_dir }}/nginx"` | No | Host directory the nginx SSL config is written to |
+| `pdns_phpipam_ca_certs_dir` | `""` | No | Host CA bundle directory mounted into phpIPAM web; empty auto-detects by OS family |
+| `pdns_phpipam_ipam_site_title` | `"Acme IPAM"` | No | phpIPAM site title |
+| `pdns_phpipam_ipam_site_admname` | `"Sysadmin"` | No | phpIPAM admin display name |
+| `pdns_phpipam_ipam_site_admemail` | `"admin@{{ pdns_phpipam_domain }}"` | No | phpIPAM admin email |
+| `pdns_phpipam_ipam_site_domain` | `"example.com"` | No | phpIPAM site domain |
+| `pdns_phpipam_ipam_site_url` | `"http://dns.{{ pdns_phpipam_domain }}"` | No | phpIPAM site URL |
+| `pdns_phpipam_ipam_site_passwd_minlength` | `8` | No | Minimum phpIPAM password length |
+| `pdns_phpipam_ipam_site_passwd_maxlength` | `0` | No | Maximum phpIPAM password length; `0` is unlimited |
+| `pdns_phpipam_ipam_site_passwd_minnumbers` | `0` | No | Minimum digits in a phpIPAM password |
+| `pdns_phpipam_ipam_site_passwd_minletters` | `0` | No | Minimum letters in a phpIPAM password |
+| `pdns_phpipam_ipam_site_passwd_minlowcase` | `0` | No | Minimum lowercase letters in a phpIPAM password |
+| `pdns_phpipam_ipam_site_passwd_minupcase` | `0` | No | Minimum uppercase letters in a phpIPAM password |
+| `pdns_phpipam_ipam_site_passwd_minsymbols` | `0` | No | Minimum symbols in a phpIPAM password |
+| `pdns_phpipam_ipam_site_passwd_maxsymbols` | `0` | No | Maximum symbols in a phpIPAM password; `0` is unlimited |
+| `pdns_phpipam_ipam_site_passwd_allowedsymbols` | `"#,_,-,!,[,],=,~,@"` | No | Symbols allowed in a phpIPAM password |
+| `pdns_phpipam_ipam_init_api_enable` | `true` | No | Enable the phpIPAM API at first init |
+| `pdns_phpipam_ipam_init_api_string` | `""` | No | phpIPAM API app-id string used at init |
+| `pdns_phpipam_ipam_ldap_create` | `false` | No | Create a phpIPAM LDAP auth method at init |
+| `pdns_phpipam_ipam_ldap_dcs` | `"ldap1.acme.com;ldap2.acme.com"` | If `pdns_phpipam_ipam_ldap_create` | LDAP servers, semicolon-separated |
+| `pdns_phpipam_ipam_ldap_basedn` | `"cn=users,dc=acme,dc=com"` | If `pdns_phpipam_ipam_ldap_create` | LDAP base DN |
+| `pdns_phpipam_ipam_ldap_userdn` | `""` | No | LDAP user DN |
+| `pdns_phpipam_ipam_ldap_uidattr` | `"uid"` | No | LDAP username attribute |
+| `pdns_phpipam_ipam_ldap_security` | `"ssl"` | No | LDAP transport security: `ssl`, `tls`, or `none` |
+| `pdns_phpipam_ipam_ldap_port` | `636` | No | LDAP port |
+| `pdns_phpipam_ipam_ldap_bindname` | `"uid=serviceaccount,cn=users,dc=acme,dc=com"` | If `pdns_phpipam_ipam_ldap_create` | LDAP bind DN |
+| `pdns_phpipam_ipam_ldap_bindpw` | `"basicpassword"` | If `pdns_phpipam_ipam_ldap_create` | LDAP bind password; the default is a placeholder, override from Vault |
+| `pdns_phpipam_ipam_ldap_descr` | `"blank"` | No | Description of the LDAP auth method |
+| `pdns_phpipam_galera_enabled` | `false` | No | Configure the MariaDB container for Galera multi-master replication |
+| `pdns_phpipam_galera_cluster_name` | `"pdns_galera"` | No | Galera cluster name |
+| `pdns_phpipam_galera_cluster_address` | `""` | If `pdns_phpipam_galera_enabled` | `gcomm://` address; `gcomm://` alone bootstraps the first node, later nodes use the full member list. Set per host |
+| `pdns_phpipam_galera_sst_user` | `"sst_user"` | No | Galera SST user |
+| `pdns_phpipam_galera_sst_password` | `""` | If `pdns_phpipam_galera_enabled` | Galera SST password |
+| `pdns_phpipam_mariadb_only` | `false` | No | Deploy only the MariaDB container (Galera quorum nodes with no DNS or IPAM) |
+| `pdns_phpipam_mariadb_root_passwd` | `""` | No | MariaDB root password; empty auto-generates and persists it to `pdns_phpipam_secrets_dir` |
+| `pdns_phpipam_mariadb_pdns_passwd` | `""` | No | PowerDNS DB user password; empty auto-generates |
+| `pdns_phpipam_mariadb_ipam_passwd` | `""` | No | phpIPAM DB user password; empty auto-generates |
+| `pdns_phpipam_auth_api_key` | `""` | No | PowerDNS Authoritative API key; empty auto-generates |
+| `pdns_phpipam_auth_web_passwd` | `""` | No | PowerDNS Authoritative web password; empty auto-generates |
+| `pdns_phpipam_recursor_api_key` | `""` | No | Recursor API key; empty auto-generates |
+| `pdns_phpipam_dnsdist_api_key` | `""` | No | dnsdist API key; empty auto-generates |
+| `pdns_phpipam_dnsdist_web_passwd` | `""` | No | dnsdist web password; empty auto-generates |
+| `pdns_phpipam_secrets_dir` | `{{ playbook_dir }}/secrets/<host>/pdns_phpipam` | No | Controller directory where auto-generated secrets are persisted and reused; keep it out of git |
+
+
 ### Required
 
 ```yaml

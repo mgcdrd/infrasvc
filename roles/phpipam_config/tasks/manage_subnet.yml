@@ -26,7 +26,7 @@
 # Delegate per-address work to manage_address.yml so set_fact calls
 # are scoped per iteration and do not bleed between addresses.
 - name: phpipam_config manage_subnet - Manage addresses
-  ansible.builtin.include_tasks: roles/phpipam_config/tasks/manage_address.yml
+  ansible.builtin.include_tasks: manage_address.yml
   loop: "{{ _phpipam_subnet.addresses | default([]) }}"
   loop_control:
     loop_var: _phpipam_address

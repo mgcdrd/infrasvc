@@ -76,7 +76,7 @@
     # Delegate per-subnet address management to manage_subnet.yml.
     # Only runs for subnets that are present and have an addresses list defined.
     - name: phpipam_config subnets - Manage address assignments
-      ansible.builtin.include_tasks: roles/phpipam_config/tasks/manage_subnet.yml
+      ansible.builtin.include_tasks: manage_subnet.yml
       loop: "{{ phpipam_config_subnets }}"
       loop_control:
         loop_var: _phpipam_subnet

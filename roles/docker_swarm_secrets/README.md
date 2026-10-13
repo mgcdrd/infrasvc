@@ -30,6 +30,14 @@ Collections:
 Role Variables
 --------------
 
+### Variable reference
+
+| Variable | Default | Required | Description |
+|---|---|---|---|
+| `docker_secrets` | `[]` | No | Swarm secrets to manage, sourced from Vault (fields below) |
+| `docker_configs` | `[]` | No | Swarm configs to manage (fields below) |
+
+
 ```yaml
 docker_secrets: []
 # docker_secrets:

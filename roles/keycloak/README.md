@@ -37,76 +37,79 @@ Requirements
 Role Variables
 --------------
 
-### Dispatch
+### Variable reference
 
-| Variable | Default | Description |
-|---|---|---|
-| `keycloak_install_method` | `docker` | `docker` or `native` |
-| `keycloak_manage_tls` | `true` | Issue the cert with `acme_sh` from this role. `false` when TLS is placed by other means. |
+| Variable | Default | Required | Description |
+|---|---|---|---|
+| `keycloak_version` | `"26.4"` | No | Container image tag (floating, e.g. `26.4`); docker method only |
+| `keycloak_image` | `"quay.io/keycloak/keycloak"` | No | Container image repository; docker method only |
+| `keycloak_hostname` | `""` | Yes | External FQDN served by the keepalived VIP; used in the TLS cert and `KC_HOSTNAME` |
+| `keycloak_network_mode` | `host` | Yes | `host` (container shares the host network; recommended) or `bridge` (published ports; cross-host clustering then needs `KC_CACHE_STACK=tcp` via `keycloak_extra_env`); docker method only |
+| `keycloak_http_port` | `8080` | No | HTTP bind port; use an unprivileged port |
+| `keycloak_https_port` | `443` native, `8443` docker | No | HTTPS bind port; firewalld forwards 443 to it |
+| `keycloak_mgmt_port` | `9000` | No | Health and metrics endpoint port |
+| `keycloak_jgroups_port` | `7800` | No | Infinispan JGroups cluster traffic port |
+| `keycloak_jgroups_fd_port` | `57600` | No | JGroups failure-detection (FD_SOCK) port |
+| `keycloak_base_dir` | `/srv/docker/keycloak` | No | Base directory on the host for the compose file; docker method only |
+| `keycloak_shared_storage` | `nfs` | Yes | Where themes and truststores live: `nfs` (shared between HA nodes, needs the NFS vars) or `local` (under `keycloak_base_dir/data` on each node) |
+| `keycloak_nfs_server` | `""` | If `keycloak_shared_storage: nfs` | NFS server address |
+| `keycloak_nfs_path` | `""` | If `keycloak_shared_storage: nfs` | NFS export path |
+| `keycloak_nfs_mount` | `/mnt/keycloak` | No | Local mount point for the NFS share |
+| `keycloak_nfs_opts` | `"vers=3,_netdev"` | No | NFS mount options |
+| `keycloak_data_subdirs` | *(list, 2 items)* | No | Subdirectories created under the data root |
+| `acme_sh_cert_base_dir` | `/etc/ssl/acme` | No | Where `acme_sh` deploys certs; must match the `acme_sh` role's value |
+| `keycloak_cert_dir` | `{{ acme_sh_cert_base_dir }}/{{ keycloak_hostname }}` | No | Directory holding this host's certificate |
+| `postgres_version` | `"18"` | No | PostgreSQL image tag; docker method only |
+| `postgres_image` | `"postgres"` | No | PostgreSQL image repository; docker method only |
+| `postgres_db` | `keycloak` | No | Database name |
+| `postgres_host` | `""` | Yes | FQDN or IP of the PostgreSQL host |
+| `postgres_port` | `5432` | No | PostgreSQL port |
+| `keycloak_db_user` | `{{ vault_keycloak_db_user }}` | No | Database user Keycloak connects as; inject from Vault |
+| `keycloak_db_password` | `{{ vault_keycloak_db_password }}` | No | Password for `keycloak_db_user`; inject from Vault |
+| `postgres_admin_user` | `postgres` | No | Admin account used to create the database and grant scoped access to `keycloak_db_user` |
+| `postgres_admin_password` | `{{ vault_postgres_admin_password }}` | No | Password for the admin account; inject from Vault |
+| `keycloak_admin_user` | `{{ vault_keycloak_admin_user }}` | No | Bootstrap admin username; only active on first start |
+| `keycloak_admin_password` | `{{ vault_keycloak_admin_password }}` | No | Bootstrap admin password; only active on first start |
+| `keycloak_extra_env` | `{}` | No | Additional `KC_*` environment variables merged into the compose service; docker method only |
+| `keycloak_install_method` | `docker` | No | `docker` (Compose stack) or `native` (Quarkus tarball with a hardened systemd unit, e.g. for LXC) |
+| `keycloak_manage_tls` | `true` | No | Issue the TLS certificate with `mgcdrd.infrabase.acme_sh`; set false when TLS terminates upstream |
+| `keycloak_release` | `""` | If `keycloak_install_method: native` | Full `X.Y.Z` release (the GitHub tag); `keycloak_version` is a floating tag and will not resolve a tarball |
+| `keycloak_download_url` | *(GitHub release URL for `keycloak_release`)* | No | Tarball URL for native installs; override for a mirror |
+| `keycloak_download_checksum` | `""` | No | Checksum for the tarball, e.g. `sha256:https://…/keycloak-26.4.0.tar.gz.sha256` |
+| `keycloak_service_name` | `keycloak` | No | systemd unit name (native) |
+| `keycloak_service_user` | `keycloak` | No | Service user (native) |
+| `keycloak_service_group` | `keycloak` | No | Service group (native) |
+| `keycloak_install_dir` | `/opt/keycloak` | No | Install path, a symlink to the versioned directory (native) |
+| `keycloak_versioned_dir` | `"/opt/keycloak-{{ keycloak_release }}"` | No | Versioned install directory (native) |
+| `keycloak_systemd_hardening` | `true` | No | Emit the sandboxing block in the unit (native) |
+| `keycloak_java_package_method` | `distro` | No | `distro` (OS OpenJDK 21 package) or `adoptium` (Eclipse Temurin); native only |
+| `keycloak_java_package` | *(OS-specific OpenJDK 21 package)* | No | Distro JDK package; override for a newer JDK |
+| `keycloak_adoptium_package` | `temurin-21-jdk` | No | Package installed when `keycloak_java_package_method: adoptium` |
+| `keycloak_http_enabled` | `false` | No | Enable the plain HTTP listener in `keycloak.conf` (native) |
+| `keycloak_https_protocols` | `"TLSv1.3,TLSv1.2"` | No | Allowed TLS protocols (native) |
+| `keycloak_hostname_strict` | `true` | No | Enforce the configured hostname (native) |
+| `keycloak_metrics_enabled` | `false` | No | Enable the metrics endpoint (native) |
+| `keycloak_cache` | `ispn` | No | Infinispan cache mode (native); `jdbc-ping` discovery avoids multicast, which is what makes cross-node caching work in LXC |
+| `keycloak_cache_stack` | `jdbc-ping` | No | Cache discovery stack (native) |
+| `keycloak_cache_embedded_mtls_enabled` | `true` | No | mTLS on the JGroups transport (native) |
+| `keycloak_cache_embedded_network_bind_address` | *(default IPv4 address, else `127.0.0.1`)* | No | JGroups bind address (native) |
+| `keycloak_db_sslmode` | `verify-full` | No | Keycloak to PostgreSQL TLS mode in the JDBC URL (native) |
+| `keycloak_db_sslrootcert` | `{{ keycloak_install_dir }}/conf/truststores/db-ca.pem` | No | CA file checked by `verify-full` (native) |
+| `keycloak_truststore_files` | `[]` | No | Files placed in `{{ keycloak_install_dir }}/conf/truststores/` |
+| `keycloak_extra_conf` | `{}` | No | Extra `key=value` lines appended to `keycloak.conf` (native) |
+| `keycloak_acme_challenge` | `dns_cf` | No | `acme_sh` challenge type: `dns_cf`, `dns_pdns`, `standalone`, `webroot`, and so on |
+| `keycloak_acme_complete_chain` | `false` | No | Root the deployed chain with a pinned root (needed for Google Public CA) |
+| `keycloak_acme_root_cn` | `""` | No | Root CA common name for `complete_chain`; empty uses the `acme_sh` default |
+| `keycloak_acme_root_fingerprint` | `""` | No | Root CA fingerprint for `complete_chain`; empty uses the `acme_sh` default |
+| `keycloak_acme_root_urls` | `[]` | No | Root CA PEM URLs for `complete_chain`; empty uses the `acme_sh` default |
+| `keepalived_preset_keycloak` | *(map, 11 lines)* | No | Keycloak keepalived preset, registered so the `keepalived` role finds it when `keepalived_vip_for` includes `keycloak` |
 
-### Common
-
-| Variable | Default | Description |
-|---|---|---|
-| `keycloak_hostname` | `""` | External FQDN (VIP) — **required**. Used in the cert, `KC_HOSTNAME` / `hostname`. |
-| `keycloak_https_port` | `8443` docker / `443` native | HTTPS bind port. |
-| `keycloak_mgmt_port` | `9000` | Management/health port. |
-| `postgres_host` | `""` | PostgreSQL FQDN or IP — **required**. |
-| `postgres_port` / `postgres_db` | `5432` / `keycloak` | |
-| `keycloak_db_user` / `keycloak_db_password` | `{{ vault_keycloak_db_* }}` | DB credentials Keycloak itself authenticates with — no ownership, scoped to `USAGE,CREATE` on `public`. |
-| `postgres_admin_user` / `postgres_admin_password` | `postgres` / `{{ vault_postgres_admin_password }}` | Bootstrap account that creates/owns the database. Not used by this role — consumed by the deployment's provisioning phase (`postgres_admin_password` is docker-mode only). |
-| `keycloak_admin_user` / `keycloak_admin_password` | `{{ vault_keycloak_admin_* }}` | First-start bootstrap admin. |
 
 ### acme shaping (both modes)
-
-| Variable | Default | Description |
-|---|---|---|
-| `keycloak_acme_challenge` | `dns_cf` | `dns_cf`, `dns_pdns`, `standalone`, … |
-| `keycloak_acme_complete_chain` | `false` | `true` roots the deployed chain with a pinned CA (Google Public CA). acme_sh then deploys `ca.pem` and no `fullchain.pem`; the role picks the right filename automatically. |
-| `keycloak_acme_root_cn` / `_root_fingerprint` / `_root_urls` | `""` / `""` / `[]` | Pinned root, when `keycloak_acme_complete_chain`. |
 
 CA selection (`acme_sh_ca`), EAB (`acme_sh_eab_*`), and the Cloudflare /
 PowerDNS credentials are `acme_sh` role variables — set them at the
 deployment/inventory level.
-
-### docker mode
-
-| Variable | Default | Description |
-|---|---|---|
-| `keycloak_version` | `26.4` | Container image tag. |
-| `keycloak_image` | `quay.io/keycloak/keycloak` | |
-| `keycloak_network_mode` | `host` | `host` or `bridge`. |
-| `keycloak_http_port` / `keycloak_jgroups_port` / `keycloak_jgroups_fd_port` | `8080` / `7800` / `57600` | Bind ports (bridge mode publishes them). |
-| `keycloak_base_dir` | `/srv/docker/keycloak` | Compose project directory. |
-| `keycloak_shared_storage` | `nfs` | `nfs` or `local` — themes/truststores. |
-| `keycloak_nfs_server` / `keycloak_nfs_path` / `keycloak_nfs_mount` / `keycloak_nfs_opts` | | NFS mount (nfs mode). |
-| `keycloak_extra_env` | `{}` | Extra `KC_*` env merged into the service. |
-
-### native mode
-
-| Variable | Default | Description |
-|---|---|---|
-| `keycloak_release` | `""` | **Required** — full `X.Y.Z` GitHub release tag. |
-| `keycloak_download_url` | GitHub release URL for `keycloak_release` | Override for a mirror. |
-| `keycloak_download_checksum` | `""` | e.g. `sha256:<url-or-hash>`. |
-| `keycloak_service_name` / `_user` / `_group` | `keycloak` | |
-| `keycloak_install_dir` | `/opt/keycloak` | Symlink to `keycloak_versioned_dir` (`/opt/keycloak-<release>`). |
-| `keycloak_systemd_hardening` | `true` | Emit the sandbox block in the unit. |
-| `keycloak_java_package_method` | `distro` | `distro` or `adoptium`. |
-| `keycloak_java_package` | `java-21-openjdk-headless` (RHEL) / `openjdk-21-jre-headless` (Debian) | Override for a newer JDK. |
-| `keycloak_adoptium_package` | `temurin-21-jdk` | |
-| `keycloak_http_enabled` | `false` | |
-| `keycloak_https_protocols` | `TLSv1.3,TLSv1.2` | |
-| `keycloak_hostname_strict` | `true` | |
-| `keycloak_metrics_enabled` | `false` | |
-| `keycloak_cache` / `keycloak_cache_stack` | `ispn` / `jdbc-ping` | Infinispan clustering. |
-| `keycloak_cache_embedded_mtls_enabled` | `true` | mTLS on the JGroups transport. |
-| `keycloak_cache_embedded_network_bind_address` | primary IPv4 | JGroups bind address. |
-| `keycloak_db_sslmode` | `verify-full` | JDBC `sslmode`. |
-| `keycloak_db_sslrootcert` | `{{ keycloak_install_dir }}/conf/truststores/db-ca.pem` | Path checked by `verify-full`. |
-| `keycloak_truststore_files` | `[]` | Files dropped into `conf/truststores/`; each entry `name` + `content` or `src`. Use for the DB CA and LDAP CA. |
-| `keycloak_extra_conf` | `{}` | Extra `key=value` lines appended to `keycloak.conf`. |
-
 
 Templates
 ---------

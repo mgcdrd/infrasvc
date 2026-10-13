@@ -6,39 +6,39 @@
   block:
 
     - name: phpipam_config main - Preflight and authentication
-      include_tasks: roles/phpipam_config/tasks/preflight.yml
+      include_tasks: preflight.yml
 
     # Independent objects — no cross-references, safe to run in any order.
     - name: phpipam_config main - Manage customers
-      include_tasks: roles/phpipam_config/tasks/customers.yml
+      include_tasks: customers.yml
 
     - name: phpipam_config main - Manage sections
-      include_tasks: roles/phpipam_config/tasks/sections.yml
+      include_tasks: sections.yml
 
     - name: phpipam_config main - Manage VLANs
-      include_tasks: roles/phpipam_config/tasks/vlans.yml
+      include_tasks: vlans.yml
 
     - name: phpipam_config main - Manage nameservers
-      include_tasks: roles/phpipam_config/tasks/nameservers.yml
+      include_tasks: nameservers.yml
 
     - name: phpipam_config main - Manage NAT policies
-      include_tasks: roles/phpipam_config/tasks/nat.yml
+      include_tasks: nat.yml
 
     - name: phpipam_config main - Manage locations
-      include_tasks: roles/phpipam_config/tasks/locations.yml
+      include_tasks: locations.yml
 
     # Dependent objects — must run after their parents above.
     - name: phpipam_config main - Manage racks
-      include_tasks: roles/phpipam_config/tasks/racks.yml
+      include_tasks: racks.yml
 
     - name: phpipam_config main - Manage subnets and address assignments
-      include_tasks: roles/phpipam_config/tasks/subnets.yml
+      include_tasks: subnets.yml
 
     - name: phpipam_config main - Manage devices
-      include_tasks: roles/phpipam_config/tasks/devices.yml
+      include_tasks: devices.yml
 
     - name: phpipam_config main - Manage circuits
-      include_tasks: roles/phpipam_config/tasks/circuits.yml
+      include_tasks: circuits.yml
 
   module_defaults:
     ansible.builtin.uri:

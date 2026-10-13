@@ -30,6 +30,32 @@ isn't in the base Rocky repos.
 Role Variables
 --------------
 
+### Variable reference
+
+| Variable | Default | Required | Description |
+|---|---|---|---|
+| `nut_server_config_dir` | `/etc/nut` Debian, `/etc/ups` EL | No | NUT config directory; differs by packaging |
+| `nut_server_ups_name` | `apc` | No | UPS name in `ups.conf` |
+| `nut_server_ups_desc` | `"APC Back-UPS 1500"` | No | UPS description in `ups.conf` |
+| `nut_server_driver` | `usbhid-ups` | No | NUT driver in `ups.conf` |
+| `nut_server_port` | `auto` | No | Driver port in `ups.conf`; `auto` for USB |
+| `nut_server_pollinterval` | `15` | No | Driver poll interval in seconds |
+| `nut_server_mode` | `netserver` | No | `MODE` in `nut.conf`; `netserver` exposes upsd to the network |
+| `nut_server_listen_addresses` | *(list, 1 items)* | No | Addresses `upsd` listens on |
+| `nut_server_admin_user` | `admin` | No | Admin user in `upsd.users`; can `SET` variables and issue FSD and instant commands |
+| `nut_server_admin_password` | `""` | Yes | Admin user password; use `{{ vault_* }}` |
+| `nut_server_admin_actions` | `"SET FSD"` | No | Actions granted to the admin user |
+| `nut_server_admin_instcmds` | `"ALL"` | No | Instant commands granted to the admin user |
+| `nut_server_monuser_user` | `monuser` | No | Read-only monitoring user that clients log in as |
+| `nut_server_monuser_password` | `""` | Yes | Monitoring user password; use `{{ vault_* }}` |
+| `nut_server_local_monitor` | `true` | No | Also run `upsmon` on this host against its own upsd, in NUT's primary role |
+| `nut_server_local_monitor_power_value` | `1` | No | Power value of the local monitor entry |
+| `nut_server_shutdowncmd` | `"/sbin/shutdown -h now"` | No | Command the local `upsmon` runs to shut the host down |
+| `nut_server_deadtime` | `15` | No | Local `upsmon` `DEADTIME` in seconds |
+| `nut_server_minsupplies` | `1` | No | Local `upsmon` `MINSUPPLIES` |
+| `nut_server_group` | `nut` | No | Group NUT services drop privileges to after opening the USB device; files with secrets stay group-readable by it |
+
+
 All variables are prefixed `nut_server_`. See `defaults/main.yml` for the
 full list. Most commonly overridden:
 

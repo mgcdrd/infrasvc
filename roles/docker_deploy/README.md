@@ -28,6 +28,13 @@ Collections:
 Role Variables
 --------------
 
+### Variable reference
+
+| Variable | Default | Required | Description |
+|---|---|---|---|
+| `docker_deploy` | `[]` | Yes | Stacks (swarm) or standalone Compose projects to deploy (fields below); empty is a no-op |
+
+
 ```yaml
 docker_deploy: []
 # docker_deploy:

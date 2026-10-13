@@ -57,6 +57,34 @@ effect on a system with stable power.
 Role Variables
 ---------------
 
+### Variable reference
+
+| Variable | Default | Required | Description |
+|---|---|---|---|
+| `ups_shed_ups_name` | `apc` | No | UPS name `nut_client` already monitors; this role polls it directly with `upsc` |
+| `ups_shed_ups_host` | *(placeholder; set per environment)* | Yes | Host running upsd for that UPS |
+| `ups_shed_tier1_threshold` | `70` | No | Battery % at which tier 1 sheds; tiers are checked in ascending order each poll so a fast drain still runs every tier it crossed |
+| `ups_shed_tier2_threshold` | `40` | No | Battery % at which tier 2 sheds |
+| `ups_shed_tier3_threshold` | `20` | No | Battery % at which tier 3 sheds |
+| `ups_shed_poll_interval` | `20` | No | Seconds between battery polls once `ONBATT` fires |
+| `ups_shed_graceful_wait` | `30` | No | Seconds to wait after powering off a tier's guests before powering off the hypervisor |
+| `ups_shed_k8s_workers` | `[]` | No | Kubernetes workers drained before shedding; set per environment |
+| `ups_shed_tier1_guests` | `[]` | No | Guests shed at tier 1, in shed order |
+| `ups_shed_tier1_hypervisor` | `""` | No | Hypervisor powered off after the tier 1 guests |
+| `ups_shed_tier2_guests` | `[]` | No | Guests shed at tier 2, in shed order |
+| `ups_shed_tier2_hypervisor` | `""` | No | Hypervisor powered off after the tier 2 guests |
+| `ups_shed_ssh_user` | `svc-ups-shutdown` | No | Identity used to SSH to shed targets |
+| `ups_shed_ssh_key` | `/root/.ssh/id_ed25519_svc-ups-shutdown` | No | Private key for that identity |
+| `ups_shed_vault_addr` | `"{{ vault_addr }}"` | No | Vault address; comes from `inventory-common`'s `vault_addr` |
+| `ups_shed_vault_role_id_file` | `/etc/vault/ups-shutdown-role-id` | No | AppRole role_id file, pre-positioned by the identity build |
+| `ups_shed_vault_secret_id_file` | `/etc/vault/ups-shutdown-secret-id` | No | AppRole secret_id file, pre-positioned by the identity build |
+| `ups_shed_vault_secret_path` | *(see defaults)* | No | Vault KV path holding the shed credentials, including `k8s_drain_token`, read at run time and never written to disk |
+| `ups_shed_k8s_api` | *(placeholder; set per environment)* | No | Kubernetes API URL used to drain workers |
+| `ups_shed_ansible_dir` | `/opt/ups-shed` | No | Working directory on the responder VM |
+| `ups_shed_state_dir` | `/var/lib/ups-shed` | No | State directory on the responder VM |
+| `ups_shed_log_file` | `/var/log/ups-shed.log` | No | Log file on the responder VM |
+
+
 All variables are prefixed `ups_shed_`. See `defaults/main.yml` for the
 full list — host lists default empty, thresholds default to 70/40/20.
 

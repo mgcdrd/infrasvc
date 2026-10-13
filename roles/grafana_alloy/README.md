@@ -29,6 +29,29 @@ For metrics, nginx must have `ngx_http_stub_status_module` enabled with a
 Role Variables
 --------------
 
+### Variable reference
+
+| Variable | Default | Required | Description |
+|---|---|---|---|
+| `grafana_alloy_config_path` | `/etc/alloy/config.alloy` | No | Path of the deployed Alloy config |
+| `grafana_alloy_loki_enabled` | `true` | No | Ship logs to Loki |
+| `grafana_alloy_loki_url` | `""` | If `grafana_alloy_loki_enabled` | Loki push URL |
+| `grafana_alloy_loki_user` | `""` | If `grafana_alloy_loki_enabled` | Loki basic-auth user |
+| `grafana_alloy_loki_password` | `""` | If `grafana_alloy_loki_enabled` | Loki basic-auth password; use `{{ vault_grafana_alloy_loki_password }}` |
+| `grafana_alloy_nginx_access_log_path` | `"/var/log/**/*.access.log"` | No | Glob for nginx access logs |
+| `grafana_alloy_nginx_error_log_path` | `"/var/log/**/*.error.log"` | No | Glob for nginx error logs |
+| `grafana_alloy_log_sync_period` | `"10s"` | No | How often the log file list is re-synced |
+| `grafana_alloy_prometheus_enabled` | `true` | No | Remote-write metrics to Prometheus |
+| `grafana_alloy_remote_write_url` | `""` | If `grafana_alloy_prometheus_enabled` | Prometheus remote-write URL |
+| `grafana_alloy_remote_write_user` | `""` | If `grafana_alloy_prometheus_enabled` | Remote-write basic-auth user |
+| `grafana_alloy_remote_write_password` | `""` | If `grafana_alloy_prometheus_enabled` | Remote-write basic-auth password; use `{{ vault_grafana_alloy_remote_write_password }}` |
+| `grafana_alloy_nginx_stub_status_uri` | `"http://127.0.0.1/nginx_status"` | No | nginx `stub_status` endpoint (needs `ngx_http_stub_status_module`) |
+| `grafana_alloy_nginx_scrape_interval` | `"15s"` | No | Scrape interval for nginx metrics |
+| `grafana_alloy_node_metrics_enabled` | `true` | No | Collect host metrics with `prometheus.exporter.unix` |
+| `grafana_alloy_node_scrape_interval` | `"30s"` | No | Scrape interval for host metrics |
+| `grafana_alloy_extra_labels` | `{}` | No | Extra labels attached to all metrics |
+
+
 All variables are prefixed `grafana_alloy_`.
 
 ### Loki (log forwarding)

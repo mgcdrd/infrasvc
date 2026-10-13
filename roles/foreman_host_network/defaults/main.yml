@@ -24,7 +24,7 @@ foreman_host_network_interface_identifier: ""
 # lab's Foreman (2026-09-02): none of its hosts are compute-resource-linked
 # (all show provision_method: build), so setting this here only updates
 # Foreman's own interface record — it does not touch Proxmox. Use
-# mgcdrd.infrabase.proxmox_nic directly for the real VLAN/bridge change on
+# mgcdrd.proxmox.proxmox_nic directly for the real VLAN/bridge change on
 # hosts like that (see the vm-migrate deployment). Only rely on this field
 # alone in an environment you've confirmed is actually compute-resource-linked.
 foreman_host_network_vlan_tag: ""

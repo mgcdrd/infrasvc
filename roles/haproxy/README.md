@@ -23,6 +23,20 @@ install ansible.posix`) for the sysctl task.
 Role Variables
 --------------
 
+### Variable reference
+
+| Variable | Default | Required | Description |
+|---|---|---|---|
+| `haproxy_global` | `{}` | No | Settings for the `global` section |
+| `haproxy_defaults` | `[]` | No | `defaults` blocks |
+| `haproxy_mailers` | `[]` | No | `mailers` blocks |
+| `haproxy_resolvers` | `[]` | No | `resolvers` blocks |
+| `haproxy_frontends` | `[]` | Yes | `frontend` blocks |
+| `haproxy_backends` | `[]` | Yes | `backend` blocks |
+| `haproxy_additional` | `[]` | No | Extra files hard-linked into place before haproxy starts |
+| `haproxy_selinux_connect_any` | `true` | No | Set the SELinux boolean that lets haproxy connect to backends on non-standard ports |
+
+
 All variables are prefixed `haproxy_`. The full structure with descriptions is
 in `vars/main.yml`. Common examples are shown below.
 

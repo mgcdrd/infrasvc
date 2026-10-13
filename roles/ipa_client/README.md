@@ -37,6 +37,28 @@ and broken enrollment repair.
   `vault_ipa_enrollment_principal` / `vault_ipa_enrollment_password`.
 - `vault_ipa_pdns_api_key` from Vault if DNS registration is enabled.
 
+Role Variables
+--------------
+
+### Variable reference
+
+| Variable | Default | Required | Description |
+|---|---|---|---|
+| `ipa_client_servers` | `[]` | Yes | IPA server FQDNs |
+| `ipa_client_domain` | `""` | Yes | IPA domain (lowercase), e.g. `lab.example.com` |
+| `ipa_client_realm` | `""` | Yes | Kerberos realm (uppercase), e.g. `LAB.EXAMPLE.COM` |
+| `ipa_client_validate_certs` | `true` | No | Set to false for lab environments with self-signed IPA certificates |
+| `ipa_client_host_ip` | `"{{ ansible_default_ipv4.address }}"` | No | IP address to register in PowerDNS and record on the IPA host object |
+| `ipa_client_pdns_api_url` | `""` | If `ipa_client_dns_register` | PowerDNS authoritative API endpoint reachable from the target host |
+| `ipa_client_pdns_server_id` | `"localhost"` | No | PowerDNS server ID — almost always "localhost" |
+| `ipa_client_dns_forward_zone` | `""` | If `ipa_client_dns_register` | Forward zone for the A record, e.g. `lab.example.com` |
+| `ipa_client_dns_reverse_zone` | `""` | If `ipa_client_dns_register` | Reverse zone for the PTR record, e.g. `10.0.0.in-addr.arpa` |
+| `ipa_client_dns_ttl` | `300` | No | TTL for registered DNS records (seconds) |
+| `ipa_client_dns_register` | `true` | No | Register the host in PowerDNS; set false when another process (e.g. Foreman) owns the record |
+| `vault_ipa_enrollment_principal` | `""` | Yes | Enrollment service account written by `ipa_baseline`; inject from Vault |
+| `vault_ipa_enrollment_password` | `""` | Yes | Enrollment account password; inject from Vault |
+| `vault_ipa_pdns_api_key` | `""` | If `ipa_client_dns_register` | PowerDNS API key; inject from Vault |
+
 ## Usage
 
 ```yaml
@@ -58,25 +80,6 @@ and broken enrollment repair.
   roles:
     - mgcdrd.infrasvc.ipa_client
 ```
-
-## Variables
-
-| Variable | Default | Description |
-|---|---|---|
-| `ipa_client_servers` | `[]` | IPA server FQDNs (required) |
-| `ipa_client_domain` | `""` | IPA domain, lowercase (required) |
-| `ipa_client_realm` | `""` | Kerberos realm, uppercase (required) |
-| `ipa_client_validate_certs` | `true` | Validate IPA TLS certificate |
-| `ipa_client_host_ip` | `ansible_default_ipv4.address` | IP to register in DNS and IPA |
-| `ipa_client_pdns_api_url` | `""` | PowerDNS API URL |
-| `ipa_client_pdns_server_id` | `localhost` | PowerDNS server ID |
-| `ipa_client_dns_forward_zone` | `""` | Forward DNS zone |
-| `ipa_client_dns_reverse_zone` | `""` | Reverse DNS zone |
-| `ipa_client_dns_ttl` | `300` | DNS record TTL |
-| `ipa_client_dns_register` | `true` | Enable DNS registration |
-| `vault_ipa_enrollment_principal` | `""` | Service account username (inject from Vault) |
-| `vault_ipa_enrollment_password` | `""` | Service account password (inject from Vault) |
-| `vault_ipa_pdns_api_key` | `""` | PowerDNS API key (inject from Vault) |
 
 ## Enrollment states
 

@@ -35,12 +35,43 @@ Collections:
 Role Variables
 --------------
 
-### Required (no defaults)
+### Variable reference
 
-| Variable                     | Description                                                                      |
-|------------------------------|----------------------------------------------------------------------------------|
-| `k8s_init_master`            | FQDN of the node that runs `kubeadm init`. All other masters join after it.     |
-| `k8s_control_plane_endpoint` | DNS name or VIP for the HA API endpoint. Used in kubeadm config and cert SANs.  |
+| Variable | Default | Required | Description |
+|---|---|---|---|
+| `k8s_version` | `"1.32"` | No | Kubernetes minor version; also passed to the container runtime role |
+| `k8s_calico_version` | `"3.31.0"` | No | Calico CNI version |
+| `k8s_svc_cidr` | `"10.96.0.0/12"` | No | Kubernetes service CIDR |
+| `k8s_pod_cidr` | `"10.112.0.0/12"` | No | Pod network CIDR |
+| `k8s_selinux_state` | `Permissive` | No | SELinux state on RedHat nodes |
+| `k8s_firewalld_ports_common` | *(list, 2 items)* | No | Ports opened on every node (firewalld) |
+| `k8s_firewalld_ports_master` | *(list, 4 items)* | No | Ports opened on control plane nodes only |
+| `k8s_firewalld_ports_worker` | *(list, 1 items)* | No | Ports opened on worker nodes only |
+| `k8s_modules` | *(list, 2 items)* | No | Kernel modules loaded on all nodes during prep (`br_netfilter`, `overlay`) |
+| `k8s_sysctl` | *(list, 5 items)* | No | sysctl parameters written to `/etc/sysctl.d/kubernetes.conf` during prep |
+| `k8s_container_runtime` | `cri-o` | No | Runtime to install: `cri-o`, `docker`, or `podman` (only `cri-o` is fully supported) |
+| `k8s_run` | `config` | No | Phase to run: `config` (node prep), `init` (`kubeadm init`, Calico, join), or `addnodes` (join an existing cluster) |
+| `k8s_advertise_address` | *(primary IPv4 address)* | No | IP the API server binds to and advertises in `InitConfiguration` |
+| `k8s_cluster_group` | `""` | No | Inventory group written to `/etc/hosts` on every node; auto-detected when empty |
+| `k8s_helm_version` | `3` | No | Helm major version installed on masters: `3` or `4` |
+| `k8s_psa_enabled` | `true` | No | Apply cluster-wide Pod Security Admission defaults through `AdmissionConfiguration` |
+| `k8s_psa_version` | `latest` | No | Policy version the PSA levels are pinned to |
+| `k8s_psa_enforce` | `baseline` | No | PSA level enforced by default |
+| `k8s_psa_warn` | `restricted` | No | PSA level that warns by default |
+| `k8s_psa_audit` | `restricted` | No | PSA level recorded in audit logs by default |
+| `k8s_psa_exempt_namespaces` | *(list, 3 items)* | No | Namespaces exempt from the PSA defaults |
+| `k8s_oidc_enabled` | `false` | No | Configure the API server to accept JWTs from an external OIDC provider (e.g. Keycloak) |
+| `k8s_oidc_issuer_url` | `""` | If `k8s_oidc_enabled` | OIDC issuer URL, e.g. `https://infra-kc.example.com/realms/lab` |
+| `k8s_oidc_client_id` | `"kubernetes"` | No | OIDC client ID |
+| `k8s_oidc_username_claim` | `"preferred_username"` | No | JWT claim used as the Kubernetes username |
+| `k8s_oidc_groups_claim` | `"groups"` | No | JWT claim used for group membership |
+| `k8s_keepalived_enabled` | `false` | No | Mirror of the deployment-level keepalived flag; stops keepalived on joining nodes so the VIP stays on the init master |
+| `k8s_init_master` |  | Yes | FQDN of the node that runs `kubeadm init`; all other masters join after it |
+| `k8s_control_plane_endpoint` |  | Yes | DNS name or VIP for the HA API endpoint, used in the kubeadm config and cert SANs |
+| `k8s_init_token` | `unset` | No | Pins the `kubeadm init` bootstrap token (`[a-z0-9]{6}.[a-z0-9]{16}`); unset lets kubeadm generate one. Treat as a secret, inject from Vault |
+
+
+### Required (no defaults)
 
 `k8s_init_token` (the `kubeadm init` bootstrap token) is optional and normally
 left unset: kubeadm then generates a random one. It is only used by `kubeadm
@@ -49,24 +80,6 @@ it afterwards. `addnodes` gets a fresh join token from `kubeadm token create
 --print-join-command` on the init master, so it never needs the init token.
 Set it only to pin a known value, and treat it as a secret if you do (inject
 from Vault, never commit).
-
-### Optional
-
-| Variable                | Default                    | Description                                                               |
-|-------------------------|----------------------------|---------------------------------------------------------------------------|
-| `k8s_run`               | `config`                   | Phase to execute. See **Phases** below.                                   |
-| `k8s_init_token`        | unset (kubeadm generates)  | Pin the `kubeadm init` bootstrap token. Format `[a-z0-9]{6}.[a-z0-9]{16}`.  |
-| `k8s_version`           | `1.32`                     | Kubernetes minor version. Also passed to the container runtime role.      |
-| `k8s_calico_version`    | `3.31.0`                   | Calico CNI version.                                                       |
-| `k8s_container_runtime` | `cri-o`                    | Runtime to install: `cri-o`, `docker`, or `podman`.                      |
-| `k8s_svc_cidr`          | `10.96.0.0/12`             | Kubernetes service CIDR.                                                  |
-| `k8s_pod_cidr`          | `10.112.0.0/12`            | Pod network CIDR.                                                         |
-| `k8s_cluster_group`     | `""`                       | Inventory group written to `/etc/hosts`. Auto-detected when empty.        |
-| `k8s_helm_version`      | `4`                        | Helm major version to install on masters (`3` or `4`).                   |
-| `k8s_modules`           | `[br_netfilter, overlay]`  | Kernel modules loaded on all nodes via `infrabase.kernel_modules`.        |
-| `k8s_sysctl`            | see defaults               | sysctl parameters passed to `infrabase.sysctl`.                          |
-| `k8s_selinux_state`     | `Permissive`               | SELinux state on RedHat nodes.                                            |
-
 
 Phases (`k8s_run`)
 ------------------
@@ -103,7 +116,7 @@ Helm on Masters
 
 During the `config` phase, masters receive:
 - **helm** — installed via the official `get-helm-<version>.sh` script.
-  Version is controlled by `k8s_helm_version` (default: `4`).
+  Version is controlled by `k8s_helm_version` (default: `3`).
 - **python3-kubernetes** — required by `kubernetes.core` Ansible modules.
 
 These are prerequisites for the `k8s-platform` deployment
@@ -206,14 +219,6 @@ OIDC provider (e.g. Keycloak). Set `k8s_oidc_enabled: true` and supply the
 remaining variables before running the `init` phase — these flags are baked
 into the kubeadm `InitConfiguration` and cannot be changed without restarting
 the API server or re-running kubeadm.
-
-| Variable | Default | Description |
-|---|---|---|
-| `k8s_oidc_enabled` | `false` | Enable OIDC API server flags |
-| `k8s_oidc_issuer_url` | `""` | OIDC issuer URL (e.g. `https://infra-kc.example.com/realms/lab`) |
-| `k8s_oidc_client_id` | `kubernetes` | OIDC client ID |
-| `k8s_oidc_username_claim` | `preferred_username` | JWT claim used as the k8s username |
-| `k8s_oidc_groups_claim` | `groups` | JWT claim used for group membership |
 
 The Keycloak side is configured by `mgcdrd.infrasvc.keycloak_config`, which
 creates the `kubernetes` OIDC client with the matching claims mappers. After

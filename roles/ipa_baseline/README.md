@@ -33,6 +33,25 @@ after a Vault DR restore to regenerate and re-sync the enrollment secret.
 - Network access to the IPA HTTPS API and Vault API from the host running
   the play.
 
+Role Variables
+--------------
+
+### Variable reference
+
+| Variable | Default | Required | Description |
+|---|---|---|---|
+| `ipa_baseline_server` | `""` | Yes | FQDN of the primary IPA server |
+| `ipa_baseline_admin_principal` | `"admin"` | No | IPA admin username used to bootstrap the service account |
+| `ipa_baseline_validate_certs` | `true` | No | Set to false only in lab environments with self-signed IPA certificates |
+| `ipa_baseline_enrollment_principal` | `"svc-ansible-enrollment"` | No | Username of the least-privilege enrollment service account to create/ensure |
+| `ipa_baseline_enrollment_role` | `"Ansible Host Enrollment"` | No | IPA role that will hold the Host Enrollment privilege |
+| `ipa_baseline_force_rotate` | `false` | No | Force password rotation even when Vault already has credentials |
+| `ipa_baseline_vault_url` | `""` | Yes | Base URL of the Vault API, no trailing slash |
+| `ipa_baseline_vault_token` | *(`VAULT_TOKEN` environment variable)* | No | Vault token used to read and write secrets |
+| `ipa_baseline_vault_kv_mount` | `"kv1"` | No | KV engine mount point |
+| `ipa_baseline_vault_enrollment_path` | `"ipa/enrollment"` | No | Path within the KV mount where enrollment credentials are stored |
+| `vault_ipa_admin_password` | `""` | Yes | IPA admin password, supplied at runtime |
+
 ## Usage
 
 This role makes only API calls — it does not require SSH access to the IPA
@@ -50,22 +69,6 @@ IPA and Vault.
   roles:
     - mgcdrd.infrasvc.ipa_baseline
 ```
-
-## Variables
-
-| Variable | Default | Description |
-|---|---|---|
-| `ipa_baseline_server` | `""` | Primary IPA server FQDN (required) |
-| `ipa_baseline_admin_principal` | `admin` | IPA admin username |
-| `ipa_baseline_validate_certs` | `true` | Validate IPA TLS certificate |
-| `ipa_baseline_enrollment_principal` | `svc-ansible-enrollment` | Service account username |
-| `ipa_baseline_enrollment_role` | `Ansible Host Enrollment` | IPA role to create |
-| `ipa_baseline_force_rotate` | `false` | Regenerate password and overwrite Vault entry |
-| `ipa_baseline_vault_url` | `""` | Vault API base URL (required) |
-| `ipa_baseline_vault_token` | `$VAULT_TOKEN` | Vault auth token |
-| `ipa_baseline_vault_kv_mount` | `kv1` | KV v2 engine mount point |
-| `ipa_baseline_vault_enrollment_path` | `ipa/enrollment` | Path within KV mount |
-| `vault_ipa_admin_password` | `""` | IPA admin password (required, inject from Vault) |
 
 ## Vault paths
 

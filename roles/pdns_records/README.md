@@ -31,6 +31,17 @@ Requirements
 Role Variables
 --------------
 
+### Variable reference
+
+| Variable | Default | Required | Description |
+|---|---|---|---|
+| `pdns_records_api_url` | `"http://127.0.0.1:8081"` | No | PowerDNS Authoritative HTTP API URL |
+| `pdns_records_api_key` | `""` | Yes | API key for the PowerDNS server; use `{{ vault_* }}` |
+| `pdns_records_server_id` | `"localhost"` | No | PowerDNS server ID; `localhost` for self-hosted instances |
+| `pdns_records_zones` | `[]` | No | Zones to create or manage (fields below); needed when creating a new zone |
+| `pdns_records` | `[]` | No | Records to manage (fields below) |
+
+
 ### Required
 
 ```yaml

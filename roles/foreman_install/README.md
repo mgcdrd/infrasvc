@@ -73,6 +73,84 @@ Requirements
 Role Variables
 --------------
 
+### Variable reference
+
+| Variable | Default | Required | Description |
+|---|---|---|---|
+| `foreman_version` | `"3.19"` | No | Foreman release to install |
+| `foreman_katello_version` | `"4.21"` | No | Katello release to install |
+| `foreman_puppet_release` | `"openvox8"` | No | Puppet/OpenVox repo release |
+| `foreman_installer_scenario` | `katello` | No | `foreman-installer` scenario |
+| `foreman_skip_storage_check` | `false` | No | Skip the preflight check that `/var/lib/{pulp,containers,pgsql}` are large enough |
+| `foreman_storage_min_pulp_gb` | `290` | No | Minimum available GB on the Pulp mount |
+| `foreman_storage_min_containers_gb` | `28` | No | Minimum available GB on the containers mount |
+| `foreman_storage_min_pgsql_gb` | `18` | No | Minimum available GB on the PostgreSQL mount |
+| `foreman_hostname` | `"{{ ansible_fqdn }}"` | No | Foreman server FQDN |
+| `foreman_url` | `"https://{{ foreman_hostname }}"` | No | Foreman base URL |
+| `foreman_org` | `"My Organization"` | Yes | Initial organization; set in group_vars |
+| `foreman_location` | `"Default Location"` | Yes | Initial location; set in group_vars |
+| `foreman_installer_cli_enable` | *(list, 6 items)* | No | hammer CLI modules enabled (`--enable-foreman-cli-<item>`) |
+| `foreman_installer_plugin_enable` | *(list, 9 items)* | No | Foreman plugins enabled |
+| `foreman_installer_proxy_plugin_enable` | *(list, 4 items)* | No | Smart Proxy plugins enabled |
+| `foreman_installer_further_enable` | *(list, 1 items)* | No | Additional packages enabled (`--enable-<item>`) |
+| `foreman_dhcp_enable` | `false` | No | Manage DHCP on the smart proxy |
+| `foreman_dhcp_provider` | `isc` | No | DHCP provider |
+| `foreman_dhcp_interface` | `eth0` | No | Interface DHCP listens on |
+| `foreman_dhcp_gateway` | `""` | If `foreman_dhcp_enable` | Gateway handed out by DHCP |
+| `foreman_dhcp_range_start` | `""` | If `foreman_dhcp_enable` | First address of the DHCP range |
+| `foreman_dhcp_range_end` | `""` | If `foreman_dhcp_enable` | Last address of the DHCP range |
+| `foreman_dhcp_nameservers` | `[]` | No | DNS servers handed out by DHCP |
+| `foreman_dns_enable` | `false` | No | Manage DNS on the smart proxy |
+| `foreman_dns_provider` | `powerdns` | No | `powerdns` or `nsupdate` |
+| `foreman_dns_forwarders` | `[]` | No | DNS forwarders |
+| `foreman_pdns_api_url` | `"http://localhost:8081"` | No | PowerDNS API URL; the API key comes from `vault_pdns_api_key` |
+| `foreman_dns_nsupdate_server` | `""` | If `foreman_dns_provider: nsupdate` | DNS server that receives nsupdate updates |
+| `foreman_tftp_enable` | `true` | No | Manage TFTP on the smart proxy |
+| `foreman_tftp_listen_on` | `https` | No | Protocols TFTP serves: `http`, `https`, or `both` |
+| `foreman_proxy_template_url` | `""` | No | Smart proxy template URL; empty uses the installer default (the proxy's own host and port) |
+| `foreman_realm_enable` | `false` | No | Enable realm (FreeIPA) integration |
+| `foreman_realm_pam_server` | `foreman` | No | PAM service name for realm authentication |
+| `foreman_realm_ipa_authentication` | `"true"` | No | Enable IPA authentication (installer string boolean) |
+| `foreman_realm_ipa_authentication_api` | `"false"` | No | Enable IPA authentication for the API (installer string boolean) |
+| `foreman_realm_proxy` | `"true"` | No | Enable the realm smart-proxy feature (installer string boolean) |
+| `foreman_realm_provider` | `freeipa` | No | Realm provider |
+| `foreman_realm_principal` | `""` | If `foreman_realm_enable` | Kerberos principal the realm proxy uses |
+| `foreman_realm_freeipa_remove_dns` | `"false"` | No | Remove DNS records when a realm host is deleted (installer string boolean) |
+| `foreman_ipa_controller` | `""` | If `foreman_realm_enable` | IPA server the realm proxy talks to |
+| `foreman_realm_vault_rotate` | `false` | No | Reset the realm principal's password after each keytab fetch and write it back to Vault, since `ipa-getkeytab` rotates the key |
+| `foreman_realm_vault_addr` | `""` | If `foreman_realm_vault_rotate` | Vault address holding the realm principal's password |
+| `foreman_realm_vault_kv_mount` | `""` | If `foreman_realm_vault_rotate` | KV mount for the password |
+| `foreman_realm_vault_path` | `""` | If `foreman_realm_vault_rotate` | KV path for the password |
+| `foreman_realm_vault_password_key` | `"realm_agent_password"` | No | Key within the secret holding the password |
+| `foreman_puppet_autosign_entries` | `"[*.example.com]"` | No | Puppet autosign patterns |
+| `foreman_puppetserver_tmpdir` | `/opt/puppetlabs/server/data/puppetserver/tmp` | No | JVM temp directory for puppetserver |
+| `foreman_proxy_content_enable_ansible` | `true` | No | Enable the Ansible Pulp content type |
+| `foreman_proxy_content_enable_deb` | `true` | No | Enable the deb Pulp content type |
+| `foreman_proxy_content_enable_docker` | `false` | No | Enable the container Pulp content type |
+| `foreman_proxy_content_enable_file` | `true` | No | Enable the file Pulp content type |
+| `foreman_proxy_content_enable_ostree` | `true` | No | Enable the OSTree Pulp content type |
+| `foreman_proxy_content_enable_python` | `true` | No | Enable the Python Pulp content type |
+| `foreman_proxy_content_enable_yum` | `true` | No | Enable the yum Pulp content type |
+| `foreman_proxy_content_pulpcore_mirror` | `false` | No | Mirror pulpcore content on the proxy |
+| `foreman_proxy_openscap_ansible_module` | `true` | No | Install the OpenSCAP Ansible module on the proxy |
+| `foreman_proxy_rex_script_enabled` | `true` | No | Enable remote execution (script provider) |
+| `foreman_proxy_rex_script_cockpit_integration` | `false` | No | Enable the Cockpit integration for remote execution |
+| `foreman_plugin_tasks_automatic_cleanup` | `true` | No | Clean up old tasks automatically |
+| `foreman_plugin_tasks_backup` | `true` | No | Back up tasks before cleanup |
+| `foreman_certs_city` | `Raleigh` | No | City for the internal certificates |
+| `foreman_certs_country` | `US` | No | Country for the internal certificates |
+| `foreman_certs_org` | `"My Organization"` | No | Organization for the internal certificates |
+| `foreman_certs_org_unit` | `IT` | No | Organizational unit for the internal certificates |
+| `foreman_certs_state` | `NC` | No | State for the internal certificates |
+| `foreman_custom_certs` | `false` | No | Replace the self-signed web certificate with the files below |
+| `foreman_cert_path` | `"/etc/ssl/acme/{{ foreman_hostname }}/cert.pem"` | If `foreman_custom_certs` | Web certificate path |
+| `foreman_cert_key_path` | `"/etc/ssl/acme/{{ foreman_hostname }}/key.pem"` | If `foreman_custom_certs` | Web certificate key path |
+| `foreman_cert_ca_path` | `"/etc/ssl/acme/{{ foreman_hostname }}/ca.pem"` | If `foreman_custom_certs` | CA chain path |
+| `foreman_telemetry_logger_enabled` | `false` | No | Enable the logger telemetry sink |
+| `foreman_telemetry_prometheus_enabled` | `false` | No | Enable the Prometheus telemetry endpoint |
+| `foreman_telemetry_statsd_enabled` | `false` | No | Enable the statsd telemetry sink |
+
+
 ### Required (no defaults — must be set by caller)
 
 ```yaml

@@ -34,6 +34,17 @@ Requirements
 Role Variables
 --------------
 
+### Variable reference
+
+| Variable | Default | Required | Description |
+|---|---|---|---|
+| `foreman_hostname` | `"{{ ansible_fqdn }}"` | No | Foreman server FQDN |
+| `foreman_url` | `"https://{{ foreman_hostname }}"` | No | Foreman API base URL |
+| `foreman_org` | `"My Organization"` | No | Organization the content is created under |
+| `foreman_location` | `"Default Location"` | No | Location the content is created under |
+| `foreman_validate_certs` | `true` | No | Validate the Foreman API TLS certificate |
+
+
 ### Connection (required)
 
 ```yaml

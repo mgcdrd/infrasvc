@@ -40,6 +40,30 @@ track it by default. Override per-instance with `vrrp_scripts.presets`.
 Role Variables
 --------------
 
+### Variable reference
+
+| Variable | Default | Required | Description |
+|---|---|---|---|
+| `vrrp_script_interval` | `3` | No | Seconds between runs of any `vrrp_script` that does not set its own |
+| `vrrp_script_fall` | `3` | No | Consecutive failures before a script is marked failed |
+| `vrrp_script_rise` | `4` | No | Consecutive successes before a script is marked healthy |
+| `vrrp_script_init_fail` | `true` | No | Start scripts in the failed state until they first succeed |
+| `vrrp_script_user` | `root` | No | User scripts run as |
+| `vrrp_script_group` | `root` | No | Group scripts run as |
+| `keepalived_priority_max` | `210` | No | VRRP priority of the first node (master); priorities step down linearly to the minimum |
+| `keepalived_priority_min` | `90` | No | VRRP priority of the last backup |
+| `keepalived_script_weight_default` | `"-150"` | No | Weight applied on script failure when a script does not set one |
+| `keepalived_vip_for` | `[]` | No | Presets to activate: `webproxy`, `ftp`, `kubernetes`, `dockerswarm`, `keycloak` |
+| `keepalived_global_defs` | `{}` | No | `global_defs` block; empty omits it |
+| `keepalived_vrrp_scripts` | `[]` | No | Extra `vrrp_script` entries beyond the presets |
+| `keepalived_vrrp_instances` | `[]` | Yes | `vrrp_instance` definitions (fields below); the role does nothing without them |
+| `keepalived_preset_webproxy` | *(map, 11 lines)* | No | Built-in `webproxy` preset (scripts and instance); redefine to override |
+| `keepalived_preset_ftp` | *(map, 11 lines)* | No | Built-in `ftp` preset; redefine to override |
+| `keepalived_preset_dockerswarm` | *(map, 21 lines)* | No | Built-in `dockerswarm` preset; redefine to override |
+| `keepalived_preset_kubernetes` | *(map, 11 lines)* | No | Built-in `kubernetes` preset; redefine to override |
+| `keepalived_preset_keycloak` | *(map, 11 lines)* | No | Built-in `keycloak` preset; redefine to override |
+
+
 ### Required
 
 ```yaml

@@ -25,6 +25,21 @@ as `nut_server`. On RedHat, the role enables EPEL itself.
 Role Variables
 --------------
 
+### Variable reference
+
+| Variable | Default | Required | Description |
+|---|---|---|---|
+| `nut_client_config_dir` | `/etc/nut` Debian, `/etc/ups` EL | No | NUT config directory; differs by packaging |
+| `nut_client_mode` | `netclient` | No | `MODE` in `nut.conf`; `netclient` polls a remote upsd |
+| `nut_client_monitors` | `[]` | Yes | Remote UPSes this host watches, one entry each (fields below) |
+| `nut_client_minsupplies` | `1` | No | `MINSUPPLIES`: power supplies that must stay up before shutdown |
+| `nut_client_deadtime` | `60` | No | `DEADTIME` in seconds before an unreachable upsd counts as dead; generous because the link crosses a network boundary |
+| `nut_client_notifycmd` | `/usr/local/bin/nut-notify.sh` | No | Script upsmon runs on events |
+| `nut_client_notify_hook` | `""` | No | Extra script `nut-notify.sh` calls after logging, with the same `NOTIFYTYPE` and message |
+| `nut_client_shutdowncmd` | `""` | No | `SHUTDOWNCMD`; deliberately unset so shutdown is driven by Ansible via `ups_shed` |
+| `nut_client_group` | `nut` | No | Group NUT's upsmon runs as; matches `nut_server_group` |
+
+
 All variables are prefixed `nut_client_`. See `defaults/main.yml` for the
 full list.
 

@@ -32,25 +32,25 @@ Collections:
 Role Variables
 --------------
 
+### Variable reference
+
+| Variable | Default | Required | Description |
+|---|---|---|---|
+| `docker_swarm_run` | `config` | No | Phase to run: `config` (node prep), `init` (init swarm and join all nodes), `addnodes` (join to an existing swarm), `nodeconfig` (role/availability/label changes) |
+| `docker_swarm_advertise_addr` | *(primary IPv4 address)* | No | Address the init manager advertises to other nodes |
+| `docker_swarm_listen_addr` | `"0.0.0.0:2377"` | No | Address and port for inter-manager communication |
+| `docker_swarm_default_addr_pool` | `[]` | No | Overlay network address pool, used only at init; empty keeps Docker's built-in default (10.0.0.0/8 in /24s) |
+| `docker_swarm_subnet_size` | `24` | No | Subnet mask length carved from the default address pool; init only |
+| `docker_swarm_firewalld_ports` | *(list, 4 items)* | Yes | Swarm ports opened on every node (RedHat only): 2377/tcp, 7946/tcp+udp, 4789/udp |
+| `docker_swarm_keepalived_enabled` | `false` | No | During `addnodes`, stop keepalived on non-init managers while they join so the VIP stays on the init manager |
+| `docker_swarm_node_config` | `[]` | If `docker_swarm_run: nodeconfig` | Node role/availability/label changes; each item maps to `community.docker.docker_node` and needs `hostname` |
+
+
 ### Required (no defaults)
 
 | Variable | Description |
 |---|---|
 | `docker_swarm_init_manager` | `inventory_hostname` of the node that runs the initial swarm init. All other managers and workers join after it. |
-
-### Optional
-
-| Variable | Default | Description |
-|---|---|---|
-| `docker_swarm_run` | `config` | Phase to execute. See **Phases** below. |
-| `docker_swarm_advertise_addr` | `{{ ansible_default_ipv4.address }}` | Address this node advertises to other nodes. |
-| `docker_swarm_listen_addr` | `0.0.0.0:2377` | Address/port for inter-manager communication. |
-| `docker_swarm_default_addr_pool` | `[]` | Overlay network address pool (CIDR list). Empty uses Docker's default. Init-only. |
-| `docker_swarm_subnet_size` | `24` | Default address pool subnet mask length. Init-only. |
-| `docker_swarm_firewalld_ports` | see defaults | Ports opened via firewalld on RedHat nodes. |
-| `docker_swarm_keepalived_enabled` | `false` | Stop/start keepalived on non-init managers around the join, so the VIP stays pinned to the init manager. |
-| `docker_swarm_node_config` | `[]` | List of node role/availability/label changes. See **Node Configuration** below. |
-
 
 Phases (`docker_swarm_run`)
 ----------------------------
