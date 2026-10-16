@@ -1,0 +1,63 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    _pg_service: "{{ 'postgresql-18' if ansible_facts['os_family'] == 'RedHat' else 'postgresql@18-main' }}"
+    _pg_conf_root: "{{ '/var/lib/pgsql/18/data' if ansible_facts['os_family'] == 'RedHat' else '/etc/postgresql/18/main' }}"
+  tasks:
+    - name: Collect service facts
+      ansible.builtin.service_facts:
+
+    - name: PostgreSQL service is running
+      ansible.builtin.assert:
+        quiet: true
+        that:
+          - (ansible_facts.services[_pg_service ~ '.service'].state | default('')) == 'running'
+
+    - name: Read the managed drop-in
+      ansible.builtin.slurp:
+        src: "{{ _pg_conf_root }}/conf.d/10-mgcdrd.conf"
+      register: _dropin
+
+    - name: Drop-in carries our settings
+      ansible.builtin.assert:
+        quiet: true
+        that:
+          - "'listen_addresses = ' in (_dropin.content | b64decode)"
+          - "'max_connections = ' in (_dropin.content | b64decode)"
+
+    - name: Read pg_hba.conf
+      ansible.builtin.slurp:
+        src: "{{ _pg_conf_root }}/pg_hba.conf"
+      register: _hba
+
+    - name: pg_hba is rendered from the list, scoped to the client CIDR
+      ansible.builtin.assert:
+        quiet: true
+        that:
+          - "'keycloak' in (_hba.content | b64decode)"
+          - "'10.42.0.0/16' in (_hba.content | b64decode)"
+          - "'0.0.0.0/0' not in (_hba.content | b64decode)"
+
+    - name: Query the bootstrapped role
+      community.postgresql.postgresql_query:
+        db: postgres
+        query: "SELECT 1 FROM pg_roles WHERE rolname = 'keycloak'"
+      become_user: postgres
+      register: _role
+
+    - name: Query the bootstrapped database
+      community.postgresql.postgresql_query:
+        db: postgres
+        query: "SELECT 1 FROM pg_database WHERE datname = 'keycloak'"
+      become_user: postgres
+      register: _db
+
+    - name: Role and database exist
+      ansible.builtin.assert:
+        quiet: true
+        that:
+          - _role.rowcount == 1
+          - _db.rowcount == 1

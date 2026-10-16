@@ -1,0 +1,23 @@
+---
+
+- name: postgresql - Validate variables
+  ansible.builtin.import_tasks: preflight.yml
+
+- name: postgresql - Install (RedHat)
+  ansible.builtin.import_tasks: install-redhat.yml
+  when: ansible_facts['os_family'] == 'RedHat'
+
+- name: postgresql - Install (Debian)
+  ansible.builtin.import_tasks: install-debian.yml
+  when: ansible_facts['os_family'] == 'Debian'
+
+- name: postgresql - Issue TLS certificate
+  ansible.builtin.import_tasks: tls.yml
+  when: postgresql_manage_cert | bool
+
+- name: postgresql - Configure
+  ansible.builtin.import_tasks: configure.yml
+
+- name: postgresql - Bootstrap roles and databases
+  ansible.builtin.import_tasks: bootstrap.yml
+  when: postgresql_roles | length > 0 or postgresql_databases | length > 0

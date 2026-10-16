@@ -1,0 +1,11 @@
+# {{ ansible_managed }}
+# mgcdrd.infrabase.postgresql — rendered from postgresql_hba_entries.
+# Order is significant. The first matching row wins.
+
+{% for e in postgresql_hba_entries %}
+{% if e.type == 'local' %}
+{{ "%-7s %-16s %-16s %s" | format(e.type, e.database, e.user, e.method) }}
+{% else %}
+{{ "%-7s %-16s %-16s %-22s %s" | format(e.type, e.database, e.user, e.address, e.method) }}
+{% endif %}
+{% endfor %}

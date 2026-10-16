@@ -1,0 +1,44 @@
+---
+# Base config (driver, provisioner, verifier, sequence) comes from
+# ../../../../.config/molecule/config.yml via MOLECULE_BASE_CONFIG.
+
+platforms:
+  - name: pg-rocky9
+    image: geerlingguy/docker-rockylinux9-ansible:latest
+    command: /usr/lib/systemd/systemd
+    systemd: true
+    privileged: true
+    cgroupns_mode: host
+    pre_build_image: true
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+
+  - name: pg-rocky10
+    image: geerlingguy/docker-rockylinux10-ansible:latest
+    command: /usr/lib/systemd/systemd
+    systemd: true
+    privileged: true
+    cgroupns_mode: host
+    pre_build_image: true
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+
+  - name: pg-debian12
+    image: geerlingguy/docker-debian12-ansible:latest
+    command: /lib/systemd/systemd
+    systemd: true
+    privileged: true
+    cgroupns_mode: host
+    pre_build_image: true
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+
+  - name: pg-debian13
+    image: geerlingguy/docker-debian13-ansible:latest
+    command: /lib/systemd/systemd
+    systemd: true
+    privileged: true
+    cgroupns_mode: host
+    pre_build_image: true
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw

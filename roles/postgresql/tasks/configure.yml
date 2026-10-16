@@ -1,0 +1,78 @@
+---
+
+- name: postgresql configure - Ensure conf.d is included
+  ansible.builtin.lineinfile:
+    path: "{{ _postgresql_conf_root }}/postgresql.conf"
+    line: "include_dir = 'conf.d'"
+    regexp: "^#?\\s*include_dir\\s*=\\s*'conf\\.d'"
+    state: present
+    owner: postgres
+    group: postgres
+  notify: postgresql restart
+
+- name: postgresql configure - Create conf.d directory
+  ansible.builtin.file:
+    path: "{{ _postgresql_confd }}"
+    state: directory
+    owner: postgres
+    group: postgres
+    mode: "0750"
+
+- name: postgresql configure - Prepare the private TLS directory
+  ansible.builtin.file:
+    path: "{{ _postgresql_ssl_dir }}"
+    state: directory
+    owner: root
+    group: postgres
+    mode: "0750"
+  when:
+    - postgresql_ssl | bool
+    - _postgresql_ssl_managed | bool
+
+- name: postgresql configure - Install the server certificate
+  ansible.builtin.copy:
+    src: "{{ postgresql_ssl_cert_file }}"
+    dest: "{{ _postgresql_ssl_dir }}/server.crt"
+    remote_src: true
+    owner: root
+    group: postgres
+    mode: "0640"
+  when:
+    - postgresql_ssl | bool
+    - _postgresql_ssl_managed | bool
+  notify: postgresql reload
+
+- name: postgresql configure - Install the server private key
+  ansible.builtin.copy:
+    src: "{{ postgresql_ssl_key_file }}"
+    dest: "{{ _postgresql_ssl_dir }}/server.key"
+    remote_src: true
+    owner: root
+    group: postgres
+    mode: "0640"
+  no_log: true
+  when:
+    - postgresql_ssl | bool
+    - _postgresql_ssl_managed | bool
+  notify: postgresql reload
+
+- name: postgresql configure - Deploy the managed settings drop-in
+  ansible.builtin.template:
+    src: conf.d/10-mgcdrd.conf.j2
+    dest: "{{ _postgresql_confd }}/10-mgcdrd.conf"
+    owner: postgres
+    group: postgres
+    mode: "0640"
+  notify: postgresql restart
+
+- name: postgresql configure - Deploy pg_hba.conf
+  ansible.builtin.template:
+    src: pg_hba.conf.j2
+    dest: "{{ _postgresql_conf_root }}/pg_hba.conf"
+    owner: postgres
+    group: postgres
+    mode: "0640"
+  notify: postgresql reload
+
+- name: postgresql configure - Apply pending restarts and reloads
+  ansible.builtin.meta: flush_handlers

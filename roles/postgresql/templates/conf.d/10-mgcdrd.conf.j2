@@ -1,0 +1,20 @@
+# {{ ansible_managed }}
+# mgcdrd.infrabase.postgresql — do not edit, changes are overwritten.
+
+listen_addresses = '{{ postgresql_listen_addresses }}'
+port = {{ postgresql_port }}
+
+{% if postgresql_ssl %}
+ssl = on
+ssl_cert_file = '{{ _postgresql_ssl_cert_effective }}'
+ssl_key_file = '{{ _postgresql_ssl_key_effective }}'
+{% if postgresql_ssl_ca_file | length > 0 %}
+ssl_ca_file = '{{ postgresql_ssl_ca_file }}'
+{% endif %}
+ssl_min_protocol_version = '{{ postgresql_ssl_min_protocol_version }}'
+{% else %}
+ssl = off
+{% endif %}
+{% for key, value in postgresql_settings | dictsort %}
+{{ key }} = '{{ value }}'
+{% endfor %}

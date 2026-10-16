@@ -1,0 +1,79 @@
+---
+
+# ---- VERSION / PACKAGES ----
+
+# Major PostgreSQL version. Selects the PGDG package set
+# (postgresql-{{ version }} on Debian, postgresql{{ version }} on RHEL) and
+# the on-disk paths computed in vars/main.yml.
+postgresql_version: "18"
+
+# Manage the PGDG repository. Set false when the packages already come from a
+# local mirror configured on the host.
+postgresql_manage_repo: true
+
+# Extra packages installed alongside the server, e.g.
+# "postgresql{{ postgresql_version }}-plpython3" (RHEL) or
+# "postgresql-plpython3-{{ postgresql_version }}" (Debian).
+postgresql_packages_extra: []
+
+
+# ---- LISTENER ----
+
+# Value written to listen_addresses. "localhost" keeps the server private;
+# add the host's own address(es) to accept remote connections.
+postgresql_listen_addresses: "localhost"
+
+postgresql_port: 5432
+
+# Arbitrary extra GUCs written to the managed conf.d drop-in as key = 'value'.
+postgresql_settings: {}
+
+
+# ---- TLS ----
+
+# Turn on server-side TLS. Requires postgresql_ssl_cert_file and
+# postgresql_ssl_key_file to point at readable PEM files.
+postgresql_ssl: false
+
+# Private directory the cert and key are copied into so the server (user
+# postgres) can read them without loosening perms on the acme/live tree.
+# Empty means use postgresql_ssl_cert_file / _key_file in place — they must
+# already be root:postgres 0640 or postgres-owned 0600.
+postgresql_ssl_dir: ""
+
+postgresql_ssl_cert_file: ""
+postgresql_ssl_key_file: ""
+postgresql_ssl_ca_file: ""
+postgresql_ssl_min_protocol_version: "TLSv1.2"
+
+# Issue the certificate with mgcdrd.infrabase.acme_sh from inside this role.
+# Off by default — the caller normally issues the cert (any CA / challenge)
+# and points postgresql_ssl_cert_file / _key_file at the result.
+postgresql_manage_cert: false
+postgresql_acme_certs: []
+
+
+# ---- HOST-BASED AUTH ----
+
+# pg_hba.conf is rendered entirely from this list — order is preserved and
+# nothing else is kept. Each entry: type, database, user, address (omit for
+# type "local"), method.
+postgresql_hba_entries:
+  - { type: local, database: all, user: all, method: peer }
+  - { type: host, database: all, user: all, address: "127.0.0.1/32", method: scram-sha-256 }
+  - { type: host, database: all, user: all, address: "::1/128", method: scram-sha-256 }
+
+
+# ---- ROLES / DATABASES / PRIVILEGES ----
+# Applied only when the corresponding list is non-empty. Needs
+# community.postgresql and local peer access for the postgres OS user.
+
+# Each: name, password (reference a vault_ var), role_attr_flags, state.
+postgresql_roles: []
+
+# Each: name, owner, encoding, lc_collate, lc_ctype, template, state.
+postgresql_databases: []
+
+# Each: roles, database, privs, type, objs, schema, state — passed straight
+# to community.postgresql.postgresql_privs.
+postgresql_privileges: []

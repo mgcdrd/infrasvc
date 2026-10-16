@@ -1,0 +1,32 @@
+---
+
+- name: postgresql preflight - Assert a supported OS family
+  ansible.builtin.assert:
+    quiet: true
+    that:
+      - ansible_facts['os_family'] in ['RedHat', 'Debian']
+    fail_msg: "postgresql: unsupported OS family '{{ ansible_facts['os_family'] }}'"
+
+- name: postgresql preflight - Assert pg_hba entries are present
+  ansible.builtin.assert:
+    quiet: true
+    that:
+      - postgresql_hba_entries | length > 0
+    fail_msg: "postgresql_hba_entries must not be empty — pg_hba.conf is rendered from it"
+
+- name: postgresql preflight - Assert TLS cert paths are set
+  ansible.builtin.assert:
+    quiet: true
+    that:
+      - postgresql_ssl_cert_file | length > 0
+      - postgresql_ssl_key_file | length > 0
+    fail_msg: "postgresql_ssl is true — set postgresql_ssl_cert_file and postgresql_ssl_key_file"
+  when: postgresql_ssl | bool
+
+- name: postgresql preflight - Assert acme certs are defined
+  ansible.builtin.assert:
+    quiet: true
+    that:
+      - postgresql_acme_certs | length > 0
+    fail_msg: "postgresql_manage_cert is true — provide postgresql_acme_certs"
+  when: postgresql_manage_cert | bool

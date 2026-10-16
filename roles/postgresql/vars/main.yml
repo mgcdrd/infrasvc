@@ -1,0 +1,58 @@
+---
+
+# systemd unit name.
+#   RHEL:   postgresql-{{ version }}
+#   Debian: postgresql@{{ version }}-main  (the per-cluster instance unit)
+_postgresql_service: >-
+  {{ 'postgresql-' ~ postgresql_version
+     if ansible_facts['os_family'] == 'RedHat'
+     else 'postgresql@' ~ postgresql_version ~ '-main' }}
+
+# Cluster data directory.
+#   RHEL:   /var/lib/pgsql/{{ version }}/data
+#   Debian: /var/lib/postgresql/{{ version }}/main
+_postgresql_data_dir: >-
+  {{ '/var/lib/pgsql/' ~ postgresql_version ~ '/data'
+     if ansible_facts['os_family'] == 'RedHat'
+     else '/var/lib/postgresql/' ~ postgresql_version ~ '/main' }}
+
+# Directory holding postgresql.conf / pg_hba.conf.
+#   RHEL:   alongside the data dir
+#   Debian: /etc/postgresql/{{ version }}/main
+_postgresql_conf_root: >-
+  {{ _postgresql_data_dir
+     if ansible_facts['os_family'] == 'RedHat'
+     else '/etc/postgresql/' ~ postgresql_version ~ '/main' }}
+
+_postgresql_confd: "{{ _postgresql_conf_root }}/conf.d"
+
+# RHEL only — PGDG installs versioned binaries under here.
+_postgresql_bindir: "/usr/pgsql-{{ postgresql_version }}/bin"
+
+# Effective private TLS directory (see postgresql_ssl_dir).
+_postgresql_ssl_dir: >-
+  {{ postgresql_ssl_dir if postgresql_ssl_dir | length > 0
+     else _postgresql_data_dir ~ '/certs' }}
+
+# Whether the role copies the cert/key into the private dir rather than
+# referencing them in place.
+_postgresql_ssl_managed: "{{ postgresql_ssl_dir | length > 0 or postgresql_manage_cert | bool }}"
+
+# Paths written into the running config.
+_postgresql_ssl_cert_effective: >-
+  {{ _postgresql_ssl_dir ~ '/server.crt' if _postgresql_ssl_managed | bool
+     else postgresql_ssl_cert_file }}
+_postgresql_ssl_key_effective: >-
+  {{ _postgresql_ssl_dir ~ '/server.key' if _postgresql_ssl_managed | bool
+     else postgresql_ssl_key_file }}
+
+_postgresql_apt_arch: >-
+  {{ 'amd64' if ansible_architecture == 'x86_64'
+     else 'arm64' if ansible_architecture == 'aarch64'
+     else ansible_architecture }}
+
+_postgresql_el_major: "{{ ansible_facts['distribution_major_version'] }}"
+
+_postgresql_el_arch: >-
+  {{ 'aarch64' if ansible_architecture in ['aarch64', 'arm64']
+     else 'x86_64' }}

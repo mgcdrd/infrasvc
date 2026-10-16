@@ -1,0 +1,50 @@
+---
+
+- name: postgresql bootstrap - Install the Python PostgreSQL driver
+  ansible.builtin.package:
+    name: python3-psycopg2
+    state: present
+
+- name: postgresql bootstrap - Manage roles
+  community.postgresql.postgresql_user:
+    name: "{{ item.name }}"
+    password: "{{ item.password | default(omit) }}"
+    role_attr_flags: "{{ item.role_attr_flags | default(omit) }}"
+    state: "{{ item.state | default('present') }}"
+  become: true
+  become_user: postgres
+  no_log: true
+  loop: "{{ postgresql_roles }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: postgresql bootstrap - Manage databases
+  community.postgresql.postgresql_db:
+    name: "{{ item.name }}"
+    owner: "{{ item.owner | default(omit) }}"
+    encoding: "{{ item.encoding | default('UTF-8') }}"
+    lc_collate: "{{ item.lc_collate | default(omit) }}"
+    lc_ctype: "{{ item.lc_ctype | default(omit) }}"
+    template: "{{ item.template | default(omit) }}"
+    state: "{{ item.state | default('present') }}"
+  become: true
+  become_user: postgres
+  loop: "{{ postgresql_databases }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: postgresql bootstrap - Manage privileges
+  community.postgresql.postgresql_privs:
+    roles: "{{ item.roles }}"
+    database: "{{ item.database }}"
+    privs: "{{ item.privs | default(omit) }}"
+    type: "{{ item.type | default('table') }}"
+    objs: "{{ item.objs | default(omit) }}"
+    schema: "{{ item.schema | default(omit) }}"
+    state: "{{ item.state | default('present') }}"
+  become: true
+  become_user: postgres
+  loop: "{{ postgresql_privileges }}"
+  loop_control:
+    label: "{{ item.database }}"
+  when: postgresql_privileges | length > 0

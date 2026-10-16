@@ -33,6 +33,7 @@ Role Variables
 | `nginx_load_dynamic_mods` | `false` | No | Emit `load_module` lines for dynamic modules |
 | `nginx_events` | *(map, 1 lines)* | No | `events` block settings |
 | `nginx_http_block` | *(map, 9 lines)* | No | `http` block settings (logging, timeouts, TLS, security headers); see `vars/main.yml` for the annotated structure |
+| `nginx_badagent_list` | *(map, 10 items)* | No | If `nginx_http_block.block_badagents` sets a defined list of user agent allow/deny |
 | `nginx_shared_configs` | `{}` | No | Variables consumed by the `shared_configs/*.conf.j2` templates |
 | `nginx_server_blocks` | `[]` | Yes | Server block definitions, one conf file per entry (fields below) |
 | `nginx_conf_d_dir` | `/etc/nginx/conf.d` | No | Base `conf.d` directory; override for a nonstandard install |

@@ -91,13 +91,9 @@ http {
 {% if nginx_http_block.block_badagents is defined and nginx_http_block.block_badagents %}
     #block unnecessary user agents
     map $http_user_agent $blockedagent {
-      ~*HarvesterBot 0;
-      default     0;
-      ~*malicious 1;
-      ~*bot       1;
-      ~*backdoor  1;
-      ~*crawler   1;
-      ~*bandit    1;
+      {% for item in nginx_badagent_list %}
+      {{ "%-20s"|format(item.regex) }} {{ item.value }};
+      {% endfor %}
     }
 {% endif %}
 

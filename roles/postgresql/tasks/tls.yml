@@ -1,0 +1,7 @@
+---
+
+- name: postgresql tls - Issue certificate via acme.sh
+  ansible.builtin.include_role:
+    name: mgcdrd.infrabase.acme_sh
+  vars:
+    acme_sh_certs: "{{ postgresql_acme_certs }}"

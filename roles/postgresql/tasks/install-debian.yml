@@ -1,0 +1,54 @@
+---
+
+- name: postgresql install-debian - Install prerequisites
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - curl
+    state: present
+    update_cache: true
+
+- name: postgresql install-debian - Create keyrings directory
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: postgresql install-debian - Download PGDG signing key
+  ansible.builtin.get_url:
+    url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
+    dest: /etc/apt/keyrings/pgdg.asc
+    mode: "0644"
+    force: false
+  when: postgresql_manage_repo | bool
+
+- name: postgresql install-debian - Add PGDG apt repository
+  ansible.builtin.apt_repository:
+    repo: >-
+      deb [arch={{ _postgresql_apt_arch }} signed-by=/etc/apt/keyrings/pgdg.asc]
+      https://apt.postgresql.org/pub/repos/apt
+      {{ ansible_distribution_release }}-pgdg main
+    state: present
+    filename: pgdg
+  when: postgresql_manage_repo | bool
+
+# postgresql-common's post-install runs pg_createcluster, which creates the
+# `main` cluster and the postgresql@{{ version }}-main unit. No explicit
+# initdb step on Debian.
+- name: postgresql install-debian - Install server packages
+  ansible.builtin.apt:
+    name: "{{ _postgresql_deb_packages + postgresql_packages_extra }}"
+    state: present
+    update_cache: true
+  vars:
+    _postgresql_deb_packages:
+      - "postgresql-{{ postgresql_version }}"
+      - "postgresql-client-{{ postgresql_version }}"
+
+- name: postgresql install-debian - Enable and start the service
+  ansible.builtin.systemd_service:
+    name: "{{ _postgresql_service }}"
+    state: started
+    enabled: true

@@ -1,0 +1,40 @@
+---
+
+- name: postgresql install-redhat - Add PGDG repository
+  ansible.builtin.dnf:
+    name: >-
+      https://download.postgresql.org/pub/repos/yum/reporpms/EL-{{ _postgresql_el_major }}-{{ _postgresql_el_arch }}/pgdg-redhat-repo-latest.noarch.rpm
+    state: present
+    disable_gpg_check: true
+  when: postgresql_manage_repo | bool
+
+# EL9 ships a conflicting `postgresql` appstream module. EL10 dropped modules,
+# so this only runs on 9.
+- name: postgresql install-redhat - Disable the built-in postgresql module
+  ansible.builtin.command:
+    cmd: dnf -y module disable postgresql
+  changed_when: false
+  when:
+    - postgresql_manage_repo | bool
+    - _postgresql_el_major == '9'
+
+- name: postgresql install-redhat - Install server packages
+  ansible.builtin.dnf:
+    name: "{{ _postgresql_rh_packages + postgresql_packages_extra }}"
+    state: present
+  vars:
+    _postgresql_rh_packages:
+      - "postgresql{{ postgresql_version }}"
+      - "postgresql{{ postgresql_version }}-server"
+      - "postgresql{{ postgresql_version }}-contrib"
+
+- name: postgresql install-redhat - Initialise the database cluster
+  ansible.builtin.command:
+    cmd: "{{ _postgresql_bindir }}/postgresql-{{ postgresql_version }}-setup initdb"
+    creates: "{{ _postgresql_data_dir }}/PG_VERSION"
+
+- name: postgresql install-redhat - Enable and start the service
+  ansible.builtin.systemd_service:
+    name: "{{ _postgresql_service }}"
+    state: started
+    enabled: true

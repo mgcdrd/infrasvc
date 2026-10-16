@@ -32,6 +32,7 @@ Set `keepalived_vip_for` to activate one or more presets:
 | `ftp` | `/etc/keepalived/check_haproxy.sh` | haproxy process |
 | `kubernetes` | `/etc/keepalived/check_apiserver.sh` | k8s API server |
 | `dockerswarm` | `check_node_active.sh`, `check_node_ready.sh` | swarm node state |
+| `keycloak` | `/etc/keepalived/check_keycloak.sh` | Keycloak `/health/ready` on the management port |
 
 Each preset's `vrrp_script` block is included in the config and all instances
 track it by default. Override per-instance with `vrrp_scripts.presets`.

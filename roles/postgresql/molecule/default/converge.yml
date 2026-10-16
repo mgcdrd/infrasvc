@@ -1,0 +1,24 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    postgresql_version: "18"
+    postgresql_listen_addresses: "localhost"
+    postgresql_settings:
+      max_connections: "120"
+    postgresql_hba_entries:
+      - { type: local, database: all, user: all, method: peer }
+      - { type: host, database: all, user: all, address: "127.0.0.1/32", method: scram-sha-256 }
+      - { type: host, database: keycloak, user: keycloak, address: "10.42.0.0/16", method: scram-sha-256 }
+    postgresql_roles:
+      - name: keycloak
+        password: molecule-not-a-secret
+        role_attr_flags: LOGIN
+    postgresql_databases:
+      - name: keycloak
+        owner: keycloak
+  tasks:
+    - name: Include mgcdrd.infrabase.postgresql
+      ansible.builtin.include_role:
+        name: mgcdrd.infrabase.postgresql

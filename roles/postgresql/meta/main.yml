@@ -1,0 +1,26 @@
+---
+galaxy_info:
+  role_name: postgresql
+  author: mgcdrd
+  description: Install and configure a native PostgreSQL server from the PGDG repository
+  license: GPL-3.0-or-later
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+        - trixie
+    - name: EL
+      versions:
+        - "9"
+        - "10"
+
+  galaxy_tags:
+    - mgcdrd
+    - postgresql
+    - database
+
+collections:
+  - community.postgresql
+
+dependencies: []

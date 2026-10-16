@@ -611,6 +611,19 @@ reading the current config before writing.
 | dockerswarm | `check_node_active.sh`, `check_node_ready.sh` | swarm node state |
 | keycloak    | `/etc/keepalived/check_keycloak.sh`           | Keycloak `/health/ready` on the management port |
 
+**keepalived_vrrp_instances[] variables**
+
+| Field                                       | Required | Description |
+|---------------------------------------------|----------|-------------|
+| name                                        | Yes      | `vrrp_instance` block name. |
+| master_node                                 | Yes      | Inventory hostname of the master. |
+| backup_nodes                                | Yes      | List of backup inventory hostnames. |
+| virt_ip                                     | Yes      | List of VIPs in CIDR form. |
+| interface                                   | No       | Default: `ansible_default_ipv4.interface`. |
+| virtual_router_id                           | No       | Auto-derived from the VIP octets if omitted. |
+| smtp_alert                                  | No       | Emit SMTP alerts on state changes. |
+| vrrp_scripts                                | No       | Override tracked scripts: `presets` (list) and `extra` (list). |
+| notify_master / notify_backup / notify_fault | No       | Scripts run on state transitions. |
 
 
 
@@ -788,6 +801,7 @@ block configs under `/etc/nginx/conf.d/`, and a set of shared config snippets
 | Variable                              | Default                            | Required | Description |
 |---------------------------------------|------------------------------------|----------|-------------|
 | nginx_process_user                    | `nginx`                            | No       | `user` directive |
+| nginx_process_group                   | *(unset)*                          | No       | Group appended to the `user` directive; omit to let nginx use its default |
 | nginx_worker_processes                | `auto`                             | No       | `worker_processes` |
 | nginx_pid_file                        | `/run/nginx.pid`                   | No       | `pid` file path |
 | nginx_load_dynamic_mods               | `false`                            | No       | Emit `load_module` lines for dynamic modules |
@@ -815,6 +829,16 @@ block configs under `/etc/nginx/conf.d/`, and a set of shared config snippets
 | nginx_ssl_provider                    | `""`                               | If `nginx_ssl_enable` | Role that manages certs: `acme_sh` or `ssl_scripting` |
 | nginx_ssl_scripting                   | `{}`                               | No       | Variables passed to `ssl_scripting` when `nginx_ssl_provider: ssl_scripting` |
 | nginx_dhparam_bits                    | `2048`                             | No       | dhparam size when `ssl_dhparam` is set and the provider is `acme_sh` or empty |
+
+**nginx_server_blocks[] variables**
+
+| Field               | Required | Description |
+|---------------------|----------|-------------|
+| name                | Yes      | Config filename label (`<name>.conf`) and default proxy file name; no relationship to `acme_sh_certs`. |
+| server_names        | Yes      | `server_name` values; must line up with `acme_sh_certs[].domains` for TLS. |
+| exclude_proxy_files | Yes      | Set explicitly. `false` includes the proxy file; omitting it behaves like `true` (no include). |
+| proxy_files_path    | No       | Proxy file to include. Default: `<nginx_proxy_files_dir>/<name>.proxies`. |
+
 
 nut_client Role Variables
 --------------
