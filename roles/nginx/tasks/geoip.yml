@@ -1,0 +1,101 @@
+---
+# GeoIP2 database: geoipupdate with a MaxMind account, or a database that is
+# placed another way (leave nginx_geoip2_account_id empty).
+
+- name: nginx geoip - Assert the license key is set with the account ID
+  ansible.builtin.assert:
+    quiet: true
+    that:
+      - nginx_geoip2_license_key | length > 0
+    fail_msg: >-
+      nginx_geoip2_license_key is required with nginx_geoip2_account_id.
+      Use nginx_geoip2_license_key: "{{ '{{' }} vault_maxmind_license_key {{ '}}' }}".
+  when:
+    - nginx_geoip2_update_enabled | bool
+    - nginx_geoip2_account_id | length > 0
+
+- name: nginx geoip - Install geoipupdate (Debian)
+  ansible.builtin.apt:
+    pkg: "{{ nginx_geoip2_update_package }}"
+    state: present
+  when:
+    - nginx_geoip2_update_enabled | bool
+    - nginx_geoip2_account_id | length > 0
+    - ansible_facts['os_family'] == 'Debian'
+
+- name: nginx geoip - Install geoipupdate (RedHat)
+  ansible.builtin.dnf:
+    name:  "{{ nginx_geoip2_update_package }}"
+    state: present
+  when:
+    - nginx_geoip2_update_enabled | bool
+    - nginx_geoip2_account_id | length > 0
+    - ansible_facts['os_family'] == 'RedHat'
+
+- name: nginx geoip - Create database directory
+  ansible.builtin.file:
+    path:  "{{ nginx_geoip2_db_path | dirname }}"
+    state: directory
+    owner: root
+    group: root
+    mode:  "0755"
+
+- name: nginx geoip - Deploy GeoIP.conf (holds the license key)
+  ansible.builtin.template:
+    src:   GeoIP.conf.j2
+    dest:  /etc/GeoIP.conf
+    owner: root
+    group: root
+    mode:  "0600"
+  no_log: true
+  when:
+    - nginx_geoip2_update_enabled | bool
+    - nginx_geoip2_account_id | length > 0
+
+- name: nginx geoip - Download the database if it is missing
+  ansible.builtin.command:
+    cmd:     /usr/bin/geoipupdate
+    creates: "{{ nginx_geoip2_db_path }}"
+  when:
+    - nginx_geoip2_update_enabled | bool
+    - nginx_geoip2_account_id | length > 0
+
+- name: nginx geoip - Deploy periodic update units
+  ansible.builtin.template:
+    src:   "{{ item }}.j2"
+    dest:  "/etc/systemd/system/{{ item }}"
+    owner: root
+    group: root
+    mode:  "0644"
+  loop:
+    - nginx-geoipupdate.service
+    - nginx-geoipupdate.timer
+  notify: nginx proxy sync reload systemd
+  when:
+    - nginx_geoip2_update_enabled | bool
+    - nginx_geoip2_account_id | length > 0
+
+- name: nginx geoip - Flush handlers so the units are known to systemd
+  ansible.builtin.meta: flush_handlers
+
+- name: nginx geoip - Enable and start the update timer
+  ansible.builtin.systemd_service:
+    name:    nginx-geoipupdate.timer
+    state:   started
+    enabled: true
+  when:
+    - nginx_geoip2_update_enabled | bool
+    - nginx_geoip2_account_id | length > 0
+
+- name: nginx geoip - Verify the database exists
+  ansible.builtin.stat:
+    path: "{{ nginx_geoip2_db_path }}"
+  register: _nginx_geoip2_db_stat
+
+- name: nginx geoip - Fail early if there is no database
+  ansible.builtin.fail:
+    msg: >-
+      {{ nginx_geoip2_db_path }} does not exist, and nginx would refuse to
+      start without it. Set nginx_geoip2_account_id and nginx_geoip2_license_key
+      so geoipupdate can fetch it, or place the database there first.
+  when: not _nginx_geoip2_db_stat.stat.exists

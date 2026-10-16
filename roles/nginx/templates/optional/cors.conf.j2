@@ -1,0 +1,12 @@
+# Opt-in CORS for one origin. Include at server level (it uses add_header),
+# after the shared include, and set the allowed origin first:
+#
+#   set $cors_origin https://app.example.com;
+#   include {{ nginx_conf_d_dir }}/optional/cors.conf;
+#
+# Preflight (OPTIONS) is passed through to the upstream; it must answer it.
+
+add_header Access-Control-Allow-Origin  $cors_origin always;
+add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS" always;
+add_header Access-Control-Allow-Headers "Content-Type, Authorization" always;
+add_header Vary Origin always;

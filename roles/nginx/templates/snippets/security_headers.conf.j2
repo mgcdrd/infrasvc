@@ -1,0 +1,18 @@
+# Standard response security headers. Included once at server level by
+# shared_configs/proxy_configs.conf.
+#
+# nginx drops ALL inherited add_header as soon as a location sets one. A
+# location that needs an extra header includes this file first, then adds its
+# own. If the vhost uses optional snippets that call add_header (noindex.conf,
+# nocache.conf, cors.conf), include those in the location too, or they are lost:
+#
+#   location /api/ {
+#     include {{ nginx_conf_d_dir }}/snippets/security_headers.conf;
+#     include {{ nginx_conf_d_dir }}/optional/noindex.conf;
+#     add_header X-Extra "value" always;
+#     proxy_pass https://up_example/;
+#   }
+
+add_header X-Content-Type-Options nosniff always;
+add_header Strict-Transport-Security "max-age={{ nginx_hsts_max_age }}; includeSubDomains" always;
+add_header X-Frame-Options SAMEORIGIN always;

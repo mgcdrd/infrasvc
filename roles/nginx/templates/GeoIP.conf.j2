@@ -1,0 +1,9 @@
+#=============DO NOT EDIT - ANSIBLE CONTROLLED===============
+# geoipupdate configuration. Holds the MaxMind license key; mode 0600.
+AccountID {{ nginx_geoip2_account_id }}
+LicenseKey {{ nginx_geoip2_license_key }}
+EditionIDs {{ nginx_geoip2_edition_ids }}
+DatabaseDirectory {{ nginx_geoip2_db_path | dirname }}
+{% if nginx_geoip2_update_host | length > 0 %}
+Host {{ nginx_geoip2_update_host }}
+{% endif %}

@@ -1,0 +1,10 @@
+#=============DO NOT EDIT - ANSIBLE CONTROLLED===============
+[Unit]
+Description=Update the MaxMind GeoIP2 databases for nginx
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/geoipupdate
+# nginx's geoip2 auto_reload picks up the new database; no reload needed.

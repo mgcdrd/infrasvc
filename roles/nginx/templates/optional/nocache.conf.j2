@@ -1,0 +1,4 @@
+# Opt-in: tell browsers and intermediaries never to store responses. Include at
+# server level. The shared config already sets `expires off`, so nothing more is needed.
+add_header Cache-Control "no-store, no-cache, must-revalidate, max-age=0" always;
+add_header Pragma "no-cache" always;

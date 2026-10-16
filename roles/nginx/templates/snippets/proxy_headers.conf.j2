@@ -1,0 +1,33 @@
+# Standard proxy_set_header / proxy_hide_header set. Included once at server
+# level by shared_configs/proxy_configs.conf.
+#
+# nginx drops ALL inherited proxy_set_header/proxy_hide_header as soon as a
+# location sets one. A location that needs an extra header includes this file
+# first, then adds its own:
+#
+#   location /api/ {
+#     include {{ nginx_conf_d_dir }}/snippets/proxy_headers.conf;
+#     proxy_set_header X-Extra "value";
+#     proxy_pass https://up_example/;
+#   }
+#
+# To change a standard header's value instead of adding one, use a variable
+# (see $upstream_host for Host and the upstream SNI).
+
+proxy_hide_header X-Powered-By;
+# If the upstream also sends HSTS, drop it; security_headers.conf adds ours.
+proxy_hide_header Strict-Transport-Security;
+
+proxy_set_header Upgrade $http_upgrade;
+proxy_set_header Connection $connection_upgrade;
+proxy_set_header X-Forwarded-Host $host;
+proxy_set_header X-Forwarded-Server $host;
+{% if nginx_trust_client_forwarded_for | default(false) %}
+proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+{% else %}
+# Edge proxy: don't trust or append a client-supplied X-Forwarded-For.
+proxy_set_header X-Forwarded-For $remote_addr;
+{% endif %}
+proxy_set_header X-Real-IP $remote_addr;
+# Host and SNI come from $upstream_host (set in proxy_configs.conf, overridden per vhost).
+proxy_set_header Host $upstream_host;

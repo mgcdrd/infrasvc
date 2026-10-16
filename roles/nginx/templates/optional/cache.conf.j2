@@ -1,0 +1,21 @@
+# Opt-in nginx caching. Include inside a `location`, NOT at server level:
+# it sets `expires`, which the shared config already sets once per server.
+#
+#   location / {
+#     include {{ nginx_conf_d_dir }}/optional/cache.conf;
+#     proxy_pass https://up_example/;
+#   }
+#
+# Uses the {{ nginx_cache_zone }} zone (nginx_http_block.caching must be enabled). Requests carrying an
+# Authorization header are never served from or stored in the cache. Responses
+# that set cookies are not cached by nginx's default rules.
+# Don't add add_header here; in a location it would drop the shared headers.
+
+expires 3h;
+
+proxy_cache {{ nginx_cache_zone }};
+proxy_cache_valid 200 3h;
+proxy_cache_lock on;
+proxy_cache_use_stale error timeout updating http_500 http_502 http_503 http_504;
+proxy_cache_bypass $http_upgrade $http_authorization;
+proxy_no_cache $http_authorization;

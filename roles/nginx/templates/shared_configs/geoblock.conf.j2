@@ -1,0 +1,9 @@
+{% if nginx_geoblock_active | bool %}
+# Reject clients from blocked countries. $geo_block is built in nginx.conf
+# (public tier only; internal/trusted networks always pass).
+if ($geo_block) {
+  return 403;
+}
+{% else %}
+# Geoblocking is off (nginx_geoip2_enabled / nginx_geoblock_countries).
+{% endif %}
