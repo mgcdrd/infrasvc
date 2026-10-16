@@ -9,8 +9,8 @@ foreman-installer \
 {% if foreman_installer_skip_checks | default(false) | bool %}
   --skip-checks-i-know-better \
 {% endif %}
-  --foreman-initial-admin-username "{{ vault_foreman_admin_username }}" \
-  --foreman-initial-admin-password "{{ vault_foreman_admin_password }}" \
+  --foreman-initial-admin-username "{{ foreman_admin_username }}" \
+  --foreman-initial-admin-password "{{ foreman_admin_password }}" \
   --foreman-initial-organization "{{ foreman_org }}" \
   --foreman-initial-location "{{ foreman_location }}" \
 {% for item in foreman_installer_cli_enable %}
@@ -25,7 +25,7 @@ foreman-installer \
 {% for item in foreman_installer_further_enable %}
   --enable-{{ item }} \
 {% endfor %}
-  --foreman-db-password "{{ vault_foreman_db_password }}" \
+  --foreman-db-password "{{ foreman_db_password }}" \
 \
   --certs-city "{{ foreman_certs_city }}" \
   --certs-country "{{ foreman_certs_country }}" \
@@ -80,7 +80,7 @@ foreman-installer \
 {% endfor %}
 {% if foreman_dns_provider == 'powerdns' %}
   --enable-foreman-proxy-plugin-dns-powerdns \
-  --foreman-proxy-plugin-dns-powerdns-rest-api-key "{{ vault_pdns_api_key }}" \
+  --foreman-proxy-plugin-dns-powerdns-rest-api-key "{{ foreman_pdns_api_key }}" \
   --foreman-proxy-plugin-dns-powerdns-rest-url "{{ foreman_pdns_api_url }}" \
 {% elif foreman_dns_provider == 'nsupdate' %}
   --foreman-proxy-dns-server "{{ foreman_dns_nsupdate_server }}" \

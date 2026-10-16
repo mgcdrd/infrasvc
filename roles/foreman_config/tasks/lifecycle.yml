@@ -2,8 +2,8 @@
 - name: lifecycle - create lifecycle environments
   become: false
   theforeman.foreman.lifecycle_environment:
-    username: "{{ foreman_username }}"
-    password: "{{ vault_foreman_admin_password }}"
+    username: "{{ foreman_admin_username }}"
+    password: "{{ foreman_admin_password }}"
     server_url: "{{ foreman_url }}"
     validate_certs: "{{ foreman_validate_certs }}"
     name: "{{ item.name }}"
@@ -17,8 +17,8 @@
 - name: lifecycle - create content views
   become: false
   theforeman.foreman.content_view:
-    username: "{{ foreman_username }}"
-    password: "{{ vault_foreman_admin_password }}"
+    username: "{{ foreman_admin_username }}"
+    password: "{{ foreman_admin_password }}"
     server_url: "{{ foreman_url }}"
     validate_certs: "{{ foreman_validate_certs }}"
     name: "{{ item.name }}"
@@ -41,8 +41,8 @@
 - name: lifecycle - check for existing content view versions
   become: false
   theforeman.foreman.content_view_version_info:
-    username: "{{ foreman_username }}"
-    password: "{{ vault_foreman_admin_password }}"
+    username: "{{ foreman_admin_username }}"
+    password: "{{ foreman_admin_password }}"
     server_url: "{{ foreman_url }}"
     validate_certs: "{{ foreman_validate_certs }}"
     content_view: "{{ item.name }}"
@@ -56,8 +56,8 @@
 - name: lifecycle - initial publish and promote content views
   become: false
   theforeman.foreman.content_view_version:
-    username: "{{ foreman_username }}"
-    password: "{{ vault_foreman_admin_password }}"
+    username: "{{ foreman_admin_username }}"
+    password: "{{ foreman_admin_password }}"
     server_url: "{{ foreman_url }}"
     validate_certs: "{{ foreman_validate_certs }}"
     content_view: "{{ item.item.name }}"
@@ -74,8 +74,8 @@
 - name: lifecycle - create activation keys
   become: false
   theforeman.foreman.activation_key:
-    username: "{{ foreman_username }}"
-    password: "{{ vault_foreman_admin_password }}"
+    username: "{{ foreman_admin_username }}"
+    password: "{{ foreman_admin_password }}"
     server_url: "{{ foreman_url }}"
     validate_certs: "{{ foreman_validate_certs }}"
     name: "{{ item.name }}"

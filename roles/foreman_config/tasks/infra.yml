@@ -2,8 +2,8 @@
 - name: infra - create domains
   become: false
   theforeman.foreman.domain:
-    username: "{{ foreman_username }}"
-    password: "{{ vault_foreman_admin_password }}"
+    username: "{{ foreman_admin_username }}"
+    password: "{{ foreman_admin_password }}"
     server_url: "{{ foreman_url }}"
     validate_certs: "{{ foreman_validate_certs }}"
     name: "{{ item.name }}"
@@ -17,8 +17,8 @@
 - name: infra - create realms
   become: false
   theforeman.foreman.realm:
-    username: "{{ foreman_username }}"
-    password: "{{ vault_foreman_admin_password }}"
+    username: "{{ foreman_admin_username }}"
+    password: "{{ foreman_admin_password }}"
     server_url: "{{ foreman_url }}"
     validate_certs: "{{ foreman_validate_certs }}"
     name: "{{ item.name }}"
@@ -32,8 +32,8 @@
 - name: infra - create subnets
   become: false
   theforeman.foreman.subnet:
-    username: "{{ foreman_username }}"
-    password: "{{ vault_foreman_admin_password }}"
+    username: "{{ foreman_admin_username }}"
+    password: "{{ foreman_admin_password }}"
     server_url: "{{ foreman_url }}"
     validate_certs: "{{ foreman_validate_certs }}"
     name: "{{ item.name }}"
@@ -63,8 +63,8 @@
 - name: infra - create architectures
   become: false
   theforeman.foreman.architecture:
-    username: "{{ foreman_username }}"
-    password: "{{ vault_foreman_admin_password }}"
+    username: "{{ foreman_admin_username }}"
+    password: "{{ foreman_admin_password }}"
     server_url: "{{ foreman_url }}"
     validate_certs: "{{ foreman_validate_certs }}"
     name: "{{ item.name }}"
@@ -74,8 +74,8 @@
 - name: infra - create compute resources
   become: false
   theforeman.foreman.compute_resource:
-    username: "{{ foreman_username }}"
-    password: "{{ vault_foreman_admin_password }}"
+    username: "{{ foreman_admin_username }}"
+    password: "{{ foreman_admin_password }}"
     server_url: "{{ foreman_url }}"
     validate_certs: "{{ foreman_validate_certs }}"
     name: "{{ item.name }}"
@@ -96,8 +96,8 @@
 - name: infra - create compute profiles
   become: false
   theforeman.foreman.compute_profile:
-    username: "{{ foreman_username }}"
-    password: "{{ vault_foreman_admin_password }}"
+    username: "{{ foreman_admin_username }}"
+    password: "{{ foreman_admin_password }}"
     server_url: "{{ foreman_url }}"
     validate_certs: "{{ foreman_validate_certs }}"
     name: "{{ item.name }}"

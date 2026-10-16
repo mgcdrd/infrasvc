@@ -23,7 +23,7 @@ Requirements
 - `theforeman.foreman`, `community.general`, and `community.hashi_vault`
   collections must be installed.
 - The `foreman` OS user needs an SSH keypair deployed for GitLab access.
-  `templates.yml` deploys a keypair stored in Vault (`vault_foreman_template_sync_ssh_private_key` /
+  `templates.yml` deploys a keypair stored in Vault (`foreman_template_sync_ssh_private_key` /
   `..._public_key`) rather than generating a fresh one per host — this keeps
   the same public key valid across host rebuilds, so the GitLab deploy key
   only needs to be registered once instead of after every rebuild.
@@ -50,8 +50,8 @@ Role Variables
 ```yaml
 foreman_url:      "https://foreman.example.com"
 foreman_hostname: "foreman.example.com"
-foreman_username: admin
-vault_foreman_admin_password: "{{ vault_lookup }}"
+foreman_admin_username: admin
+foreman_admin_password: "{{ lookup('community.hashi_vault.vault_kv2_get', vault_kv_env + '/foreman', engine_mount_point=vault_kv_infra_mount, url=vault_addr).secret.admin_password }}"
 foreman_validate_certs: true
 foreman_org:      "My Organization"
 foreman_location: LAB
@@ -180,7 +180,7 @@ foreman_compute_resources:
     provider: proxmox
     url: https://pve2.example.com:8006/api2/json
     user: root@pam
-    password: "{{ vault_pve2_password }}"
+    password: "{{ lookup('community.hashi_vault.vault_kv2_get', vault_kv_env + '/proxmox/root', engine_mount_point=vault_kv_infra_mount, url=vault_addr).secret.pve2_password }}"
     ssl_verify_peer: true
     organizations: ["{{ foreman_org }}"]
     locations: LAB
@@ -263,7 +263,7 @@ foreman_global_parameters:
     state: present
   - name: some-secret-token
     type: string
-    value: "{{ vault_foreman_some_secret_token }}"
+    value: "{{ lookup('community.hashi_vault.vault_kv2_get', vault_kv_env + '/foreman', engine_mount_point=vault_kv_infra_mount, url=vault_addr).secret.some_secret_token }}"
     hidden: true  # optional, defaults to false
     state: present
 ```
@@ -301,7 +301,7 @@ foreman_hostgroups:
     ptable: EL Single Disk UEFI
     pxe_loader: PXELinux UEFI
     activation_keys: rocky9
-    root_pass: "{{ vault_foreman_host_root_pass }}"
+    root_pass: "{{ foreman_host_root_pass }}"
     state: present
 ```
 
@@ -320,7 +320,7 @@ foreman_ldap_auth_sources:
     host: ldap.example.com
     port: 636                        # default: 389
     account: "cn=foreman,ou=svc,dc=example,dc=com"
-    account_password: "{{ vault_foreman_ldap_bind_password }}"
+    account_password: "{{ lookup('community.hashi_vault.vault_kv2_get', vault_kv_env + '/foreman', engine_mount_point=vault_kv_infra_mount, url=vault_addr).secret.ldap_bind_password }}"
     base_dn: "dc=example,dc=com"
     groups_base: "ou=groups,dc=example,dc=com"
     attr_login: uid
@@ -368,7 +368,7 @@ foreman_usergroups:
 ```yaml
 foreman_awx_url: "https://awx.example.com"
 foreman_awx_job_template_id: "42"
-# vault_awx_host_config_key must be set
+foreman_awx_host_config_key: "{{ lookup('community.hashi_vault.vault_kv2_get', vault_kv_env + '/awx/host_callback', engine_mount_point=vault_kv_infra_mount, url=vault_addr).secret.host_config_key }}"
 ```
 
 AWX tasks are skipped if `foreman_awx_url` is not defined.

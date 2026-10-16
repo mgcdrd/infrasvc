@@ -30,15 +30,15 @@
 # keytab must belong to that principal. IPA lets any user retrieve their
 # OWN keytab by default (no admin/delegated privilege needed) — kinit as
 # the realm principal itself rather than borrowing an admin account's
-# rights, which the enrollment account (vault_ipa_admin_user) deliberately
+# rights, which the enrollment account (foreman_ipa_admin_user) deliberately
 # doesn't have. The account must already exist in IPA with a role granting
 # host-management privileges (equivalent to foreman-prepare-realm's
-# realm-proxy user) and a password set (vault_foreman_realm_agent_password).
+# realm-proxy user) and a password set (foreman_realm_agent_password).
 - name: ipa - obtain realm principal Kerberos ticket
   become: true
   ansible.builtin.shell:
     cmd: "kinit {{ foreman_realm_principal.split('@') | first }}"
-    stdin: "{{ vault_foreman_realm_agent_password }}"
+    stdin: "{{ foreman_realm_agent_password }}"
   when: not foreman_keytab_stat.stat.exists
   no_log: true
 
@@ -52,7 +52,7 @@
 
 # Note: this rotates the principal's Kerberos key — safe because the
 # account is dedicated to the realm proxy and this only runs when the
-# keytab is absent. It also invalidates vault_foreman_realm_agent_password
+# keytab is absent. It also invalidates foreman_realm_agent_password
 # as a side effect (self-service ipa-getkeytab can only generate a new
 # random key, not retrieve the current one — -r needs elevated privilege
 # this account deliberately doesn't have). See the role README for what
@@ -67,9 +67,9 @@
       -k /etc/foreman-proxy/freeipa.keytab
   when: not foreman_keytab_stat.stat.exists
 
-# Rotate vault_foreman_realm_agent_password to match the key ipa-getkeytab
+# Rotate foreman_realm_agent_password to match the key ipa-getkeytab
 # just generated, so the next full rebuild doesn't hit a stale password.
-# Requires vault_ipa_admin_user to hold an IPA role scoped to change only
+# Requires foreman_ipa_admin_user to hold an IPA role scoped to change only
 # foreman_realm_principal's password (see README) — opt in per-deployment
 # via foreman_realm_vault_rotate, since not every deployment wants the
 # role writing to Vault.
@@ -82,8 +82,8 @@
 - name: ipa - obtain admin Kerberos ticket
   become: true
   ansible.builtin.shell:
-    cmd: "kinit {{ vault_ipa_admin_user }}"
-    stdin: "{{ vault_ipa_admin_password }}"
+    cmd: "kinit {{ foreman_ipa_admin_user }}"
+    stdin: "{{ foreman_ipa_admin_password }}"
   when: not foreman_keytab_stat.stat.exists and foreman_realm_vault_rotate | bool
   no_log: true
 

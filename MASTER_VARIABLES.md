@@ -138,8 +138,8 @@ undefined. Each area has its own tag so it can be re-run alone.
 | foreman_org                                 | `"My Organization"`                | No                               | Organization the content is created under |
 | foreman_location                            | `"Default Location"`               | No                               | Location the content is created under |
 | foreman_validate_certs                      | `true`                             | No                               | Validate the Foreman API TLS certificate |
-| foreman_username                            | *(unset)*                          | Yes                              | Foreman API user |
-| vault_foreman_admin_password                | *(unset)*                          | Yes                              | Foreman API password |
+| foreman_admin_username                            | *(unset)*                          | Yes                              | Foreman API user |
+| foreman_admin_password                      | *(unset)*                          | Yes                              | Foreman API password |
 | foreman_sync_plans                          | *(unset)*                          | No                               | Sync plans |
 | foreman_gpg_keys                            | `[]`                               | No                               | GPG content credentials, read from the role's `files/`; referenced by `foreman_repos_rpm[].gpg_key` |
 | foreman_repo_products                       | *(unset)*                          | No                               | Products |
@@ -167,17 +167,17 @@ undefined. Each area has its own tag so it can be re-run alone.
 | foreman_template_import_filter              | *(omitted)*                        | No                               | Regex limiting which templates are imported |
 | foreman_template_import_force               | `false`                            | No                               | Overwrite locked templates |
 | foreman_template_settings                   | `[]`                               | No                               | Foreman settings (`name`, `value`) applied before the sync |
-| vault_foreman_template_sync_ssh_private_key | *(unset)*                          | If template sync                 | Persistent ed25519 key for the `foreman` user; the public half is registered on GitLab once |
-| vault_foreman_template_sync_ssh_public_key  | *(unset)*                          | If template sync                 | Public half of that key |
+| foreman_template_sync_ssh_private_key       | *(unset)*                          | If template sync                 | Persistent ed25519 key for the `foreman` user; the public half is registered on GitLab once |
+| foreman_template_sync_ssh_public_key        | *(unset)*                          | If template sync                 | Public half of that key |
 | foreman_hostgroups                          | *(unset)*                          | No                               | Host groups |
-| vault_foreman_host_root_pass                | *(unset)*                          | If a host group sets `root_pass` | Root password for provisioned hosts |
+| foreman_host_root_pass                      | *(unset)*                          | If a host group sets `root_pass` | Root password for provisioned hosts |
 | foreman_ldap_auth_sources                   | *(unset)*                          | No                               | Plain LDAP auth sources, for sites without IPA |
 | foreman_usergroups                          | *(unset)*                          | No                               | User groups mapped to external (IPA) or LDAP groups |
 | foreman_awx_url                             | *(unset)*                          | No                               | AWX URL; AWX tasks are skipped when undefined |
 | foreman_awx_job_template_id                 | `""`                               | If `foreman_awx_url`             | AWX job template ID for provisioning callbacks |
 | foreman_awx_provider                        | `awx`                              | No                               | Ansible provider type |
 | foreman_awx_inventory_enabled               | `true`                             | No                               | Register Foreman as an AWX inventory source |
-| vault_awx_host_config_key                   | `""`                               | If `foreman_awx_url`             | AWX host config key |
+| foreman_awx_host_config_key                   | `""`                               | If `foreman_awx_url`             | AWX host config key |
 | foreman_scap_contents                       | `[]`                               | No                               | Extra SCAP datastreams (`scap-security-guide` content is seeded automatically) |
 | foreman_scap_tailoring_files                | `[]`                               | No                               | SCAP tailoring files |
 | foreman_scap_policies                       | `[]`                               | No                               | Compliance policies; content, profile, and host groups referenced by name |
@@ -243,9 +243,9 @@ the installer script from variables. Rocky Linux 9 only.
 | foreman_url                                  | `"https://{{ foreman_hostname }}"`                | No                                  | Foreman base URL |
 | foreman_org                                  | `"My Organization"`                               | Yes                                 | Initial organization; set in group_vars |
 | foreman_location                             | `"Default Location"`                              | Yes                                 | Initial location; set in group_vars |
-| vault_foreman_admin_username                 | *(unset)*                                         | Yes                                 | Initial admin username |
-| vault_foreman_admin_password                 | *(unset)*                                         | Yes                                 | Initial admin password |
-| vault_foreman_db_password                    | *(unset)*                                         | Yes                                 | Foreman database password |
+| foreman_admin_username                       | *(unset)*                                         | Yes                                 | Initial admin username |
+| foreman_admin_password                       | *(unset)*                                         | Yes                                 | Initial admin password |
+| foreman_db_password                          | *(unset)*                                         | Yes                                 | Foreman database password |
 | foreman_installer_cli_enable                 | *(list, 6 items)*                                 | No                                  | hammer CLI modules enabled (`--enable-foreman-cli-<item>`) |
 | foreman_installer_plugin_enable              | *(list, 9 items)*                                 | No                                  | Foreman plugins enabled |
 | foreman_installer_proxy_plugin_enable        | *(list, 4 items)*                                 | No                                  | Smart Proxy plugins enabled |
@@ -261,7 +261,7 @@ the installer script from variables. Rocky Linux 9 only.
 | foreman_dns_provider                         | `powerdns`                                        | No                                  | `powerdns` or `nsupdate` |
 | foreman_dns_forwarders                       | `[]`                                              | No                                  | DNS forwarders |
 | foreman_pdns_api_url                         | `"http://localhost:8081"`                         | No                                  | PowerDNS API URL |
-| vault_pdns_api_key                           | *(unset)*                                         | If `foreman_dns_provider: powerdns` | PowerDNS API key |
+| foreman_pdns_api_key                           | *(unset)*                                         | If `foreman_dns_provider: powerdns` | PowerDNS API key |
 | foreman_dns_nsupdate_server                  | `""`                                              | If `foreman_dns_provider: nsupdate` | DNS server that receives nsupdate updates |
 | foreman_tftp_enable                          | `true`                                            | No                                  | Manage TFTP on the smart proxy |
 | foreman_tftp_listen_on                       | `https`                                           | No                                  | Protocols TFTP serves: `http`, `https`, or `both` |
@@ -273,7 +273,7 @@ the installer script from variables. Rocky Linux 9 only.
 | foreman_realm_proxy                          | `"true"`                                          | No                                  | Enable the realm smart-proxy feature (installer string boolean) |
 | foreman_realm_provider                       | `freeipa`                                         | No                                  | Realm provider |
 | foreman_realm_principal                      | `""`                                              | If `foreman_realm_enable`           | Kerberos principal the realm proxy uses |
-| vault_foreman_realm_agent_password           | *(unset)*                                         | If `foreman_realm_enable`           | Password for `foreman_realm_principal`, used for keytab retrieval |
+| foreman_realm_agent_password                 | *(unset)*                                         | If `foreman_realm_enable`           | Password for `foreman_realm_principal`, used for keytab retrieval |
 | foreman_realm_freeipa_remove_dns             | `"false"`                                         | No                                  | Remove DNS records when a realm host is deleted (installer string boolean) |
 | foreman_ipa_controller                       | `""`                                              | If `foreman_realm_enable`           | IPA server the realm proxy talks to |
 | foreman_realm_vault_rotate                   | `false`                                           | No                                  | Reset the realm principal's password after each keytab fetch and write it back to Vault, since `ipa-getkeytab` rotates the key |
@@ -281,8 +281,8 @@ the installer script from variables. Rocky Linux 9 only.
 | foreman_realm_vault_kv_mount                 | `""`                                              | If `foreman_realm_vault_rotate`     | KV mount for the password |
 | foreman_realm_vault_path                     | `""`                                              | If `foreman_realm_vault_rotate`     | KV path for the password |
 | foreman_realm_vault_password_key             | `"realm_agent_password"`                          | No                                  | Key within the secret holding the password |
-| vault_ipa_admin_user                         | *(unset)*                                         | If `foreman_realm_vault_rotate`     | IPA account allowed to change only the realm principal's password |
-| vault_ipa_admin_password                     | *(unset)*                                         | If `foreman_realm_vault_rotate`     | Its password |
+| foreman_ipa_admin_user                         | *(unset)*                                         | If `foreman_realm_vault_rotate`     | IPA account allowed to change only the realm principal's password |
+| foreman_ipa_admin_password                     | *(unset)*                                         | If `foreman_realm_vault_rotate`     | Its password |
 | foreman_puppet_autosign_entries              | `"[*.example.com]"`                               | No                                  | Puppet autosign patterns |
 | foreman_puppetserver_tmpdir                  | `/opt/puppetlabs/server/data/puppetserver/tmp`    | No                                  | JVM temp directory for puppetserver |
 | foreman_proxy_content_enable_ansible         | `true`                                            | No                                  | Enable the Ansible Pulp content type |

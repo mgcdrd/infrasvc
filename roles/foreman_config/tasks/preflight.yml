@@ -1,0 +1,9 @@
+---
+- name: foreman_config preflight - assert admin credentials are set
+  become: false
+  ansible.builtin.assert:
+    quiet: true
+    that:
+      - foreman_admin_username | length > 0
+      - foreman_admin_password | length > 0
+    fail_msg: "foreman_admin_username and foreman_admin_password must be set."

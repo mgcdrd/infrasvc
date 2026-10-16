@@ -24,7 +24,7 @@ Requirements
   `foreman_realm_principal` must already exist in IPA with a role granting
   host-management privileges (the equivalent of the `realm-proxy` user that
   `foreman-prepare-realm` creates) and must have a password set, available
-  via `vault_foreman_realm_agent_password`. The role kinits as that
+  via `foreman_realm_agent_password`. The role kinits as that
   principal itself and self-service-fetches its own keytab into
   `/etc/foreman-proxy/freeipa.keytab` — no admin credentials are needed for
   that fetch.
@@ -33,7 +33,7 @@ Requirements
   random key* for the principal — retrieving the *current* key (`-r`)
   needs elevated privilege this account deliberately doesn't have. That
   means every keytab fetch silently invalidates
-  `vault_foreman_realm_agent_password`, since the password no longer
+  `foreman_realm_agent_password`, since the password no longer
   matches the freshly-rotated key. On a host that keeps its keytab file
   (a normal re-run) this never matters — the `when: not
   foreman_keytab_stat.stat.exists` guard means the fetch, and therefore
@@ -44,16 +44,16 @@ Requirements
   Set `foreman_realm_vault_rotate: true` (plus `foreman_realm_vault_addr`,
   `foreman_realm_vault_kv_mount`, `foreman_realm_vault_path`, and
   `foreman_realm_vault_password_key`) to have the role handle this itself:
-  after the keytab fetch it kinits as `vault_ipa_admin_user`, runs `ipa
+  after the keytab fetch it kinits as `foreman_ipa_admin_user`, runs `ipa
   passwd` against `foreman_realm_principal` to set a fresh random password,
   and writes that password back to Vault at the given path/key. This
-  requires `vault_ipa_admin_user` to hold an IPA role/privilege scoped to
+  requires `foreman_ipa_admin_user` to hold an IPA role/privilege scoped to
   changing *only* that one account's password — it should not be a
   general-purpose admin account. With this left `false` (the default),
   fall back to the manual process: reset the account's password
   admin-assisted (self-service password *change* needs the current
   password, which you no longer have once it's gone stale) and update
-  `vault_foreman_realm_agent_password` accordingly before deploying against
+  `foreman_realm_agent_password` accordingly before deploying against
   a freshly rebuilt host.
 - If `foreman_custom_certs: true`, the cert files must exist on the host before
   the role runs (e.g. provisioned by `acme_sh` with `complete_chain: true` —
@@ -103,7 +103,12 @@ Role Variables
 | `foreman_dns_enable` | `false` | No | Manage DNS on the smart proxy |
 | `foreman_dns_provider` | `powerdns` | No | `powerdns` or `nsupdate` |
 | `foreman_dns_forwarders` | `[]` | No | DNS forwarders |
-| `foreman_pdns_api_url` | `"http://localhost:8081"` | No | PowerDNS API URL; the API key comes from `vault_pdns_api_key` |
+| `foreman_admin_username` / `foreman_admin_password` | `""` | Yes | Initial admin account; also what `foreman_config` authenticates with |
+| `foreman_db_password` | `""` | Yes | Foreman database password |
+| `foreman_pdns_api_key` | `""` | If `foreman_dns_provider: powerdns` | PowerDNS API key |
+| `foreman_realm_agent_password` | `""` | If `foreman_realm_enable` | Password of `foreman_realm_principal`, used for self-service keytab retrieval |
+| `foreman_ipa_admin_user` / `foreman_ipa_admin_password` | `""` | If `foreman_realm_vault_rotate` | IPA account scoped to change only the realm principal's password |
+| `foreman_pdns_api_url` | `"http://localhost:8081"` | No | PowerDNS API URL; the API key is `foreman_pdns_api_key` |
 | `foreman_dns_nsupdate_server` | `""` | If `foreman_dns_provider: nsupdate` | DNS server that receives nsupdate updates |
 | `foreman_tftp_enable` | `true` | No | Manage TFTP on the smart proxy |
 | `foreman_tftp_listen_on` | `https` | No | Protocols TFTP serves: `http`, `https`, or `both` |
@@ -154,9 +159,9 @@ Role Variables
 ### Required (no defaults — must be set by caller)
 
 ```yaml
-vault_foreman_admin_username: admin
-vault_foreman_admin_password: "{{ vault_lookup }}"
-vault_foreman_db_password:    "{{ vault_lookup }}"
+foreman_admin_username: admin
+foreman_admin_password: "{{ lookup('community.hashi_vault.vault_kv2_get', vault_kv_env + '/foreman', engine_mount_point=vault_kv_infra_mount, url=vault_addr).secret.admin_password }}"
+foreman_db_password:    "{{ lookup('community.hashi_vault.vault_kv2_get', vault_kv_env + '/foreman', engine_mount_point=vault_kv_infra_mount, url=vault_addr).secret.db_password }}"
 foreman_org:      "My Organization"
 foreman_location: LAB
 ```
@@ -222,7 +227,7 @@ foreman_dns_forwarders: []           # non-managed-zone forwarders, either provi
 
 # powerdns provider
 foreman_pdns_api_url: "http://localhost:8081"
-# vault_pdns_api_key must be set when foreman_dns_provider: powerdns
+# foreman_pdns_api_key must be set when foreman_dns_provider: powerdns
 
 # nsupdate provider
 foreman_dns_nsupdate_server: ""      # nameserver to submit updates to, required when foreman_dns_provider: nsupdate
@@ -253,17 +258,17 @@ foreman_realm_provider: freeipa
 foreman_realm_principal: "svc-foreman-agent@EXAMPLE.COM"
 foreman_realm_freeipa_remove_dns: "false"
 foreman_ipa_controller: ""
-# vault_foreman_realm_agent_password required when enabled (password for the
+# foreman_realm_agent_password required when enabled (password for the
 # foreman_realm_principal account, used for self-service keytab retrieval)
 
-# Optional: have the role rotate vault_foreman_realm_agent_password in Vault
+# Optional: have the role rotate foreman_realm_agent_password in Vault
 # itself after a rebuild-triggered keytab fetch. See Requirements above.
 foreman_realm_vault_rotate: false
 foreman_realm_vault_addr: ""
 foreman_realm_vault_kv_mount: ""
 foreman_realm_vault_path: ""
 foreman_realm_vault_password_key: "realm_agent_password"
-# vault_ipa_admin_user / vault_ipa_admin_password required when
+# foreman_ipa_admin_user / foreman_ipa_admin_password required when
 # foreman_realm_vault_rotate is true — must be scoped to change only
 # foreman_realm_principal's password
 ```

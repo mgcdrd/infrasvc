@@ -5,3 +5,8 @@ foreman_org: "My Organization"
 foreman_location: "Default Location"
 
 foreman_validate_certs: true
+
+# Admin account the role authenticates as (same vars foreman_install uses to
+# create it). Set directly, as a Vault lookup.
+foreman_admin_username: ""              # required
+foreman_admin_password: ""              # required

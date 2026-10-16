@@ -3,8 +3,8 @@
 - name: provisioning - create Debian operating systems
   become: false
   theforeman.foreman.operatingsystem:
-    username: "{{ foreman_username }}"
-    password: "{{ vault_foreman_admin_password }}"
+    username: "{{ foreman_admin_username }}"
+    password: "{{ foreman_admin_password }}"
     server_url: "{{ foreman_url }}"
     validate_certs: "{{ foreman_validate_certs }}"
     name: "{{ item.name }}"
@@ -18,8 +18,8 @@
 - name: provisioning - create RHEL-family operating systems (pass 1 - no templates)
   become: false
   theforeman.foreman.operatingsystem:
-    username: "{{ foreman_username }}"
-    password: "{{ vault_foreman_admin_password }}"
+    username: "{{ foreman_admin_username }}"
+    password: "{{ foreman_admin_password }}"
     server_url: "{{ foreman_url }}"
     validate_certs: "{{ foreman_validate_certs }}"
     name: "{{ item.name }}"
@@ -33,8 +33,8 @@
 - name: provisioning - create installation media
   become: false
   theforeman.foreman.installation_medium:
-    username: "{{ foreman_username }}"
-    password: "{{ vault_foreman_admin_password }}"
+    username: "{{ foreman_admin_username }}"
+    password: "{{ foreman_admin_password }}"
     server_url: "{{ foreman_url }}"
     validate_certs: "{{ foreman_validate_certs }}"
     name: "{{ item.name }}"
@@ -61,8 +61,8 @@
 - name: provisioning - associate templates and media to operating systems
   become: false
   theforeman.foreman.operatingsystem:
-    username: "{{ foreman_username }}"
-    password: "{{ vault_foreman_admin_password }}"
+    username: "{{ foreman_admin_username }}"
+    password: "{{ foreman_admin_password }}"
     server_url: "{{ foreman_url }}"
     validate_certs: "{{ foreman_validate_certs }}"
     name: "{{ item.name }}"
@@ -95,8 +95,8 @@
 - name: provisioning - set OS default templates
   become: false
   theforeman.foreman.os_default_template:
-    username: "{{ foreman_username }}"
-    password: "{{ vault_foreman_admin_password }}"
+    username: "{{ foreman_admin_username }}"
+    password: "{{ foreman_admin_password }}"
     server_url: "{{ foreman_url }}"
     validate_certs: "{{ foreman_validate_certs }}"
     operatingsystem: "{{ item.os }}"
@@ -115,12 +115,12 @@
   become: true
   ansible.builtin.shell:
     cmd: >
-      hammer -u "{{ foreman_username }}" -p "$HAMMER_PASSWORD"
+      hammer -u "{{ foreman_admin_username }}" -p "$HAMMER_PASSWORD"
       partition-table update
       --name "{{ item.name }}"
       --os-family "{{ item.family }}"
   environment:
-    HAMMER_PASSWORD: "{{ vault_foreman_admin_password }}"
+    HAMMER_PASSWORD: "{{ foreman_admin_password }}"
   loop: "{{ foreman_partition_table_os_families | default([]) }}"
   loop_control:
     label: "{{ item.name }}"
@@ -133,8 +133,8 @@
 - name: provisioning - set global parameters
   become: false
   theforeman.foreman.global_parameter:
-    username: "{{ foreman_username }}"
-    password: "{{ vault_foreman_admin_password }}"
+    username: "{{ foreman_admin_username }}"
+    password: "{{ foreman_admin_password }}"
     server_url: "{{ foreman_url }}"
     validate_certs: "{{ foreman_validate_certs }}"
     name: "{{ item.name }}"

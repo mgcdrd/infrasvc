@@ -15,8 +15,8 @@
 - name: scap policy {{ policy.name }} - look up SCAP content
   become: false
   theforeman.foreman.resource_info:
-    username: "{{ foreman_username }}"
-    password: "{{ vault_foreman_admin_password }}"
+    username: "{{ foreman_admin_username }}"
+    password: "{{ foreman_admin_password }}"
     server_url: "{{ foreman_url }}"
     validate_certs: "{{ foreman_validate_certs }}"
     resource: scap_contents
@@ -43,8 +43,8 @@
 - name: scap policy {{ policy.name }} - look up tailoring file
   become: false
   theforeman.foreman.resource_info:
-    username: "{{ foreman_username }}"
-    password: "{{ vault_foreman_admin_password }}"
+    username: "{{ foreman_admin_username }}"
+    password: "{{ foreman_admin_password }}"
     server_url: "{{ foreman_url }}"
     validate_certs: "{{ foreman_validate_certs }}"
     resource: tailoring_files
@@ -77,8 +77,8 @@
 - name: scap policy {{ policy.name }} - look up host groups
   become: false
   theforeman.foreman.hostgroup_info:
-    username: "{{ foreman_username }}"
-    password: "{{ vault_foreman_admin_password }}"
+    username: "{{ foreman_admin_username }}"
+    password: "{{ foreman_admin_password }}"
     server_url: "{{ foreman_url }}"
     validate_certs: "{{ foreman_validate_certs }}"
     name: "{{ item }}"
@@ -100,8 +100,8 @@
 - name: scap policy {{ policy.name }} - look up existing policy
   become: false
   theforeman.foreman.resource_info:
-    username: "{{ foreman_username }}"
-    password: "{{ vault_foreman_admin_password }}"
+    username: "{{ foreman_admin_username }}"
+    password: "{{ foreman_admin_password }}"
     server_url: "{{ foreman_url }}"
     validate_certs: "{{ foreman_validate_certs }}"
     resource: policies
@@ -131,8 +131,8 @@
   ansible.builtin.uri:
     url: "{{ foreman_url }}/api/compliance/policies"
     method: POST
-    user: "{{ foreman_username }}"
-    password: "{{ vault_foreman_admin_password }}"
+    user: "{{ foreman_admin_username }}"
+    password: "{{ foreman_admin_password }}"
     force_basic_auth: true
     validate_certs: "{{ foreman_validate_certs }}"
     body_format: json
@@ -152,8 +152,8 @@
   ansible.builtin.uri:
     url: "{{ foreman_url }}/api/compliance/policies/{{ _scap_policy_existing.resources[0].id }}"
     method: PUT
-    user: "{{ foreman_username }}"
-    password: "{{ vault_foreman_admin_password }}"
+    user: "{{ foreman_admin_username }}"
+    password: "{{ foreman_admin_password }}"
     force_basic_auth: true
     validate_certs: "{{ foreman_validate_certs }}"
     body_format: json
@@ -169,8 +169,8 @@
   ansible.builtin.uri:
     url: "{{ foreman_url }}/api/compliance/policies/{{ _scap_policy_existing.resources[0].id }}"
     method: DELETE
-    user: "{{ foreman_username }}"
-    password: "{{ vault_foreman_admin_password }}"
+    user: "{{ foreman_admin_username }}"
+    password: "{{ foreman_admin_password }}"
     force_basic_auth: true
     validate_certs: "{{ foreman_validate_certs }}"
     status_code: [200, 204]

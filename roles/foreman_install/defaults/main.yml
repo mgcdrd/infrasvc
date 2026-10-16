@@ -16,6 +16,15 @@ foreman_storage_min_pulp_gb: 290
 foreman_storage_min_containers_gb: 28
 foreman_storage_min_pgsql_gb: 18
 
+# ---- Credentials (set directly, as a Vault lookup; see README) ----
+foreman_admin_username: ""              # required
+foreman_admin_password: ""              # required
+foreman_db_password: ""                 # required
+foreman_pdns_api_key: ""                # required when foreman_dns_provider: powerdns
+foreman_realm_agent_password: ""        # required when foreman_realm_enable
+foreman_ipa_admin_user: ""              # required when foreman_realm_vault_rotate
+foreman_ipa_admin_password: ""          # required when foreman_realm_vault_rotate
+
 foreman_hostname: "{{ ansible_fqdn }}"
 foreman_url: "https://{{ foreman_hostname }}"
 
@@ -70,7 +79,6 @@ foreman_dns_enable: false
 foreman_dns_provider: powerdns        # powerdns or nsupdate
 foreman_dns_forwarders: []
 foreman_pdns_api_url: "http://localhost:8081"
-# vault_pdns_api_key required when foreman_dns_provider: powerdns
 foreman_dns_nsupdate_server: ""       # required when foreman_dns_provider: nsupdate
 
 # ---- TFTP ----
@@ -95,7 +103,7 @@ foreman_ipa_controller: ""
 # ipa-getkeytab (see ipa.yml) rotates the realm principal's Kerberos key on
 # every keytab fetch, invalidating whatever password is stored in Vault.
 # Enabling this has the role reset the principal's password afterward
-# (via vault_ipa_admin_user, which must hold a role scoped to change only
+# (via foreman_ipa_admin_user, which must hold a role scoped to change only
 # this one account's password) and write the new value back to Vault
 # itself, so the next full rebuild doesn't need a manual password reset.
 foreman_realm_vault_rotate: false

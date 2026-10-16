@@ -2,6 +2,23 @@
 # Run before repo configuration to ensure the host is in a clean state.
 # Handles systems previously enrolled with a Foreman/Katello instance.
 
+- name: preflight - assert required credentials are set
+  become: false
+  ansible.builtin.assert:
+    quiet: true
+    that:
+      - foreman_admin_username | length > 0
+      - foreman_admin_password | length > 0
+      - foreman_db_password | length > 0
+      - foreman_pdns_api_key | length > 0 or not (foreman_dns_enable | bool and foreman_dns_provider == 'powerdns')
+      - foreman_realm_agent_password | length > 0 or not (foreman_realm_enable | bool)
+      - (foreman_ipa_admin_user | length > 0 and foreman_ipa_admin_password | length > 0) or not (foreman_realm_enable | bool and foreman_realm_vault_rotate | bool)
+    fail_msg: >-
+      foreman_admin_username, foreman_admin_password and foreman_db_password are
+      required. Also required: foreman_pdns_api_key (foreman_dns_enable with the
+      powerdns provider), foreman_realm_agent_password (foreman_realm_enable),
+      foreman_ipa_admin_user/_password (foreman_realm_vault_rotate).
+
 # A host registered as a content host of another Foreman/Katello carries
 # rhsm CA config and content-view repos that conflict with becoming a
 # Katello server itself. Unregister before anything else.

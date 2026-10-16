@@ -16,7 +16,7 @@
 - name: templates - deploy persistent SSH private key for foreman → GitLab
   become: true
   ansible.builtin.copy:
-    content: "{{ vault_foreman_template_sync_ssh_private_key }}\n"
+    content: "{{ foreman_template_sync_ssh_private_key }}\n"
     dest: /usr/share/foreman/.ssh/id_ed25519
     owner: foreman
     group: foreman
@@ -26,7 +26,7 @@
 - name: templates - deploy persistent SSH public key for foreman → GitLab
   become: true
   ansible.builtin.copy:
-    content: "{{ vault_foreman_template_sync_ssh_public_key }}\n"
+    content: "{{ foreman_template_sync_ssh_public_key }}\n"
     dest: /usr/share/foreman/.ssh/id_ed25519.pub
     owner: foreman
     group: foreman
@@ -64,8 +64,8 @@
 - name: templates - configure template sync settings
   become: false
   theforeman.foreman.setting:
-    username: "{{ foreman_username }}"
-    password: "{{ vault_foreman_admin_password }}"
+    username: "{{ foreman_admin_username }}"
+    password: "{{ foreman_admin_password }}"
     server_url: "{{ foreman_url }}"
     validate_certs: "{{ foreman_validate_certs }}"
     name: "{{ item.name }}"
@@ -76,8 +76,8 @@
 - name: templates - import templates from GitLab
   become: false
   theforeman.foreman.templates_import:
-    username: "{{ foreman_username }}"
-    password: "{{ vault_foreman_admin_password }}"
+    username: "{{ foreman_admin_username }}"
+    password: "{{ foreman_admin_password }}"
     server_url: "{{ foreman_url }}"
     validate_certs: "{{ foreman_validate_certs }}"
     associate: "{{ foreman_template_import_associate | default('always') }}"

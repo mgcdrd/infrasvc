@@ -1,4 +1,9 @@
 ---
+- name: foreman_config - preflight
+  become: false
+  import_tasks: preflight.yml
+  tags: [foreman_config, preflight]
+
 - name: foreman_config - sync plans
   become: false
   import_tasks: syncplans.yml

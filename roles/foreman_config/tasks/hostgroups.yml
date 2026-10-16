@@ -2,8 +2,8 @@
 - name: hostgroups - create host groups
   become: false
   theforeman.foreman.hostgroup:
-    username: "{{ foreman_username }}"
-    password: "{{ vault_foreman_admin_password }}"
+    username: "{{ foreman_admin_username }}"
+    password: "{{ foreman_admin_password }}"
     server_url: "{{ foreman_url }}"
     validate_certs: "{{ foreman_validate_certs }}"
     name: "{{ item.name }}"
@@ -32,7 +32,7 @@
     openscap_proxy: "{{ item.openscap_proxy | default(foreman_hostname) }}"
     kickstart_repository: "{{ item.kickstart_repository | default(omit) }}"
     activation_keys: "{{ item.activation_keys | default(omit) }}"
-    root_pass: "{{ item.root_pass | default(vault_foreman_host_root_pass) }}"
+    root_pass: "{{ item.root_pass | default(foreman_host_root_pass) }}"
     parameters: "{{ item.parameters | default(omit) }}"
     compute_resource: "{{ item.compute_resource | default(omit) }}"
     compute_profile: "{{ item.compute_profile | default(omit) }}"

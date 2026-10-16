@@ -4,8 +4,8 @@
 - name: user_groups - create or update Foreman usergroup
   become: false
   theforeman.foreman.usergroup:
-    username: "{{ foreman_username }}"
-    password: "{{ vault_foreman_admin_password }}"
+    username: "{{ foreman_admin_username }}"
+    password: "{{ foreman_admin_password }}"
     server_url: "{{ foreman_url }}"
     validate_certs: "{{ foreman_validate_certs }}"
     name: "{{ item.usergroup }}"
@@ -20,8 +20,8 @@
 - name: user_groups - create or update external usergroup mapping
   become: false
   theforeman.foreman.external_usergroup:
-    username: "{{ foreman_username }}"
-    password: "{{ vault_foreman_admin_password }}"
+    username: "{{ foreman_admin_username }}"
+    password: "{{ foreman_admin_password }}"
     server_url: "{{ foreman_url }}"
     validate_certs: "{{ foreman_validate_certs }}"
     name: "{{ item.name }}"

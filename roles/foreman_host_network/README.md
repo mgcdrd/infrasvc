@@ -54,7 +54,7 @@ Role Variables
 |---|---|---|---|
 | `foreman_host_network_url` | *(lab-specific; see defaults)* | No | Foreman API base URL |
 | `foreman_host_network_username` | `""` | Yes | Foreman API user |
-| `foreman_host_network_password` | `""` | Yes | Foreman API password; use `{{ vault_* }}` |
+| `foreman_host_network_password` | `""` | Yes | Foreman API password; set it to a Vault lookup |
 | `foreman_host_network_validate_certs` | `true` | No | Validate the Foreman API TLS certificate |
 | `foreman_host_network_host` | `""` | Yes | Foreman host whose interface is updated |
 | `foreman_host_network_subnet` | `""` | Yes | Target Foreman subnet name |
@@ -91,8 +91,8 @@ Example Playbook
   roles:
     - role: mgcdrd.infrasvc.foreman_host_network
       vars:
-        foreman_host_network_username: "{{ vault_foreman_write_username }}"
-        foreman_host_network_password: "{{ vault_foreman_write_password }}"
+        foreman_host_network_username: "{{ lookup('community.hashi_vault.vault_kv2_get', vault_kv_env + '/foreman', engine_mount_point=vault_kv_infra_mount, url=vault_addr).secret.write_username }}"
+        foreman_host_network_password: "{{ lookup('community.hashi_vault.vault_kv2_get', vault_kv_env + '/foreman', engine_mount_point=vault_kv_infra_mount, url=vault_addr).secret.write_password }}"
         foreman_host_network_host: kc1.lab.provenzawt.dev
         foreman_host_network_subnet: Lab
         foreman_host_network_ip: 10.100.10.50
